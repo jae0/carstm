@@ -110,7 +110,7 @@ weight_year = meanweights_by_strata( set=set, StrataID=as.character( sppoly$Stra
 
 # RES = data.frame(yr=p$selection$survey[["yr"]]) # collect model comparisons
 if (0) {
-  fn = file.path( getwd(), "RES.rdata" )
+  fn = file.path( project.datadirectory( "carstm" ), "RES.rdata" )
  # save(RES, file=fn)
  # load(fn)
 }
@@ -184,6 +184,13 @@ fit = glm(
   family=binomial(link="logit"),
   data=set
 )
+
+if (0) {  
+  fnx = file.path( project.datadirectory( "carstm" ), "fit_habitat_glm.rdata" )
+  save( fit, file=fnx )
+  # load(fnx)
+}
+
 s = summary(fit)
 AIC(fit)  # 10774
 
@@ -239,6 +246,12 @@ inverse.logit = function( x ) {
   oddsratio = exp(x)
   prob = oddsratio / (1 + oddsratio )
   return (prob)
+}
+
+if (0) {  
+  fnx = file.path( project.datadirectory( "carstm" ), "fit_habitat_gam.rdata" )
+  save( fit, file=fnx )
+  # load(fnx)
 }
 
 
@@ -327,6 +340,13 @@ fit = inla(
   control.inla=list(  correct=TRUE, correct.verbose=FALSE ), # strategy="laplace", cutoff=1e-6,
   verbose=TRUE
 )
+
+if (0) {  
+  fnx = file.path( project.datadirectory( "carstm" ), "fit_habitat_inla.rdata" )
+  save( fit, file=fnx )
+  # load(fnx)
+}
+
 plot(fit )
 s = summary(fit)
 s$dic$dic  # 10585   .. not sure why ..
@@ -407,6 +427,13 @@ fit = inla(
   control.inla=list(  correct=TRUE, correct.verbose=FALSE ), # strategy="laplace", cutoff=1e-6,
   verbose=TRUE
 )
+
+if (0) {  
+  fnx = file.path( project.datadirectory( "carstm" ), "fit_habitat_strata_CAR.yr_iid.rdata" )
+  save( fit, file=fnx )
+  # load(fnx)
+}
+
 plot(fit )
 s = summary(fit)
 s$dic$dic  #8885
@@ -482,6 +509,15 @@ fit = inla(
   control.inla=list(  correct=TRUE, correct.verbose=FALSE ), # strategy="laplace", cutoff=1e-6,
   verbose=TRUE
 )
+
+
+if (0) {  
+  fnx = file.path( project.datadirectory( "carstm" ), "fit_habitat_strata_CAR_yr.yr_iid.rdata" )
+  save( fit, file=fnx )
+  # load(fnx)
+}
+
+
 plot(fit )
 s = summary(fit)
 s$dic$dic  # 8730
@@ -510,7 +546,7 @@ spplot( sppoly, vn, col.regions=p$mypalette, main=vn, at=brks, sp.layout=p$coast
 ######
 
 if (0) {
- fn = file.path( getwd(), "RES.rdata" )
+ fn = file.path( project.datadirectory( "carstm" ), "RES.rdata" )
  # save(RES, file=fn)
  # load(fn)
 }
