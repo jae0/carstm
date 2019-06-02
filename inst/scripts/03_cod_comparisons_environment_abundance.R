@@ -107,7 +107,7 @@ weight_year = meanweights_by_strata( set=set, StrataID=as.character( sppoly$Stra
 
 
 # adjust based upon RAM requirements and ncores
-ncores = floor( aegis.env::ram_local( "ncores", ram_main=4, ram_process=6 ) / 2 )
+ncores = floor( aegis.base::ram_local( "ncores", ram_main=4, ram_process=6 ) / 2 )
 inla.setOption(num.threads=ncores)
 inla.setOption(blas.num.threads=ncores)
 

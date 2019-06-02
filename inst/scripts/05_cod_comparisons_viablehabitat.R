@@ -67,7 +67,7 @@ p$selection$survey$strata_toremove = NULL  # emphasize that all data enters anal
 
 set = survey.db( p=p, DS="filter" )
 
-# categorize Strata 
+# categorize Strata
 o = over( SpatialPoints( set[,c("plon", "plat")], sp::CRS(p$internal.crs) ), spTransform(sppoly, sp::CRS(p$internal.crs) ) ) # match each datum to an area
 set$StrataID = o$StrataID
 o = NULL
@@ -185,7 +185,7 @@ fit = glm(
   data=set
 )
 
-if (0) {  
+if (0) {
   fnx = file.path( project.datadirectory( "carstm" ), "fit_habitat_glm.rdata" )
   save( fit, file=fnx )
   # load(fnx)
@@ -248,7 +248,7 @@ inverse.logit = function( x ) {
   return (prob)
 }
 
-if (0) {  
+if (0) {
   fnx = file.path( project.datadirectory( "carstm" ), "fit_habitat_gam.rdata" )
   save( fit, file=fnx )
   # load(fnx)
@@ -341,7 +341,7 @@ fit = inla(
   verbose=TRUE
 )
 
-if (0) {  
+if (0) {
   fnx = file.path( project.datadirectory( "carstm" ), "fit_habitat_inla.rdata" )
   save( fit, file=fnx )
   # load(fnx)
@@ -428,7 +428,7 @@ fit = inla(
   verbose=TRUE
 )
 
-if (0) {  
+if (0) {
   fnx = file.path( project.datadirectory( "carstm" ), "fit_habitat_strata_CAR.yr_iid.rdata" )
   save( fit, file=fnx )
   # load(fnx)
@@ -511,7 +511,7 @@ fit = inla(
 )
 
 
-if (0) {  
+if (0) {
   fnx = file.path( project.datadirectory( "carstm" ), "fit_habitat_strata_CAR_yr.yr_iid.rdata" )
   save( fit, file=fnx )
   # load(fnx)
