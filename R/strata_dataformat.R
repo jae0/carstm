@@ -2,7 +2,7 @@ strata_dataformat = function( p ) {
 
     #Extract data from groundfish survey
     #Extract Cat data from groundfish survey
-    k = aegis::groundfish.db(DS="gscat") #export from grounfish survey database .. weight (kg) and num per unit area (km^2)
+    k = aegis.survey::groundfish.db(DS="gscat") #export from grounfish survey database .. weight (kg) and num per unit area (km^2)
 
     # # add required variables .. not sure if still required JC
     u = data.frame( matrix( unlist(strsplit( k$id, ".", fixed=TRUE)), ncol=2, byrow=TRUE), stringsAsFactors=FALSE )

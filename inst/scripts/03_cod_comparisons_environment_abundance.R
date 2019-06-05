@@ -55,8 +55,7 @@ sppoly$strata_to_keep = ifelse( as.character(sppoly$StrataID) %in% strata_defini
 
 # ------------------------------------------------
 # neighbourhood structure --- required to do areal unit spatial modelling
-
-W.nb = neighbourhood_structure( sppoly=sppoly, strata_type="stratanal_polygons" )
+# sppoly = neighbourhood_structure( sppoly=sppoly, strata_type="stratanal_polygons" )  # not used here
 
 
 # --------------------------------
@@ -65,7 +64,7 @@ p$selection$survey$strata_toremove = NULL  # emphasize that all data enters anal
 
 set = survey.db( p=p, DS="filter" )
 
-# categorize Strata 
+# categorize Strata
 o = over( SpatialPoints( set[,c("plon", "plat")], sp::CRS(p$internal.crs) ), spTransform(sppoly, sp::CRS(p$internal.crs) ) ) # match each datum to an area
 set$StrataID = o$StrataID
 o = NULL
@@ -107,7 +106,7 @@ weight_year = meanweights_by_strata( set=set, StrataID=as.character( sppoly$Stra
 
 
 # adjust based upon RAM requirements and ncores
-ncores = floor( aegis::ram_local( "ncores", ram_main=4, ram_process=6 ) / 2 )
+ncores = floor( ram_local( "ncores", ram_main=4, ram_process=6 ) / 2 )
 inla.setOption(num.threads=ncores)
 inla.setOption(blas.num.threads=ncores)
 

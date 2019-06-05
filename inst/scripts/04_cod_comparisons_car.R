@@ -59,7 +59,7 @@ sppoly$strata_to_keep = ifelse( as.character(sppoly$StrataID) %in% strata_defini
 # ------------------------------------------------
 # neighbourhood structure --- required to do areal unit spatial modelling
 
-W.nb = neighbourhood_structure( sppoly=sppoly, strata_type="stratanal_polygons" )
+sppoly = neighbourhood_structure( sppoly=sppoly, strata_type="stratanal_polygons" )
 
 
 # --------------------------------
@@ -68,7 +68,7 @@ p$selection$survey$strata_toremove = NULL  # emphasize that all data enters anal
 
 set = survey.db( p=p, DS="filter" )
 
-# categorize Strata 
+# categorize Strata
 o = over( SpatialPoints( set[,c("plon", "plat")], sp::CRS(p$internal.crs) ), spTransform(sppoly, sp::CRS(p$internal.crs) ) ) # match each datum to an area
 set$StrataID = o$StrataID
 o = NULL
@@ -110,7 +110,7 @@ weight_year = meanweights_by_strata( set=set, StrataID=as.character( sppoly$Stra
 
 
 # adjust based upon RAM requirements and ncores
-ncores = floor( aegis::ram_local( "ncores", ram_main=4, ram_process=6 ) / 2 )
+ncores = floor( ram_local( "ncores", ram_main=4, ram_process=6 ) / 2 )
 inla.setOption(num.threads=ncores)
 inla.setOption(blas.num.threads=ncores)
 
@@ -292,7 +292,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="iid", hyper=H$iid)
-    + f(strata, model="bym2", graph=W.nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@W.nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),
@@ -339,7 +339,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="ar1", hyper=H$ar1)
-    + f(strata, model="bym2", graph=W.nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@W.nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),
@@ -399,7 +399,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="ar1", hyper=H$ar1 )
-    + f(strata, model="bym2", graph=W.nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@W.nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),
@@ -470,7 +470,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="ar1", hyper=H$ar1, group=strata )
-    + f(strata, model="bym2", graph=W.nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@W.nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),
@@ -546,7 +546,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="ar1", hyper=H$ar1, group=strata )
-    + f(strata, model="bym2", graph=W.nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@W.nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),
@@ -612,7 +612,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="iid", hyper=H$iid )
-    + f(strata, model="bym2", graph=W.nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@W.nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),

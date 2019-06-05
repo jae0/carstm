@@ -52,7 +52,7 @@ for (tu in c( "standardtow", "towdistance", "sweptarea") ) {
       # .. but the totals are nearly identical to survey.db access
       p$selection$biologicals$spec = groundfish_species_code
       p$selection$biologicals$spec_bio = NULL
-      
+
       set = strata_dataformat( p=p )   # return values in kg or no per set
       # dim(set) # [1] 1682   45
       # sum(set$totwgt) # [1] 9683
@@ -67,12 +67,12 @@ for (tu in c( "standardtow", "towdistance", "sweptarea") ) {
     # Using this approach is better in that there is more filter control
     # Results for the basic test cases are essentially identical to "stratanal" (via "strata_dataformat", above)
     # but faster and more QA/QC done on the input data
-    set = aegis::survey.db( p=p, DS="filter", add_groundfish_strata=TRUE )   # return values in kg or no per set
+    set = aegis.survey::survey.db( p=p, DS="filter", add_groundfish_strata=TRUE )   # return values in kg or no per set
 
     if (0) {
       # the above merges based upon StrataID's designated in groundfish tables.  Alternatively one can use positions directly:
       set = survey.db( p=p, DS="filter" )
-      # categorize Strata 
+      # categorize Strata
       o = over( SpatialPoints( set[,c("plon", "plat")], sp::CRS(p$internal.crs) ), spTransform(sppoly, sp::CRS(p$internal.crs) ) ) # match each datum to an area
       set$StrataID = o$StrataID
       o = NULL
