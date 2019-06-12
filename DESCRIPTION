@@ -4,14 +4,8 @@ Version: 0.1
 Authors@R: c( person("Jae", "Choi", email="choi.jae.seok@gmail.com", role=c("aut", "cre")) )
 Description: Spatio-temporal models using conditional autoregressive methods.
 Depends: R (>= 3.0.0),
-Imports:
-  lubridate,
-  rgeos,
-  sp,
-  spdep,
-  INLA,
-  lattice
-Suggests: maps, mapdata, GADMTools
+Imports: lubridate, rgeos, sp, spdep, INLA, lattice, GADMTools, maps, mapdata
+Suggests: aegis
 NeedsCompilation: no
 ByteCompile: TRUE
 License: MIT
