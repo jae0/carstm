@@ -292,7 +292,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="iid", hyper=H$iid)
-    + f(strata, model="bym2", graph=sppoly@W.nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),
@@ -339,7 +339,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="ar1", hyper=H$ar1)
-    + f(strata, model="bym2", graph=sppoly@W.nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),
@@ -399,7 +399,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="ar1", hyper=H$ar1 )
-    + f(strata, model="bym2", graph=sppoly@W.nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),
@@ -470,7 +470,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="ar1", hyper=H$ar1, group=strata )
-    + f(strata, model="bym2", graph=sppoly@W.nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),
@@ -546,7 +546,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="ar1", hyper=H$ar1, group=strata )
-    + f(strata, model="bym2", graph=sppoly@W.nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),
@@ -612,7 +612,7 @@ fit = inla(
     + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
     + f(year, model="iid", hyper=H$iid )
-    + f(strata, model="bym2", graph=sppoly@W.nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+    + f(strata, model="bym2", graph=sppoly@nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family = "poisson",
   data=M,
   control.compute=list(dic=TRUE, config=TRUE),

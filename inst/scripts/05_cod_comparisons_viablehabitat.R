@@ -415,7 +415,7 @@ fit = inla(
   + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
   + f(di, model="rw2", scale.model=TRUE, hyper=H$rw2)
   + f(year, model="iid", hyper=H$iid)
-  + f(strata, model="bym2", graph=sppoly@W.nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+  + f(strata, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family="binomial",  # alternates family="zeroinflatedbinomial0", family="zeroinflatedbinomial1",
   data=M,
   control.family=list(control.link=list(model="logit")),
@@ -497,7 +497,7 @@ fit = inla(
   + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
   + f(di, model="rw2", scale.model=TRUE, hyper=H$rw2)
   + f(year, model="iid", hyper=H$iid)
-  + f(strata, model="bym2", graph=sppoly@W.nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+  + f(strata, model="bym2", graph=sppoly@nb, group=year, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
   family="binomial",  # alternates family="zeroinflatedbinomial0", family="zeroinflatedbinomial1",
   data=M,
   control.family=list(control.link=list(model="logit")),
