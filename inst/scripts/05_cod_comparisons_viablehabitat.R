@@ -51,7 +51,7 @@ p$selection=list(
 # Here we compute surface area of each polygon via projection to utm or some other appropriate planar projection.
 # This adds some variabilty relative to "statanal" (which uses sa in sq nautical miles, btw)
 
-sppoly = areal_units( strata_type="stratanal_polygons",  proj4string_planar_km=p$internal.crs_planar, timeperiod="pre2014" )
+sppoly = areal_units( strata_type="stratanal_polygons",  proj4string_planar_km=p$proj4string_planar_km, timeperiod="pre2014" )
 sppoly$strata_to_keep = ifelse( as.character(sppoly$StrataID) %in% strata_definitions( c("Gulf", "Georges_Bank", "Spring", "Deep_Water") ), FALSE,  TRUE )
 
 
