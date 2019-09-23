@@ -49,13 +49,17 @@ p$selection=list(
 # Here we compute surface area of each polygon via projection to utm or some other appropriate planar projection.
 # This adds some variabilty relative to "statanal" (which uses sa in sq nautical miles, btw)
 
-sppoly = areal_units( strata_type="stratanal_polygons",  proj4string_planar_km=p$proj4string_planar_km, timeperiod="pre2014" )
+sppoly = areal_units(
+  areal_units_strata_type="stratanal_polygons",
+  areal_units_proj4string_planar_km=p$areal_units_proj4string_planar_km,
+  timeperiod="pre2014"
+)
 sppoly$strata_to_keep = ifelse( as.character(sppoly$StrataID) %in% strata_definitions( c("Gulf", "Georges_Bank", "Spring", "Deep_Water") ), FALSE,  TRUE )
 
 
 # ------------------------------------------------
 # neighbourhood structure --- required to do areal unit spatial modelling
-# sppoly = neighbourhood_structure( sppoly=sppoly, strata_type="stratanal_polygons" )  # not used here
+# sppoly = neighbourhood_structure( sppoly=sppoly, areal_units_strata_type="stratanal_polygons" )  # not used here
 
 
 # --------------------------------
@@ -65,7 +69,7 @@ p$selection$survey$strata_toremove = NULL  # emphasize that all data enters anal
 set = survey.db( p=p, DS="filter" )
 
 # categorize Strata
-o = over( SpatialPoints( set[,c("plon", "plat")], sp::CRS(p$internal.crs) ), spTransform(sppoly, sp::CRS(p$internal.crs) ) ) # match each datum to an area
+o = over( SpatialPoints( set[,c("lon", "lat")], sp::CRS(projection_proj4string("lonlat_wgs84")) ), spTransform(sppoly, sp::CRS(projection_proj4string("lonlat_wgs84")) ) ) # match each datum to an area
 set$StrataID = o$StrataID
 o = NULL
 set = set[ which(!is.na(set$StrataID)),]
@@ -145,7 +149,7 @@ covars = c("t", "tsd", "tmax", "tmin", "degreedays", "z",  "dZ", "ddZ" )
 res = aegis_db_extract_by_polygon(
   sppoly=sppoly,
   vars=covars,
-  spatial.domain=p$spatial.domain,
+  spatial_domain=p$spatial_domain,
   yrs=p$yrs,
   dyear=0.6 # 0.6*12 months = 7.2 = early July
 )

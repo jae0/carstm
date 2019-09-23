@@ -45,7 +45,7 @@ strata_dataformat = function( p ) {
     polygon_source = "pre2014"  # "pre2014" for older
     sppoly = maritimes_groundfish_strata( timeperiod=polygon_source, returntype="polygons" )
 
-    set = maritimes_groundfish_strata_identify( Y=set, sppoly=sppoly, xyvars=c("lon", "lat"), planar_crs_km=p$internal.crs, plotdata=TRUE )
+    set = maritimes_groundfish_strata_identify( Y=set, sppoly=sppoly, xyvars=c("lon", "lat"), planar_crs_km=p$areal_units_proj4string_planar_km, plotdata=TRUE )
 
       if (exists("selection", p)) {
         if (exists("survey", p$selection)) {  # filter survey information

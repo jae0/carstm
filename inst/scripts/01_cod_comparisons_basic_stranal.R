@@ -73,7 +73,10 @@ for (tu in c( "standardtow", "towdistance", "sweptarea") ) {
       # the above merges based upon StrataID's designated in groundfish tables.  Alternatively one can use positions directly:
       set = survey.db( p=p, DS="filter" )
       # categorize Strata
-      o = over( SpatialPoints( set[,c("plon", "plat")], sp::CRS(p$internal.crs) ), spTransform(sppoly, sp::CRS(p$internal.crs) ) ) # match each datum to an area
+      sppoly = areal_units( areal_units_strata_type="stratanal_polygons",  areal_units_proj4string_planar_km=p$areal_units_proj4string_planar_km, timeperiod="pre2014" )
+      sppoly$strata_to_keep = ifelse( as.character(sppoly$StrataID) %in% strata_definitions( c("Gulf", "Georges_Bank", "Spring", "Deep_Water") ), FALSE,  TRUE )
+
+      o = over( SpatialPoints( set[,c("lon", "lat")], sp::CRS(projection_proj4string("lonlat_wgs84")) ), spTransform(sppoly, sp::CRS(projection_proj4string("lonlat_wgs84")) ) ) # match each datum to an area
       set$StrataID = o$StrataID
       o = NULL
       set = set[ which(!is.na(set$StrataID)),]

@@ -12,13 +12,12 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
 
   # ---------------------
   p$libs = c( p$libs, RLibrary ( "sp", "spdep", "rgeos", "INLA" ))  # standard CRAN libs -- geostatistical support
-  p$libs = c( p$libs, RLibrary( "aegis.ase", "bio.taxonomy", "carstm") ) #,  ) # locally developed code
+  p$libs = c( p$libs, RLibrary( "aegis", "bio.taxonomy", "carstm") ) #,  ) # locally developed code
   # aegis -- support for data layers
   # carstm -- support for stan bym-car models
 
   if (!exists("polygon_source", p)) p$polygon_source = "pre2014"   # "pre2014" for older
-  if (!exists("internal.crs", p)) p$internal.crs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
-  if (!exists("proj4string_planar_km", p)) p$proj4string_planar_km = "+proj=omerc +lat_0=44.0 +lonc=-63.0 +gamma=0.0 +k=1 +alpha=325 +x_0=0 +y_0=0 +ellps=WGS84 +units=km"  # oblique mercator, centred on Scotian Shelf rotated by 325 degrees
+  if (!exists("areal_units_proj4string_planar_km", p)) p$areal_units_proj4string_planar_km = projection_proj4string("omerc_nova_scotia")  # oblique mercator, centred on Scotian Shelf rotated by 325 degrees
   if (!exists("boundingbox", p)) p$boundingbox = list( xlim = c(-70.5, -56.5), ylim=c(39.5, 47.5)) # bounding box for plots using spplot
   if (!exists("trawlable_units", p)) p$trawlable_units = "standardtow"  # for groundfish.db
 
