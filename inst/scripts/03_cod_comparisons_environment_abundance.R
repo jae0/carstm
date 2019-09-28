@@ -21,6 +21,7 @@ p = carstm::carstm_parameters(
   # trawlable_units = "sweptarea"
 )
 
+p = aegis_parameters( p=p, DS="carstm" )  # obtain environmental data cut points
 
 
 # --------------------------------
@@ -195,12 +196,8 @@ M$StrataID  = factor( M$StrataID, levels=levels(sppoly$StrataID ))
 M$strata  = as.numeric( M$StrataID)
 M$year  = as.numeric( M$yr_factor)
 
-dtemps = seq( min(M$t, na.rm=TRUE), max(M$t, na.rm=TRUE), length.out=11 )
-ddepths = c(2.5, 5, 10, 20, 40, 80, 160, 320, 640 )
-
-M$ti = as.numeric( as.character( cut( M$t, breaks=dtemps, labels=diff(dtemps)/2 + dtemps[-length(dtemps)], include.lowest=TRUE ) ))
-
-M$zi = as.numeric( as.character( cut( M$z, breaks=ddepths, labels=diff(ddepths)/2 + ddepths[-length(ddepths)], include.lowest=TRUE ) ))
+M$ti = discretize_data( M$t, p$discretization$t )
+M$zi = discretize_data( M$t, p$discretization$z )
 
 M$iid_error = 1:nrow(M) # for inla indexing for set level variation
 

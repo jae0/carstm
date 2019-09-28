@@ -319,13 +319,9 @@ M$z[!is.finite(M$z)] = median(M$z, na.rm=TRUE )  # missing data .. quick fix .. 
 M$yr_factor = factor( M$yr, levels=p$yrs )
 M$StrataID  = factor( M$StrataID, levels=levels(sppoly$StrataID ))
 
-dtemps = seq( min(M$t, na.rm=TRUE), max(M$t, na.rm=TRUE), length.out=13 )
-ddepths = c(2.5, 5, 10, 20, 40, 80, 160, 320, 640 )
-ddegdays = c(10, 100, 200, 400, 800, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000)
-
-M$ti = as.numeric( as.character( cut( M$t, breaks=dtemps, labels=diff(dtemps)/2 + dtemps[-length(dtemps)], include.lowest=TRUE ) ))
-M$zi = as.numeric( as.character( cut( M$z, breaks=ddepths, labels=diff(ddepths)/2 + ddepths[-length(ddepths)], include.lowest=TRUE ) ))
-M$di = as.numeric( as.character( cut( M$degreedays, breaks=ddegdays, labels=diff(ddegdays)/2 + ddegdays[-length(ddegdays)], include.lowest=TRUE ) ))
+M$ti = discretize_data( M$t, p$discretization$t )
+M$zi = discretize_data( M$z, p$discretization$z )
+M$di = discretize_data( M$degreedays, p$discretization$degreedays )
 
 
 fit = inla(
@@ -404,13 +400,10 @@ M$StrataID  = factor( M$StrataID, levels=levels(sppoly$StrataID ))
 M$strata  = as.numeric( M$StrataID)
 M$year  = as.numeric( M$yr_factor)
 
-dtemps = seq( min(M$t, na.rm=TRUE), max(M$t, na.rm=TRUE), length.out=13 )
-ddepths = c(2.5, 5, 10, 20, 40, 80, 160, 320, 640 )
-ddegdays = c(10, 100, 200, 400, 800, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000)
 
-M$ti = as.numeric( as.character( cut( M$t, breaks=dtemps, labels=diff(dtemps)/2 + dtemps[-length(dtemps)], include.lowest=TRUE ) ))
-M$zi = as.numeric( as.character( cut( M$z, breaks=ddepths, labels=diff(ddepths)/2 + ddepths[-length(ddepths)], include.lowest=TRUE ) ))
-M$di = as.numeric( as.character( cut( M$degreedays, breaks=ddegdays, labels=diff(ddegdays)/2 + ddegdays[-length(ddegdays)], include.lowest=TRUE ) ))
+M$ti = discretize_data( M$t, p$discretization$t )
+M$zi = discretize_data( M$z, p$discretization$z )
+M$di = discretize_data( M$degreedays, p$discretization$degreedays )
 
 fit = inla(
   formula = pa ~ 1
@@ -484,13 +477,10 @@ M$StrataID  = factor( M$StrataID, levels=levels(sppoly$StrataID ))
 M$strata  = as.numeric( M$StrataID)
 M$year  = as.numeric( M$yr_factor)
 
-dtemps = seq( min(M$t, na.rm=TRUE), max(M$t, na.rm=TRUE), length.out=13 )
-ddepths = c(2.5, 5, 10, 20, 40, 80, 160, 320, 640 )
-ddegdays = c(10, 100, 200, 400, 800, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000)
 
-M$ti = as.numeric( as.character( cut( M$t, breaks=dtemps, labels=diff(dtemps)/2 + dtemps[-length(dtemps)], include.lowest=TRUE ) ))
-M$zi = as.numeric( as.character( cut( M$z, breaks=ddepths, labels=diff(ddepths)/2 + ddepths[-length(ddepths)], include.lowest=TRUE ) ))
-M$di = as.numeric( as.character( cut( M$degreedays, breaks=ddegdays, labels=diff(ddegdays)/2 + ddegdays[-length(ddegdays)], include.lowest=TRUE ) ))
+M$ti = discretize_data( M$t, p$discretization$t )
+M$zi = discretize_data( M$z, p$discretization$z )
+M$di = discretize_data( M$degreedays, p$discretization$degreedays )
 
 
 # 28404.251 seconds

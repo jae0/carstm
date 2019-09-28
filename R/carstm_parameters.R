@@ -8,6 +8,8 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
   i = which(duplicated(names(p), fromLast = TRUE ))
   if ( length(i) > 0 ) p = p[-i] # give any passed parameters a higher priority, overwriting pre-existing variable
 
+  p = aegis::aegis_parameters( p=p, DS="carstm")
+
   p = aegis.survey::survey_parameters( p=p, yrs=p$yrs ) # basic spatial parameters
 
   # ---------------------
