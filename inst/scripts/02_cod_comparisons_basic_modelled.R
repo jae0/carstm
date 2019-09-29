@@ -29,7 +29,6 @@
 # and some plotting parameters (bounding box, projection, bathymetry layout, coastline)
 # NOTE: the data selection is the same as in (01_cod_comparisons_basic_stranal.R)
 p = carstm::carstm_parameters(
-  id ="Atlantic cod summer standardtow",
   speciesname = "Atlantic_cod",
   groundfish_species_code = 10,   #  10= cod
   yrs = 1970:2017,

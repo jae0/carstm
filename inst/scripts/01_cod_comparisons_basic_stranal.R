@@ -19,7 +19,7 @@ for (tu in c( "standardtow", "towdistance", "sweptarea") ) {
 
     # construct basic parameter list defining the main characteristics of the study and some plotting params
     p = carstm::carstm_parameters(
-      id ="Atlantic cod summer standardtow",
+      label ="Atlantic cod summer standardtow",
       speciesname = "Atlantic_cod",
       groundfish_species_code = 10,   #  10= cod
       yrs = yrs,
@@ -116,7 +116,7 @@ for (tu in c( "standardtow", "towdistance", "sweptarea") ) {
     # Random stratified estimates from a faster variation of Michelle's code
     results_basic = strata_timeseries(
       set = set,
-      speciesname = p[["id"]],
+      speciesname = p[["label"]],
       yr = p$yrs,
       variable ="totwgt",
       alpha.t = 0.05, # confidence interval eg. 0.05 = 95%, 0.1 = 90%
