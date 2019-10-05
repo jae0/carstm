@@ -258,7 +258,7 @@ APS$predictions.sd = NA
 APS$predictions.sd[kk] = preds$se.fit
 
 # reformat predictions into matrix form
-out = reformat_to_matrix(
+out = reformat_to_array(
   input = APS$predictions,
   matchfrom = list( StrataID=APS$StrataID, yr_factor=APS$yr_factor),
   matchto   = list( StrataID=sppoly$StrataID, yr_factor=levels(set$yr_factor))
@@ -306,7 +306,7 @@ APS$predictions.sd = NA
 APS$predictions.sd[kk] = preds$se.fit
 
 # reformat predictions into matrix form
-out = reformat_to_matrix(
+out = reformat_to_array(
   input = APS$predictions,
   matchfrom = list( StrataID=APS$StrataID, yr_factor=APS$yr_factor),
   matchto   = list( StrataID=sppoly$StrataID, yr_factor=levels(set$yr_factor))

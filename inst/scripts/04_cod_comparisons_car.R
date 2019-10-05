@@ -251,7 +251,7 @@ plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
 
 # reformat predictions into matrix form
 ii = which(M$tag=="predictions")
-out = reformat_to_matrix(
+out = reformat_to_array(
   input = fit$summary.fitted.values[ ii, "mean" ],
   matchfrom = list( StrataID=M$StrataID[ii], yr_factor=M$yr_factor[ii]),
   matchto   = list( StrataID=sppoly$StrataID, yr_factor=factor(p$yrs) )
@@ -312,7 +312,7 @@ plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
 
 # reformat predictions into matrix form
 ii = which(M$tag=="predictions")
-out = reformat_to_matrix(
+out = reformat_to_array(
   input = fit$summary.fitted.values[ ii, "mean" ],
   matchfrom = list( StrataID=M$StrataID[ii], yr_factor=M$yr_factor[ii] ),
   matchto   = list( StrataID=sppoly$StrataID, yr_factor=factor(p$yrs) )
@@ -358,7 +358,7 @@ s$dic$p.eff # [1] 5976
 
 # reformat predictions into matrix form
 ii = which(M$tag=="predictions")
-out = reformat_to_matrix(
+out = reformat_to_array(
   input = fit$summary.fitted.values[ ii, "mean" ],
   matchfrom = list( StrataID=M$StrataID[ii], yr_factor=M$yr_factor[ii]),
   matchto   = list( StrataID=sppoly$StrataID, yr_factor=factor(p$yrs) )
@@ -427,7 +427,7 @@ plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
 
 # reformat predictions into matrix form
 ii = which(M$tag=="predictions")
-out = reformat_to_matrix(
+out = reformat_to_array(
   input = fit$summary.fitted.values[ ii, "mean" ],
   matchfrom = list( StrataID=M$StrataID[ii], yr_factor=M$yr_factor[ii]),
   matchto   = list( StrataID=sppoly$StrataID, yr_factor=factor(p$yrs) )
@@ -499,7 +499,7 @@ plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
 
 # reformat predictions into matrix form
 ii = which(M$tag=="predictions")
-out = reformat_to_matrix(
+out = reformat_to_array(
   input = fit$summary.fitted.values[ ii, "mean" ],
   matchfrom = list( StrataID=M$StrataID[ii], yr_factor=M$yr_factor[ii]),
   matchto   = list( StrataID=sppoly$StrataID, yr_factor=factor(p$yrs) )
@@ -574,7 +574,7 @@ plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
 
 # reformat predictions into matrix form
 ii = which(M$tag=="predictions")
-out = reformat_to_matrix(
+out = reformat_to_array(
   input = fit$summary.fitted.values[ ii, "mean" ],
   matchfrom = list( StrataID=M$StrataID[ii], yr_factor=M$yr_factor[ii]),
   matchto   = list( StrataID=sppoly$StrataID, yr_factor=factor(p$yrs) )
@@ -640,7 +640,7 @@ plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
 
 # reformat predictions into matrix form
 ii = which(M$tag=="predictions")
-out = reformat_to_matrix(
+out = reformat_to_array(
   input = fit$summary.fitted.values[ ii, "mean" ],
   matchfrom = list( StrataID=M$StrataID[ii], yr_factor=M$yr_factor[ii]),
   matchto   = list( StrataID=sppoly$StrataID, yr_factor=factor(p$yrs) )
