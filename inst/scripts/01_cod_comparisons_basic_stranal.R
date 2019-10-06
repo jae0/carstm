@@ -209,9 +209,6 @@ plot( RES[, c("stratanal_standardtow", "stratanal_towdistance", "stratanal_swept
 
 # TODO basic corelations and plots, summarizing the above
 
-# Poisson distribution of total number
-
-source( system.file( "scripts", "00_cod_comparisons_data_environment.R", package = "carstm") )
 
 set$strata_year = paste( set$StrataID, set$yr, sep=".")
 nn = applySummary( set[, c("strata_year", "totno")]  )
