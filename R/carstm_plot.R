@@ -1,42 +1,45 @@
-  carstm_plot = function( p, res, vn, match_id="StrataID", sppoly=areal_units(p=p), intervals=NULL, ...) {
+  carstm_plot = function( p, res, vn, match_id="StrataID", sppoly=areal_units(p=p), breaksat=NULL, ...) {
     # carstm/aegis wrapper around spplot
     require(sp)
     sppoly@data[,vn] = NA
 
-    dimensionality = length( dim(res) )
+    time_dimensionality = length( dim(res) ) - 1 # 1 = strata (space)
 
-    warning("needs to be tested")
-
-    if (dimensionality==1) {
+    if (time_dimensionality==1) { # year
       ii = match( res[,match_id[1]], sppoly@data[,match_id[1]] )
-      toplot = res$vn[ii,]
+      sppoly@data[, vn] = res[ii, vn]
     }
-    if (dimensionality==2) {
+    if (time_dimensionality==2) { # year/subyear
       ii = match( res[,match_id[1]], sppoly@data[,match_id[1]] )
       jj = match( res[,match_id[2]], sppoly@data[,match_id[2]] )
-      toplot = res$vn[ii, jj]
+      sppoly@data[, vn] = res[ii, jj, vn]
     }
-    if (dimensionality==3) {
+    if (time_dimensionality>2) { #year/subyear/?
       ii = match( res[,match_id[1]], sppoly@data[,match_id[1]] )
       jj = match( res[,match_id[2]], sppoly@data[,match_id[2]] )
       kk = match( res[,match_id[3]], sppoly@data[,match_id[3]] )
-      toplot = res[ii, jj, kk]
-    }
-    if (dimensionality>3) {
-      stop ("You need to add more methods here.. ")
+      sppoly@data[, vn] = res[ii, jj, kk, vn]
+      warning ("You need to add more methods here.. ")
     }
 
     if (length(ii) > 1 ) {
-      sppoly@data[,vn] = toplot
       dev.new();
       p$boundingbox = list( xlim=p$corners$lon, ylim=p$corners$lat) # bounding box for plots using spplot
-      sp.layout = ifelse( exists("coastLayout", p), p$coastLayout, aegis.coastline::coastline_layout(p=p) )
-      mypalette = ifelse( exists("mypalette", p), p$mypalette, RColorBrewer::brewer.pal(9, "YlOrRd") )
-      if (is.null(intervals)) intervals=interval_break(X=sppoly[[vn]], n=length(mypalette), style="quantile")
+      if ( exists("coastLayout", p)) {
+        sp.layout = p$coastLayout
+      } else {
+        sp.layout = aegis.coastline::coastline_layout(p=p)
+      }
+      if ( exists("mypalette", p)) {
+        mypalette = p$mypalette
+      } else {
+        mypalette = RColorBrewer::brewer.pal(9, "YlOrRd")
+      }
+      if (is.null(breaksat)) breaksat=interval_break(X=sppoly[[vn]], n=length(mypalette), style="quantile")
       spplot( sppoly, vn, main=vn,
         col.regions=mypalette,
-        at=intervals,
-        sp.layout=sp.layout,
+        at=breaksat,
+        sp.layout=sp.layout$coastLayout,
         col="transparent",
         ...
       )
