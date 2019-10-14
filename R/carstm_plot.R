@@ -1,28 +1,31 @@
-  carstm_plot = function( p, res, vn, match_id="StrataID", sppoly=areal_units(p=p), breaksat=NULL, ...) {
+
+  carstm_plot = function( p, res, vn, poly_match=NULL, time_match=NULL, sppoly=areal_units(p=p), breaksat=NULL, ...) {
     # carstm/aegis wrapper around spplot
     require(sp)
     sppoly@data[,vn] = NA
 
-    time_dimensionality = length( dim(res) ) - 1 # 1 = strata (space)
+    # first index is spatial strata
+    data_dimensionality = length( dim(res[[vn]]) )
 
-    if (time_dimensionality==1) { # year
-      ii = match( res[,match_id[1]], sppoly@data[,match_id[1]] )
-      sppoly@data[, vn] = res[ii, vn]
-    }
-    if (time_dimensionality==2) { # year/subyear
-      ii = match( res[,match_id[1]], sppoly@data[,match_id[1]] )
-      jj = match( res[,match_id[2]], sppoly@data[,match_id[2]] )
-      sppoly@data[, vn] = res[ii, jj, vn]
-    }
-    if (time_dimensionality>2) { #year/subyear/?
-      ii = match( res[,match_id[1]], sppoly@data[,match_id[1]] )
-      jj = match( res[,match_id[2]], sppoly@data[,match_id[2]] )
-      kk = match( res[,match_id[3]], sppoly@data[,match_id[3]] )
-      sppoly@data[, vn] = res[ii, jj, kk, vn]
-      warning ("You need to add more methods here.. ")
+    if (is.null(poly_match)) poly_match = match( res$StrataID, sppoly[["StrataID"]] )  # should match exactly but in case a subset is sent as sppoly
+
+    if (data_dimensionality==1) {
+      sppoly@data[, vn] = res[[vn]] [ poly_match ]  # year only
     }
 
-    if (length(ii) > 1 ) {
+    if (!is.null(time_match)) {
+      n_indexes = length( time_match )
+      if (data_dimensionality==2) {
+        if (n_indexes==1) sppoly@data[, vn] = res[[vn]] [ poly_match, time_match[[1]] ]  # year only
+      }
+      if (data_dimensionality==3) {
+        if (n_indexes==1) sppoly@data[, vn] = res[[vn]] [ poly_match, time_match[[1]] , ]  # year only
+        if (n_indexes==2) sppoly@data[, vn] = res[[vn]] [ poly_match, time_match[[1]], time_match[[2]] ] # year/subyear
+      }
+    }
+
+
+    if (length(poly_match) > 1 ) {
       dev.new();
       p$boundingbox = list( xlim=p$corners$lon, ylim=p$corners$lat) # bounding box for plots using spplot
       if ( exists("coastLayout", p)) {
