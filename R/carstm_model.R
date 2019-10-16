@@ -27,6 +27,8 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
   res = list(StrataID = sppoly[["StrataID"]])  # init results list
   res$strata = as.numeric(res$StrataID)
 
+  if (exists("data_transformation", p)) M[, p$variabletomodel]  = p$data_transformation$forward( M[, p$variabletomodel] ) # make all positive
+
 
   if ( grepl("glm", p$carstm_modelengine) ) {
     #nothing to do, in case input dat needs tweaking
@@ -50,6 +52,7 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
       M$year = floor(M$tiyr)
       M$dyear  =  factor( as.character( trunc(  (M$tiyr - M$year )/ p$tres )*p$tres), levels=p$dyears)
     }
+
   }
 
   fit  = NULL
