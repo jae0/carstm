@@ -1,5 +1,5 @@
 
-carstm_model = function( p, M, DS="redo" ) {
+carstm_model = function( p, M=NULL, DS="redo" ) {
 
   auids = paste(  p$auid, p$inputdata_spatial_discretization_planar_km,
     round(p$inputdata_temporal_discretization_yr, 6),   sep="_" )
@@ -39,6 +39,13 @@ carstm_model = function( p, M, DS="redo" ) {
   if ( grepl("inla", p$carstm_modelengine) ) {
     # hyperparms
     H = carstm_hyperparameters( sd(M[,p$variabletomodel], na.rm=TRUE), alpha=0.5, median( M[,p$variabletomodel], na.rm=TRUE) )
+    M$StrataID  = factor( as.character(M$StrataID), levels=levels( sppoly$StrataID ) ) # revert to factors
+    M$strata  = as.numeric( M$StrataID)
+    M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
+    M$year = floor(M$tiyr)
+    M$dyear  =  factor( as.character( trunc(  (M$tiyr - M$year )/ p$tres )*p$tres), levels=p$dyears)
+    M$iid_error = 1:nrow(M) # for inla indexing for set level variation
+
   }
 
   fit  = NULL
