@@ -24,24 +24,20 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
 
   # prediction surface
   sppoly = areal_units( p=p )  # will redo if not found
-  res = list(StrataID = sppoly[["StrataID"]])  # init results list
-  res$strata = as.numeric(res$StrataID)
+
+  # init results list
+  res = list(
+    StrataID = sppoly[["StrataID"]],
+    strata   = as.numeric(sppoly[["StrataID"]] )  )
 
   if (exists("data_transformation", p)) M[, p$variabletomodel]  = p$data_transformation$forward( M[, p$variabletomodel] ) # make all positive
-
-
-  if ( grepl("glm", p$carstm_modelengine) ) {
-    #nothing to do, in case input dat needs tweaking
-  }
-
-  if ( grepl("gam", p$carstm_modelengine) ) {
-    #nothing to do, in case input dat needs tweaking
-  }
 
   if ( grepl("inla", p$carstm_modelengine) ) {
     # hyperparms
     H = carstm_hyperparameters( sd(M[,p$variabletomodel], na.rm=TRUE), alpha=0.5, median( M[,p$variabletomodel], na.rm=TRUE) )
     M$strata  = as.numeric( M$StrataID)
+    M$zi = discretize_data( M$z, p$discretization$z )
+
     M$iid_error = 1:nrow(M) # for inla indexing for set level variation
     if ( p$aegis_dimensionality == "space-year") {
       M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
