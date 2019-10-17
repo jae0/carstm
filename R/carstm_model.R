@@ -99,22 +99,22 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
 
     vn =  paste(p$variabletomodel, "predicted", sep=".")
     input = preds$fit
-    res[vn] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
-    if (exists("data_transformation", p) ) res[vn] = p$data_transformation$backward( res[vn] ) # make all positive
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
     vn =  paste(p$variabletomodel, "predicted_se", sep=".")
     input = preds$se.fit
-    res[vn] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
 
     vn =  paste(p$variabletomodel, "predicted_lb", sep=".")
     input = preds$fit - preds$se.fit
-    res[vn] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
-    if (exists("data_transformation", p) ) res[vn] = p$data_transformation$backward( res[vn] ) # make all positive
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
     vn =  paste(p$variabletomodel, "predicted_ub", sep=".")
     input = preds$fit + preds$se.fit
-    res[vn] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
-    if (exists("data_transformation", p) ) res[vn] = p$data_transformation$backward( res[vn] ) # make all positive
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
   }
 
@@ -125,22 +125,22 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
 
     vn =  paste(p$variabletomodel, "predicted", sep=".")
     input = preds$fit
-    res[vn] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
-    if (exists("data_transformation", p) ) res[vn] = p$data_transformation$backward( res[vn] ) # make all positive
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
     vn =  paste(p$variabletomodel, "predicted_se", sep=".")
     input = preds$se.fit
-    res[vn] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
 
     vn =  paste(p$variabletomodel, "predicted_lb", sep=".")
     input = preds$fit - preds$se.fit
-    res[vn] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
-    if (exists("data_transformation", p) ) res[vn] = p$data_transformation$backward( res[vn] ) # make all positive
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
     vn =  paste(p$variabletomodel, "predicted_ub", sep=".")
     input = preds$fit + preds$se.fit
-    res[vn] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
-    if (exists("data_transformation", p) ) res[vn] = p$data_transformation$backward( res[vn] ) # make all positive
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
   }
 
 
@@ -149,22 +149,22 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
     if (exists("summary.fitted.values", fit)) {
       vn = paste( p$variabletomodel, "predicted", sep=".")
       input = fit$summary.fitted.values[ ii, "mean" ]
-      res[vn] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
-      if (exists("data_transformation", p) ) res[vn] = p$data_transformation$backward( res[vn] ) # make all positive
+      res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
+      if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn = paste( p$variabletomodel, "predicted_se", sep=".")
       input = fit$summary.fitted.values[ ii, "sd" ]
-      res[vn] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
+      res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
 
       vn = paste( p$variabletomodel, "predicted_lb", sep=".")
       input = fit$summary.fitted.values[ ii, "0.025quant" ]
-      res[vn] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
-      if (exists("data_transformation", p) ) res[vn] = p$data_transformation$backward( res[vn] ) # make all positive
+      res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
+      if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn = paste( p$variabletomodel, "predicted_ub", sep=".")
       input = fit$summary.fitted.values[ ii, "0.975quant" ]
-      res[vn] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
-      if (exists("data_transformation", p) ) res[vn] = p$data_transformation$backward( res[vn] ) # make all positive
+      res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
+      if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
     }
   }
 
@@ -215,7 +215,7 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
         }
         vn = paste( p$variabletomodel, "random_sample_iid", sep=".")
         input = fit$summary.random$iid_error[ii, "mean" ]
-        res[vn] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
+        res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
       }
 
       if (exists("strata", fit$summary.random)) {
@@ -238,7 +238,7 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
         }
         vn = paste( p$variabletomodel, "random_strata_nonspatial", sep=".")
         input = fit$summary.random$strata[ kk, "mean" ]
-        res[vn] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
+        res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
         # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
 
 
@@ -261,7 +261,7 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
 
         vn = paste( p$variabletomodel, "random_strata_spatial", sep=".")
         input = fit$summary.random$strata[ kk+max(kk), "mean" ]  # offset structure due to bym2
-        res[vn] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
+        res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
         # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
 
       }
