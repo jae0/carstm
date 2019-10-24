@@ -3,7 +3,12 @@
   substrate_carstm = function( p=NULL, DS=NULL, redo=FALSE, ... ) {
 
     require( carstm)
-    if ( is.null(p)) p = aegis.substrate::substrate_parameters(...)
+
+    if ( is.null(p)) {
+      p = aegis.substrate::substrate_parameters(...)
+    } else {
+      p = aegis.substrate::substrate_parameters(p=p, ...)
+    }
 
   # ------------------
 

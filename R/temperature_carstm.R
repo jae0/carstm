@@ -3,7 +3,12 @@ temperature_carstm = function ( p=NULL, DS=NULL, redo=FALSE, ... ) {
 
   # over-ride default dependent variable name if it exists
    require( carstm)
-  if (is.null(p)) p = aegis.temperature::temperature_parameters(...)
+
+    if ( is.null(p)) {
+      p = aegis.temperature::temperature_parameters(...)
+    } else {
+      p = aegis.temperature::temperature_parameters(p=p, ...)
+    }
 
 
   # OSD data series variables of interest
