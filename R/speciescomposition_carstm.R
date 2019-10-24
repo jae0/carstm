@@ -9,6 +9,10 @@
       p = aegis.speciescomposition::speciescomposition_parameters(p=p, ...)
     }
 
+
+
+  p$libs = c( p$libs, project.library ( "aegis", "aegis.coastline", "aegis.polygons", "aegis.speciescomposition", "aegis.survey", "carstm"  ) )
+
   # ---------------------
 
   if (DS=="carstm_auid") {

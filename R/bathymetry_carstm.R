@@ -3,13 +3,15 @@
 
     #\\ Note inverted convention: depths are positive valued
     #\\ i.e., negative valued for above sea level and positive valued for below sea level
-    require(carstm)
 
     if ( is.null(p)) {
       p = aegis.bathymetry::bathymetry_parameters(...)
     } else {
       p = aegis.bathymetry::bathymetry_parameters(p=p, ...)
     }
+
+
+  p$libs = c( p$libs, project.library ( "aegis", "aegis.bathymetry", "carstm"  ) )
 
 
   # ------------------
