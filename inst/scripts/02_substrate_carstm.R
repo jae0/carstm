@@ -1,7 +1,7 @@
 
 # construct basic parameter list defining the main characteristics of the study
 # and some plotting parameters (bounding box, projection, bathymetry layout, coastline)
-  p = aegis.substrate::substrate_carstm(
+  p = carstm::substrate_carstm(
     DS = "parameters",
     inputdata_spatial_discretization_planar_km = 1,  # km controls resolution of data prior to modelling to reduce data set and speed up modelling
     spatial_domain = "SSE",  # defines spatial area, currenty: "snowcrab" or "SSE"

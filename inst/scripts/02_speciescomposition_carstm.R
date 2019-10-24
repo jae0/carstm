@@ -6,15 +6,14 @@ if (!exists("year.assessment")) {
   year.assessment=lubridate::year(Sys.Date()) -1
 }
 
-p = aegis.speciescomposition::speciescomposition_parameters( yrs=1999:year.assessment )
+p = aegis.speciescomposition::speciescomposition_parameters( yrs=1999:year.assessment ) # to get var names
 
 # construct basic parameter list defining the main characteristics of the study
 # and some plotting parameters (bounding box, projection, bathymetry layout, coastline)
 for ( variabletomodel in p$varstomodel)  {
 
-    p = aegis.speciescomposition::speciescomposition_carstm(
+    p = carstm::speciescomposition_carstm(
       DS="parameters",
-      p=p,
       data_root = project.datadirectory( "aegis", "speciescomposition" ),
       variabletomodel = variabletomodel,
       inputdata_spatial_discretization_planar_km = 1,  # km controls resolution of data prior to modelling to reduce data set and speed up modelling

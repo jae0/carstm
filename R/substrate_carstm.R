@@ -4,12 +4,6 @@
 
     if ( is.null(p)) p = substrate_parameters(...)
 
-    if ( !exists("project_name", p)) p$project_name = "substrate"
-    if ( !exists("data_root", p) ) p$data_root = project.datadirectory( "aegis", p$project_name )
-    if ( !exists("datadir", p) )   p$datadir  = file.path( p$data_root, "data" )
-    if ( !exists("modeldir", p) )  p$modeldir = file.path( p$data_root, "modelled" )
-
-
   # ------------------
 
 
@@ -18,7 +12,6 @@
     # must be first to catch p
     pc = substrate_carstm(
       DS = "parameters",
-      project_class = "carstm", # defines which parameter class / set to load
       project_name = "substrate",
       variabletomodel = "substrate.grainsize",
       spatial_domain = p$spatial_domain,  # defines spatial area, currenty: "snowcrab" or "SSE"
