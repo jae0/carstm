@@ -16,7 +16,6 @@
     # must be first to catch p
     P = speciescomposition_carstm(
       DS="parameters",
-      project_class = "carstm", # defines which parameter class / set to load
       project_name = "speciescomposition",
       yrs = p$yrs,
       spatial_domain = p$spatial_domain,  # defines spatial area, currenty: "snowcrab" or "SSE"
