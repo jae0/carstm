@@ -3,7 +3,7 @@
 
     #\\ Note inverted convention: depths are positive valued
     #\\ i.e., negative valued for above sea level and positive valued for below sea level
-    if ( is.null(p)) p = bathymetry_parameters(...)
+    if ( is.null(p)) p = aegis.bathymetry::bathymetry_parameters(...)
 
     if ( !exists("project_name", p)) p$project_name = "bathymetry"
     if ( !exists("data_root", p) ) p$data_root = project.datadirectory( "aegis", p$project_name )
@@ -36,7 +36,7 @@
   # ------------------
 
   if (DS=="parameters") {
-    p$libs = unique( c( p$libs, project.library ( "carstm" ) ) )
+    p$libs = unique( c( p$libs, project.library ( "carstm", "aegis.bathymetry" ) ) )
 
     if ( !exists("project_name", p)) p$project_name = "bathymetry"
 
