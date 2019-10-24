@@ -15,6 +15,8 @@ if (0) {
   # load(fn)
 }
 
+yrs =2000:2018
+
 for (tu in c( "standardtow", "towdistance", "sweptarea") ) {
 
     # construct basic parameter list defining the main characteristics of the study and some plotting params

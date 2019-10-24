@@ -3,8 +3,11 @@
 
     require( carstm)
 
-    if (is.null(p)) p = aegis.speciescomposition::speciescomposition_parameters(...)
-
+    if (is.null(p)) {
+      p = aegis.speciescomposition::speciescomposition_parameters(...)
+    } else {
+      p = aegis.speciescomposition::speciescomposition_parameters(p=p, ...)
+    }
 
   # ---------------------
 
