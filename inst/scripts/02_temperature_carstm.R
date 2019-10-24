@@ -3,7 +3,7 @@
 
 # construct basic parameter list defining the main characteristics of the study
 # and some plotting parameters (bounding box, projection, bathymetry layout, coastline)
-p = aegis.temperature::temperature_carstm(
+p = carstm::temperature_carstm(
   DS = "parameters",
   project_name = "temperature",
   variabletomodel = "temperature",

@@ -1,5 +1,5 @@
 
-temperature_carstm = function ( p=NULL, DS, redo=FALSE, ... ) {
+temperature_carstm = function ( p=NULL, DS=NULL, redo=FALSE, ... ) {
 
   # over-ride default dependent variable name if it exists
    require( carstm)
@@ -10,12 +10,11 @@ temperature_carstm = function ( p=NULL, DS, redo=FALSE, ... ) {
 
   # ----------------------
 
-  if (project_class =="carstm_auid") {
+  if (DS =="carstm_auid") {
     # translate param values from one project to a unified representation
     # must be first to catch p
     pc = temperature_carstm(
       DS = "parameters",
-      project_class = "carstm", # defines which parameter class / set to load
       project_name = "temperature",
       variabletomodel = "t",
       yrs = p$yrs,
