@@ -9,7 +9,7 @@
       p = aegis.speciescomposition::speciescomposition_parameters(p=p, ...)
     }
 
-    p$libs = c( p$libs, project.library ( "aegis", "aegis.coastline", "aegis.polygons", "aegis.speciescomposition", "aegis.survey", "carstm"  ) )
+    p$libs = c( p$libs, project.library ( "aegis", "aegis.bathymetry", "aegis.substrate", "aegis.coastline", "aegis.polygons", "aegis.speciescomposition", "aegis.survey", "carstm"  ) )
 
   # ---------------------
 

@@ -10,7 +10,7 @@
       p = aegis.substrate::substrate_parameters(p=p, ...)
     }
 
-  p$libs = c( p$libs, project.library ( "aegis", "aegis.polygons", "aegis.coastline", "aegis.substrate", "carstm"   ) )
+  p$libs = c( p$libs, project.library ( "aegis", "aegis.bathymetry", "aegis.polygons", "aegis.coastline", "aegis.substrate", "carstm"   ) )
 
   # ------------------
 

@@ -10,7 +10,7 @@ temperature_carstm = function ( p=NULL, DS=NULL, redo=FALSE, ... ) {
       p = aegis.temperature::temperature_parameters(p=p, ...)
     }
 
-  p$libs = c( p$libs, project.library ( "aegis", "aegis.coastline","aegis.polygons", "aegis.temperature" , "carstm" ) )
+  p$libs = c( p$libs, project.library ( "aegis", "aegis.bathymetry", "aegis.coastline","aegis.polygons", "aegis.temperature" , "carstm" ) )
 
 
   # OSD data series variables of interest
