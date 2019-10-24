@@ -1,5 +1,5 @@
 
-  speciescomposition_carstm = function( DS="", p=NULL, ... ) {
+  speciescomposition_carstm = function( p=NULL, DS=NULL, redo=FALSE, ... ) {
 
     if (is.null(p)) p = speciescomposition_parameters(...)
 

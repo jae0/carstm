@@ -1,6 +1,6 @@
 
 
-  substrate_carstm = function( p=NULL, DS=NULL, varnames=NULL, redo=FALSE ) {
+  substrate_carstm = function( p=NULL, DS=NULL, redo=FALSE, ... ) {
 
     if ( is.null(p)) p = substrate_parameters(...)
 

@@ -1,41 +1,8 @@
 
-temperature_carstm = function ( p=NULL, DS, varnames=NULL, yr=NULL, ret="mean", dyear_index=NULL, redo=FALSE, ... ) {
+temperature_carstm = function ( p=NULL, DS, redo=FALSE, ... ) {
 
   # over-ride default dependent variable name if it exists
-  if (is.null(p)) p = temperature_parameters()
-
-  if ( !exists("project_name", p)) p$project_name = "temperature"
-  if ( !exists("data_root", p) ) p$data_root = project.datadirectory( "aegis", p$project_name )
-  if ( !exists("datadir", p) )   p$datadir  = file.path( p$data_root, "data" )
-  if ( !exists("modeldir", p) )  p$modeldir = file.path( p$data_root, "modelled" )
-
-
-
-  # manipulate temperature databases from osd, groundfish and snow crab and grid them
-  # OSD data source is
-  # http://www.meds-sdmm.dfo-mpo.gc.ca/zmp/climate/climate_e.htm
-  # http://www.mar.dfo-mpo.gc.ca/science/ocean/database/data_query.html
-  ## must download manually to this directory and run gzip
-  ## use choijae/Jc#00390
-  ## depths: 500,500, "complete profile"   .. raw data  for the SS
-  # (USER Defined -- region: jc.ss")
-
-  # no time records, just day/mon/year .. assume utc
-
-  basedir = project.datadirectory("aegis", "temperature" )
-  dir.create( basedir, recursive=T, showWarnings=F )
-
-  loc.archive = file.path( basedir, "archive", "profiles")
-  dir.create( loc.archive, recursive=T, showWarnings=F )
-
-  loc.basedata = file.path( basedir, "basedata", "rawdata" )
-  dir.create( loc.basedata, recursive=T, showWarnings=F )
-
-  loc.profile = file.path( basedir, "basedata", "profiles" )
-  dir.create( loc.profile, recursive=T, showWarnings=F )
-
-  loc.bottom = file.path( basedir, "basedata", "bottom"  )
-  dir.create( loc.bottom, recursive=T, showWarnings=F )
+  if (is.null(p)) p = temperature_parameters(...)
 
 
   # OSD data series variables of interest
@@ -149,6 +116,9 @@ temperature_carstm = function ( p=NULL, DS, varnames=NULL, yr=NULL, ret="mean", 
       yrs=p$yrs,
       inputdata_spatial_discretization_planar_km=p$inputdata_spatial_discretization_planar_km,
       inputdata_temporal_discretization_yr=p$inputdata_temporal_discretization_yr )
+
+    loc.bottom = file.path( basedir, "basedata", "bottom"  )
+    dir.create( loc.bottom, recursive=TRUE, showWarnings=FALSE )
 
     fn = file.path( loc.bottom, paste( "temperature", "aggregated_data", p$inputdata_spatial_discretization_planar_km, round(p$inputdata_temporal_discretization_yr,6), "rdata", sep=".") )
     if (!redo)  {

@@ -1,5 +1,5 @@
 
-  bathymetry_carstm = function( p=NULL, DS=NULL, varnames=NULL, redo=FALSE, ... ) {
+  bathymetry_carstm = function( p=NULL, DS=NULL, redo=FALSE, ... ) {
 
     #\\ Note inverted convention: depths are positive valued
     #\\ i.e., negative valued for above sea level and positive valued for below sea level
