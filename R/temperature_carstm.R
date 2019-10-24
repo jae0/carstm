@@ -65,7 +65,7 @@ temperature_carstm = function ( p=NULL, DS, varnames=NULL, yr=NULL, ret="mean", 
   # ---------------------
 
 
-  if (DS="parameters") {
+  if (DS=="parameters") {
 
     p$libs = unique( c( p$libs, project.library ( "carstm" ) ) )
 
