@@ -3,12 +3,8 @@
 
     #\\ Note inverted convention: depths are positive valued
     #\\ i.e., negative valued for above sea level and positive valued for below sea level
-    if ( is.null(p)) p = aegis.bathymetry::bathymetry_parameters(...)
 
-    if ( !exists("project_name", p)) p$project_name = "bathymetry"
-    if ( !exists("data_root", p) ) p$data_root = project.datadirectory( "aegis", p$project_name )
-    if ( !exists("datadir", p) )   p$datadir  = file.path( p$data_root, "data" )
-    if ( !exists("modeldir", p) )  p$modeldir = file.path( p$data_root, "modelled" )
+    if ( is.null(p)) p = aegis.bathymetry::bathymetry_parameters(...)
 
 
   # ------------------
@@ -33,13 +29,13 @@
       return(pc)
     }
 
+
   # ------------------
 
   if (DS=="parameters") {
     p$libs = unique( c( p$libs, project.library ( "carstm", "aegis.bathymetry" ) ) )
 
     if ( !exists("project_name", p)) p$project_name = "bathymetry"
-
 
     if ( !exists("data_transformation", p)) p$data_transformation=list( forward=function(x){ x+2500 }, backward=function(x) {x-2500} )
 
