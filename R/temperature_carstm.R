@@ -2,7 +2,8 @@
 temperature_carstm = function ( p=NULL, DS, redo=FALSE, ... ) {
 
   # over-ride default dependent variable name if it exists
-  if (is.null(p)) p = temperature_parameters(...)
+   require( carstm)
+  if (is.null(p)) p = aegis.temperature::temperature_parameters(...)
 
 
   # OSD data series variables of interest
@@ -13,7 +14,7 @@ temperature_carstm = function ( p=NULL, DS, redo=FALSE, ... ) {
     # translate param values from one project to a unified representation
     # must be first to catch p
     pc = temperature_carstm(
-      DS = parameters,
+      DS = "parameters",
       project_class = "carstm", # defines which parameter class / set to load
       project_name = "temperature",
       variabletomodel = "t",

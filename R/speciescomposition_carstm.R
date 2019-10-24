@@ -1,11 +1,9 @@
 
   speciescomposition_carstm = function( p=NULL, DS=NULL, redo=FALSE, ... ) {
 
-    if (is.null(p)) p = speciescomposition_parameters(...)
+    require( carstm)
 
-    ddir = project.datadirectory( "aegis", "speciescomposition" )
-    infix = paste( p$spatial_domain,  p$taxa, sep=".")
-    dir.create( ddir, showWarnings=FALSE, recursive=TRUE )
+    if (is.null(p)) p = aegis.speciescomposition::speciescomposition_parameters(...)
 
 
   # ---------------------

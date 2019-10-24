@@ -3,6 +3,7 @@
 
     #\\ Note inverted convention: depths are positive valued
     #\\ i.e., negative valued for above sea level and positive valued for below sea level
+    require(carstm)
 
     if ( is.null(p)) p = aegis.bathymetry::bathymetry_parameters(...)
 
@@ -16,7 +17,6 @@
 
       pc = bathymetry_carstm(
         DS = "parameters",
-        project_class = "carstm", # defines which parameter class / set to load
         project_name = "bathymetry",
         variabletomodel = "z",
         spatial_domain = p$spatial_domain,  # defines spatial area, currenty: "snowcrab" or "SSE"
