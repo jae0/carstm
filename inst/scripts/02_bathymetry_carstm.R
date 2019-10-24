@@ -6,7 +6,6 @@
   p = carstm::bathymetry_carstm(
     DS = "parameters",
     project_name = "bathymetry",
-    project_class = "carstm", # defines which parameter class / set to load
     spatial_domain = "SSE",  # defines spatial area, currenty: "snowcrab" or "SSE"
     inputdata_spatial_discretization_planar_km = 1,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
     areal_units_resolution_km = 25, # km dim of lattice ~ 1 hr

@@ -5,7 +5,6 @@
 # and some plotting parameters (bounding box, projection, bathymetry layout, coastline)
 p = aegis.temperature::temperature_carstm(
   DS = "parameters",
-  project_class = "carstm", # defines which parameter set to load
   project_name = "temperature",
   variabletomodel = "temperature",
   inputdata_spatial_discretization_planar_km = 1,  # km controls resolution of data prior to modelling to reduce data set and speed up modelling

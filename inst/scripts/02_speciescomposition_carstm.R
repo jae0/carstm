@@ -15,7 +15,6 @@ for ( variabletomodel in p$varstomodel)  {
     p = aegis.speciescomposition::speciescomposition_carstm(
       DS="parameters",
       p=p,
-      project_class = "carstm", # defines which parameter set to load
       data_root = project.datadirectory( "aegis", "speciescomposition" ),
       variabletomodel = variabletomodel,
       inputdata_spatial_discretization_planar_km = 1,  # km controls resolution of data prior to modelling to reduce data set and speed up modelling
