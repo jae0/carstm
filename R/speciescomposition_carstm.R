@@ -148,7 +148,7 @@
       M = speciescomposition.db( p=p, DS="speciescomposition" )
 
       M = M[ which(M$yr %in% p$yrs), ]
-      M$tiyr = lubridate::decimal_date ( M$date )
+      M$tiyr = lubridate::decimal_date ( M$timestamp )
 
       # globally remove all unrealistic data
   #    keep = which( M[,p$variabletomodel] >= -3 & M[,p$variabletomodel] <= 25 ) # hard limits
@@ -161,8 +161,9 @@
         if (length(keep) > 0 ) M = M[ keep, ]
       }
 
-      M$dyear = M$tiyr - M$yr
       M$dyear = discretize_data( M$dyear, seq(0, 1, by=p$inputdata_temporal_discretization_yr), digits=6 )
+
+      M = planar2lonlat(M, proj.type=p$aegis_proj4string_planar_km) # get planar projections of lon/lat in km
 
       # reduce size
       M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
@@ -171,6 +172,8 @@
       M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
       M$lon = NULL
       M$lat = NULL
+      M$plon = NULL
+      M$plat = NULL
       M = M[ which(is.finite(M$StrataID)),]
       M$StrataID = as.character( M$StrataID )  # match each datum to an area
 
