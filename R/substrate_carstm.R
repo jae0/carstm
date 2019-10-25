@@ -1,6 +1,6 @@
 
 
-  substrate_carstm = function( p=NULL, DS=NULL, redo=FALSE, ... ) {
+  substrate_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     require( carstm)
 
@@ -15,7 +15,7 @@
   # ------------------
 
 
-  if (DS =="carstm_auid") {
+    if (DS=="parameters_override") {
     # translate param values from one project to a unified representation
     # must be first to catch p
     pc = substrate_carstm(
@@ -103,57 +103,6 @@
 
 
 
-    if ( DS=="aggregated_data") {
-
-      p = substrate_carstm(
-        DS = "parameters",
-        variabletomodel = p$variabletomodel,
-        inputdata_spatial_discretization_planar_km=p$inputdata_spatial_discretization_planar_km
-      )
-
-      fn = file.path( p$datadir, paste( "substrate", "aggregated_data", p$inputdata_spatial_discretization_planar_km, "rdata", sep=".") )
-      if (!redo)  {
-        if (file.exists(fn)) {
-          load( fn)
-          return( M )
-        }
-      }
-
-      M = substrate.db( p=p, DS="lonlat.highres" )
-      M[,p$variabletomodel] = M$grainsize
-
-      M$plon = round(M$plon / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
-      M$plat = round(M$plat / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
-
-      bb = as.data.frame( t( simplify2array(
-        tapply( X=M[,p$variabletomodel], INDEX=list(paste(  M$plon, M$plat ) ),
-          FUN = function(w) { c(
-            mean(w, na.rm=TRUE),
-            sd(w, na.rm=TRUE),
-            length( which(is.finite(w)) )
-          ) }, simplify=TRUE )
-      )))
-      M = NULL
-      colnames(bb) = paste( p$variabletomodel, c("mean", "sd", "n"), sep=".")
-      plonplat = matrix( as.numeric( unlist(strsplit( rownames(bb), " ", fixed=TRUE))), ncol=2, byrow=TRUE)
-
-      bb$plon = plonplat[,1]
-      bb$plat = plonplat[,2]
-      plonplat = NULL
-
-      M = bb[ which( is.finite( bb[, paste(p$variabletomodel, "mean", sep=".") ] )) ,]
-      bb =NULL
-      gc()
-      M = planar2lonlat( M, p$aegis_proj4string_planar_km)
-      save(M, file=fn, compress=TRUE)
-
-      return( M )
-    }
-
-
-    # ---------------------------------------
-
-
 
   if ( DS=="carstm_inputs") {
 
@@ -173,7 +122,7 @@
     sppoly = areal_units( p=p )  # will redo if not found
 
     # do this immediately to reduce storage for sppoly (before adding other variables)
-    M = substrate_carstm ( p=p, DS="aggregated_data" )  # 16 GB in RAM just to store!
+    M = substrate.db ( p=p, DS="aggregated_data" )  # 16 GB in RAM just to store!
     names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
 
     # reduce size
@@ -190,7 +139,7 @@
     M = M[ which(is.finite(M$StrataID)),]
     M$tag = "observations"
 
-    pB = aegis.bathymetry::bathymetry_carstm( p=p, DS="carstm_auid" ) # transcribes relevant parts of p to load bathymetry
+    pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
     BI = bathymetry_carstm ( p=pB, DS="carstm_inputs" )  # unmodeled!
     jj = match( as.character( M$StrataID), as.character( BI$StrataID) )
     M$z = BI$z[jj]

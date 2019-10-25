@@ -11,7 +11,7 @@ p = aegis.speciescomposition::speciescomposition_parameters( yrs=1999:year.asses
 # construct basic parameter list defining the main characteristics of the study
 # and some plotting parameters (bounding box, projection, bathymetry layout, coastline)
 for ( variabletomodel in p$varstomodel)  {
-
+    # variabletomodel = "pca1"
     p = carstm::speciescomposition_carstm(
       DS="parameters",
       data_root = project.datadirectory( "aegis", "speciescomposition" ),

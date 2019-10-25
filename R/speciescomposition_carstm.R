@@ -1,5 +1,5 @@
 
-  speciescomposition_carstm = function( p=NULL, DS=NULL, redo=FALSE, vn=NULL, ... ) {
+  speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varnametomodel=NULL, ... ) {
 
     require( carstm)
 
@@ -13,14 +13,16 @@
 
   # ---------------------
 
-  if (DS=="carstm_auid") {
+  if (DS=="parameters_override") {
     # translate param values from one project to a unified representation
     # must be first to catch p
-    P = speciescomposition_carstm(
+    if (is.null(varnametomodel)) varnametomodel = p$variabletomodel
+
+    pc = speciescomposition_carstm(
       DS="parameters",
       project_name = "speciescomposition",
       yrs = p$yrs,
-      variabletomodel = vn,
+      variabletomodel = varnametomodel,
       spatial_domain = p$spatial_domain,  # defines spatial area, currenty: "snowcrab" or "SSE"
       areal_units_overlay = p$areal_units_overlay, # currently: "snowcrab_managementareas",  "groundfish_strata" .. additional polygon layers for subsequent analysis for now ..
       areal_units_resolution_km = p$areal_units_resolution_km, # km dim of lattice ~ 1 hr
@@ -30,7 +32,7 @@
       auid = p$auid
     )
 
-    return(P)
+    return(pc)
   }
 
 
@@ -126,6 +128,8 @@
 
     if ( DS=="carstm_inputs") {
 
+      p = speciescomposition_carstm(p=p, DS="parameters_override"  )
+
       fn = file.path( p$modeldir, paste( "speciescomposition", "carstm_inputs", p$auid,
         p$inputdata_spatial_discretization_planar_km,
         round(p$inputdata_temporal_discretization_yr, 6),
@@ -145,39 +149,41 @@
       crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
 
       # do this immediately to reduce storage for sppoly (before adding other variables)
-      M = speciescomposition.db( p=p, DS="speciescomposition" )
+
+    M = speciescomposition.db( p=p, DS="speciescomposition"  )
+
+    # globally remove all unrealistic data
+     # p$quantile_bounds_data = c(0.0005, 0.9995)
+    if (exists("quantile_bounds_data", p)) {
+      TR = quantile(M[,p$variabletomodel], probs=p$quantile_bounds_data, na.rm=TRUE ) # this was -1.7, 21.8 in 2015
+      keep = which( M[,p$variabletomodel] >=  TR[1] & M[,p$variabletomodel] <=  TR[2] )
+      if (length(keep) > 0 ) M = M[ keep, ]
+       # this was -1.7, 21.8 in 2015
+    }
+
+
 
       M = M[ which(M$yr %in% p$yrs), ]
       M$tiyr = lubridate::decimal_date ( M$timestamp )
 
-      # globally remove all unrealistic data
-  #    keep = which( M[,p$variabletomodel] >= -3 & M[,p$variabletomodel] <= 25 ) # hard limits
-  #    if (length(keep) > 0 ) M = M[ keep, ]
-
-      # p$quantile_bounds_data = c(0.0005, 0.9995)
-      if (exists("quantile_bounds_data", p)) {
-        TR = quantile(M[,p$variabletomodel], probs=p$quantile_bounds, na.rm=TRUE ) # this was -1.7, 21.8 in 2015
-        keep = which( M[,p$variabletomodel] >=  TR[1] & M[,p$variabletomodel] <=  TR[2] )
-        if (length(keep) > 0 ) M = M[ keep, ]
-      }
-
-      M$dyear = discretize_data( M$dyear, seq(0, 1, by=p$inputdata_temporal_discretization_yr), digits=6 )
+    M$dyear = M$tiyr - M$yr
+    M$dyear = discretize_data( M$dyear, seq(0, 1, by=p$inputdata_temporal_discretization_yr), digits=6 )
 
       M = planar2lonlat(M, proj.type=p$aegis_proj4string_planar_km) # get planar projections of lon/lat in km
-
       # reduce size
       M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
       # levelplot(z.mean~plon+plat, data=M, aspect="iso")
 
+    M$plon = round(M$plon / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
+    M$plat = round(M$plat / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
+
+
       M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
       M$lon = NULL
       M$lat = NULL
-      M$plon = NULL
-      M$plat = NULL
+
       M = M[ which(is.finite(M$StrataID)),]
       M$StrataID = as.character( M$StrataID )  # match each datum to an area
-
-      names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
 
       M$tag = "observations"
 
@@ -187,28 +193,27 @@
       APS[,p$variabletomodel] = NA
 
 
-      pB = bathymetry_carstm( p=p, DS="carstm_auid" ) # transcribes relevant parts of p to load bathymetry
-      pS = substrate_carstm( p=p, DS ="carstm_auid" ) # transcribes relevant parts of p to load bathymetry
-      pT = temperature_carstm( p=p, DS ="carstm_auid" ) # transcribes relevant parts of p to load
-
+      pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
+      pS = substrate_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
+      pT = temperature_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load
 
 
       M$plon = round(M$plon / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
       M$plat = round(M$plat / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
 
-      BI = carstm_model ( p=pB, DS="aggregated_data" )  # unmodeled!
+      BI = bathymetry.db( p=pB, DS="aggregated_data" )  # unmodeled!
       jj = match( as.character( M$StrataID), as.character( BI$StrataID) )
       M[, pB$variabletomodel] = BI[jj, paste(pB$variabletomodel,"predicted",sep="." )]
       jj =NULL
       BI = NULL
 
-      SI = carstm_model ( p=pS, DS="aggregated_data" )  # unmodeled!
+      SI = substrate.db( p=pS, DS="aggregated_data" )  # unmodeled!
       jj = match( as.character( M$StrataID), as.character( SI$StrataID) )
       M[, pS$variabletomodel] = SI[jj, paste(pS$variabletomodel,"predicted",sep="." )]
       jj =NULL
       SI = NULL
 
-      TI = carstm_model ( p=pT, DS="aggregated_data" )  # unmodeled!
+      TI = temperature.db ( p=pT, DS="aggregated_data" )  # unmodeled!
       jj = match( as.character( M$StrataID), as.character( TI$StrataID) )
       M[, pT$variabletomodel] = TI[jj, paste(pT$variabletomodel,"predicted",sep="." )]
       jj =NULL
