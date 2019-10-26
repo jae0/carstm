@@ -211,7 +211,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     SI = NULL
 
     TI = carstm_model ( p=pT, DS="carstm_modelled" )
-    jj = match( as.character( APS$StrataID), as.character( TI$StrataID) )  and time too
+    jj = match( as.character( APS$StrataID), as.character( TI$StrataID) )  #and time too
 
     # --------------------- to do
 
