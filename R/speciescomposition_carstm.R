@@ -161,7 +161,7 @@
        # this was -1.7, 21.8 in 2015
     }
 
-
+      M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
 
       M = M[ which(M$yr %in% p$yrs), ]
       M$tiyr = lubridate::decimal_date ( M$timestamp )
@@ -177,8 +177,16 @@
     M$plon = round(M$plon / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
     M$plat = round(M$plat / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
 
+    pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
+    pS = substrate_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
+    pT = temperature_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load
 
-      M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
+    M[, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[, c("plon", "plat")] )
+    M[, pS$variabletomodel] = lookup_substrate_from_surveys(  p=pS, locs=M[, c("plon", "plat")] )
+    M[, pT$variabletomodel] = lookup_temperature_from_surveys(  p=pT, locs=M[, c("plon", "plat")], timestamp=M$timestamp )
+
+
+
       M$lon = NULL
       M$lat = NULL
 
@@ -191,34 +199,6 @@
       APS$StrataID = as.character( APS$StrataID )
       APS$tag ="predictions"
       APS[,p$variabletomodel] = NA
-
-
-      pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
-      pS = substrate_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
-      pT = temperature_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load
-
-
-      M$plon = round(M$plon / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
-      M$plat = round(M$plat / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
-
-      BI = bathymetry.db( p=pB, DS="aggregated_data" )  # unmodeled!
-      jj = match( as.character( M$StrataID), as.character( BI$StrataID) )
-      M[, pB$variabletomodel] = BI[jj, paste(pB$variabletomodel,"predicted",sep="." )]
-      jj =NULL
-      BI = NULL
-
-      SI = substrate.db( p=pS, DS="aggregated_data" )  # unmodeled!
-      jj = match( as.character( M$StrataID), as.character( SI$StrataID) )
-      M[, pS$variabletomodel] = SI[jj, paste(pS$variabletomodel,"predicted",sep="." )]
-      jj =NULL
-      SI = NULL
-
-      TI = temperature.db ( p=pT, DS="aggregated_data" )  # unmodeled!
-      jj = match( as.character( M$StrataID), as.character( TI$StrataID) )
-      M[, pT$variabletomodel] = TI[jj, paste(pT$variabletomodel,"predicted",sep="." )]
-      jj =NULL
-      TI = NULL
-
 
 
       BI = carstm_model ( p=pB, DS="carstm_modelled" )  # unmodeled!
@@ -234,7 +214,8 @@
       SI = NULL
 
       TI = carstm_model ( p=pT, DS="carstm_modelled" )  # unmodeled!
-      jj = match( as.character( APS$StrataID), as.character( TI$StrataID) )
+      jj = match( as.character( APS$StrataID), as.character( TI$StrataID) )  and time too
+      --------------------- to do
       APS[, pT$variabletomodel] = TI[jj, paste(pT$variabletomodel,"predicted",sep="." )]
       jj =NULL
       TI = NULL

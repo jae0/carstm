@@ -130,17 +130,23 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     # prediction surface
     sppoly = areal_units( p=p )  # will redo if not found
-
     crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
 
     # do this immediately to reduce storage for sppoly (before adding other variables)
-    M = temperature.db( p=p, DS="aggregated_data"  )  # will redo if not found .. not used here but used for data matching/lookup in other aegis projects that use bathymetry
+    M = temperature.db( p=p, DS="aggregated_data"  )
 
     # reduce size
     M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
     # levelplot(z.mean~plon+plat, data=M, aspect="iso")
 
     M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
+
+    pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
+    M[, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[, c("plon", "plat")] )
+
+    # pS = substrate_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
+    # M[, pS$variabletomodel] = lookup_substrate_from_surveys(  p=pS, locs=M[, c("plon", "plat")] )
+
     M$lon = NULL
     M$lat = NULL
     M$plon = NULL
@@ -152,8 +158,6 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
     M$tag = "observations"
 
-    pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
-
     # already has depth .. no need to match
 
 
@@ -162,7 +166,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     APS$tag ="predictions"
     APS[, p$variabletomodel] = NA
 
-    BM = carstm_model ( p=pB, DS="carstm_modelled" )  # unmodeled!
+    BM = carstm_model ( p=pB, DS="carstm_modelled" )
     jj = match( as.character( APS$StrataID), as.character( BM$StrataID) )
     APS[, pB$variabletomodel] = BM$z.predicted[jj]
     jj =NULL

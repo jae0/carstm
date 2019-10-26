@@ -120,17 +120,20 @@
 
     # prediction surface
     sppoly = areal_units( p=p )  # will redo if not found
+    crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
 
     # do this immediately to reduce storage for sppoly (before adding other variables)
     M = substrate.db ( p=p, DS="aggregated_data" )  # 16 GB in RAM just to store!
     names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
+    M = M[ which(is.finite(M[, pB$variabletomodel] )), ]
 
     # reduce size
     M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
     # levelplot(substrate.grainsize.mean~plon+plat, data=M, aspect="iso")
-
-    crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
     M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
+
+    pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
+    M$z = lookup_bathymetry_from_surveys( p=pB, locs=M[, c("plon", "plat")] )
 
     M$lon = NULL
     M$lat = NULL
@@ -138,16 +141,6 @@
     M$plat = NULL
     M = M[ which(is.finite(M$StrataID)),]
     M$tag = "observations"
-
-    pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
-    BI = bathymetry_carstm ( p=pB, DS="carstm_inputs" )  # unmodeled!
-    jj = match( as.character( M$StrataID), as.character( BI$StrataID) )
-    M$z = BI$z[jj]
-    jj =NULL
-
-    M = M[ which(is.finite(M[, pB$variabletomodel] )), ]
-
-    BI = NULL
 
     sppoly_df = as.data.frame(sppoly)
     BM = carstm_model ( p=pB, DS="carstm_modelled" )  # modeled!
