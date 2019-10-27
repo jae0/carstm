@@ -2,7 +2,7 @@
 carstm_model = function( p, M=NULL, DS="redo" ) {
 
   auids = p$auid
-  if (exists( "inputdata_spatial_discretization_planar_km", p )) auids = paste( auids, p$inputdata_spatial_discretization_planar_km ,   sep="_" )
+  if (exists( "inputdata_spatial_discretization_planar_km", p )) auids = paste( auids, round(p$inputdata_spatial_discretization_planar_km, 6),   sep="_" )
   if (exists( "inputdata_temporal_discretization_yr", p )) auids = paste( auids, round(p$inputdata_temporal_discretization_yr, 6),   sep="_" )
 
   auids_suffix = paste( auids, p$variabletomodel, p$carstm_modelengine,  "rdata", sep="." )
