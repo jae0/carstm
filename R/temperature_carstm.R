@@ -168,7 +168,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     BM = carstm_model ( p=pB, DS="carstm_modelled" )
     jj = match( as.character( APS$StrataID), as.character( BM$StrataID) )
-    APS[, pB$variabletomodel] = BM$z.predicted[jj]
+    APS[, pB$variabletomodel] = BM[[ paste(pB$variabletomodel, "predicted", sep=".") ]] [jj]
     jj =NULL
     BM = NULL
 
