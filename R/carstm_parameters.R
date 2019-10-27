@@ -64,7 +64,7 @@ carstm_parameters = function( p=NULL, DS="default", redo=FALSE, ... ) {
     )
 
     if (!exists("discretization", p) ) p$discretization = list()
-    if (!exists("z", p$discretization) ) p$discretization$z = c(1.25, 2.5, 5, 10, 20, 40, 80, 160, 320, 640, 1280 )  # depth cut points
+    if (!exists("z", p$discretization) ) p$discretization$z = c(1.25, 2.5, 5, 10, 20, 40, 80, 160, 320, 640, 1280, 5000 )  # depth cut points
     # if (!exists("z", p$discretization) ) p$discretization$z = c(2.5, 5, 10, 20, 40, 80, 160, 320, 640 )
     if (!exists("dz", p$discretization) ) p$discretization$dz = c(0.01, 0.1,  1, 2, 4, 6, 8, 10, 12 )  # slope cut points
     if (!exists("ddz", p$discretization) ) p$discretization$ddz = c(0.01, 0.1, 0.2, 0.4, 0.8, 1, 2, 4  )  # slope cut points
