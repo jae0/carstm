@@ -162,6 +162,7 @@
     BM = carstm_model ( p=pB, DS="carstm_modelled" )  # modeled!
     kk = match( as.character(  sppoly_df$StrataID), as.character( BM$StrataID ) )
     sppoly_df[, pB$variabletomodel] = BM[[ paste(pB$variabletomodel, "predicted", sep=".") ]] [kk]
+
     sppoly_df[,  p$variabletomodel] = NA
     BM = NULL
     sppoly_df$StrataID = as.character( sppoly_df$StrataID )

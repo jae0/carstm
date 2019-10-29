@@ -36,7 +36,11 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
 
   if ( grepl("inla", p$carstm_modelengine) ) {
     # hyperparms
-    H = carstm_hyperparameters( sd(M[,p$variabletomodel], na.rm=TRUE), alpha=0.5, median( M[,p$variabletomodel], na.rm=TRUE) )
+    if ( grepl( "family.*\=.*lognormal", p$carstm_modelcall)) {
+      H = carstm_hyperparameters( sd( log(M[,p$variabletomodel]), na.rm=TRUE), alpha=0.5, median( log(M[,p$variabletomodel]), na.rm=TRUE) )
+    } else {
+      H = carstm_hyperparameters( sd(M[,p$variabletomodel], na.rm=TRUE), alpha=0.5, median( M[,p$variabletomodel], na.rm=TRUE) )
+    }
     M$strata  = as.numeric( M$StrataID)
     M$zi = discretize_data( M$z, p$discretization$z )
 
@@ -148,6 +152,7 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
       vn = paste( p$variabletomodel, "predicted", sep=".")
       input = fit$summary.fitted.values[ ii, "mean" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
+      if ( grepl( "family.*\=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn = paste( p$variabletomodel, "predicted_se", sep=".")
@@ -157,11 +162,13 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
       vn = paste( p$variabletomodel, "predicted_lb", sep=".")
       input = fit$summary.fitted.values[ ii, "0.025quant" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
+      if ( grepl( "family.*\=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn = paste( p$variabletomodel, "predicted_ub", sep=".")
       input = fit$summary.fitted.values[ ii, "0.975quant" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
+      if ( grepl( "family.*\=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
     }
   }
