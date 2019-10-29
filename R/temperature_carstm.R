@@ -142,10 +142,9 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
 
     pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
-    M[, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[, c("plon", "plat")] )
 
     # pS = substrate_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
-    # M[, pS$variabletomodel] = lookup_substrate_from_surveys(  p=pS, locs=M[, c("plon", "plat")] )
+    # M[, pS$variabletomodel] = lookup_substrate_from_surveys(  p=pS, locs=M[, c("lon", "lat")] )
 
     M$lon = NULL
     M$lat = NULL
@@ -158,7 +157,24 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
     M$tag = "observations"
 
-    # already has depth .. no need to match
+    # already has depth .. but in case some are missing data
+    pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
+    kk = which(!is.finite( M[, pB$variabletomodel] ))
+    if (length(kk > 0)) {
+      M[kk, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[kk, c("lon", "lat")] )
+    }
+
+    # if any still missing then use a randomly chosen depth by StrataID
+    kk =  which( !is.finite(M[, pB$variabletomodel]))
+    if (length(kk) > 0) {
+      AD = bathymetry.db ( p=pB, DS="aggregated_data"  )  # 16 GB in RAM just to store!
+      AD = AD[ which( AD$lon > p$corners$lon[1] & AD$lon < p$corners$lon[2]  & AD$lat > p$corners$lat[1] & AD$lat < p$corners$lat[2] ), ]
+      # levelplot( eval(paste(p$variabletomodel, "mean", sep="."))~plon+plat, data=M, aspect="iso")
+      AD$StrataID = over( SpatialPoints( AD[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
+      oo = tapply( AD[, paste(pB$variabletomodel, "mean", sep="." )], AD$StrataID, FUN=median, na.rm=TRUE )
+      jj = match( as.character( M$StrataID[kk]), as.character( names(oo )) )
+      M[kk, pB$variabletomodel] = oo[jj ]
+    }
 
 
     APS = as.data.frame(sppoly)

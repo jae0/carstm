@@ -178,10 +178,51 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     pS = substrate_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
     pT = temperature_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load
 
-    M[, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[, c("plon", "plat")] )
-    M[, pS$variabletomodel] = lookup_substrate_from_surveys(  p=pS, locs=M[, c("plon", "plat")] )
-    M[, pT$variabletomodel] = lookup_temperature_from_surveys(  p=pT, locs=M[, c("plon", "plat")], timestamp=M$timestamp )
+    M[, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[, c("lon", "lat")] )
+    M[, pS$variabletomodel] = lookup_substrate_from_surveys(  p=pS, locs=M[, c("lon", "lat")] )
+    M[, pT$variabletomodel] = lookup_temperature_from_surveys(  p=pT, locs=M[, c("lon", "lat")], timestamp=M$timestamp )
 
+
+    # if any still missing then use a randomly chosen depth by StrataID
+    kk =  which( !is.finite(M[, pB$variabletomodel]))
+    if (length(kk) > 0) {
+      AD = bathymetry.db ( p=pB, DS="aggregated_data"  )  # 16 GB in RAM just to store!
+      AD = AD[ which( AD$lon > p$corners$lon[1] & AD$lon < p$corners$lon[2]  & AD$lat > p$corners$lat[1] & AD$lat < p$corners$lat[2] ), ]
+      # levelplot( eval(paste(p$variabletomodel, "mean", sep="."))~plon+plat, data=M, aspect="iso")
+      AD$StrataID = over( SpatialPoints( AD[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
+      oo = tapply( AD[, paste(pB$variabletomodel, "mean", sep="." )], AD$StrataID, FUN=median, na.rm=TRUE )
+      jj = match( as.character( M$StrataID[kk]), as.character( names(oo )) )
+      M[kk, pB$variabletomodel] = oo[jj ]
+    }
+
+    # if any still missing then use a randomly chosen depth by StrataID
+    kk =  which( !is.finite(M[, pS$variabletomodel]))
+    if (length(kk) > 0) {
+      AD = substrate.db ( p=pS, DS="aggregated_data"  )  # 16 GB in RAM just to store!
+      AD = AD[ which( AD$lon > p$corners$lon[1] & AD$lon < p$corners$lon[2]  & AD$lat > p$corners$lat[1] & AD$lat < p$corners$lat[2] ), ]
+      # levelplot( eval(paste(p$variabletomodel, "mean", sep="."))~plon+plat, data=M, aspect="iso")
+      AD$StrataID = over( SpatialPoints( AD[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
+      oo = tapply( AD[, paste(pS$variabletomodel, "mean", sep="." )], AD$StrataID, FUN=median, na.rm=TRUE )
+      jj = match( as.character( M$StrataID[kk]), as.character( names(oo )) )
+      M[kk, pS$variabletomodel] = oo[jj ]
+    }
+
+    # if any still missing then use a randomly chosen depth by StrataID
+    kk =  which( !is.finite(M[, pT$variabletomodel]))
+    if (length(kk) > 0) {
+      AD = temperature.db ( p=pT, DS="aggregated_data"  )  # 16 GB in RAM just to store!
+      AD = AD[ which( AD$lon > p$corners$lon[1] & AD$lon < p$corners$lon[2]  & AD$lat > p$corners$lat[1] & AD$lat < p$corners$lat[2] ), ]
+      # levelplot( eval(paste(p$variabletomodel, "mean", sep="."))~plon+plat, data=M, aspect="iso")
+
+      AD$StrataID = over( SpatialPoints( AD[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
+      AD$uid = paste(AD$StrataID, AD$yr, AD$dyear, sep=".")
+      M$uid =  paste(M$StrataID, M$yr, M$dyear, sep=".")
+
+      oo = tapply( AD[, paste(pT$variabletomodel, "mean", sep="." )], AD$uid, FUN=median, na.rm=TRUE )
+
+      jj = match( as.character( M$uid[kk]), as.character( names(oo )) )
+      M[kk, pT$variabletomodel] = oo[jj ]
+    }
 
 
     M$lon = NULL
