@@ -183,7 +183,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     M[, pT$variabletomodel] = lookup_temperature_from_surveys(  p=pT, locs=M[, c("lon", "lat")], timestamp=M$timestamp )
 
 
-    # if any still missing then use a randomly chosen depth by StrataID
+    # if any still missing then use a mean depth by StrataID
     kk =  which( !is.finite(M[, pB$variabletomodel]))
     if (length(kk) > 0) {
       AD = bathymetry.db ( p=pB, DS="aggregated_data"  )  # 16 GB in RAM just to store!
@@ -195,7 +195,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
       M[kk, pB$variabletomodel] = oo[jj ]
     }
 
-    # if any still missing then use a randomly chosen depth by StrataID
+    # if any still missing then use a mean substrate by StrataID
     kk =  which( !is.finite(M[, pS$variabletomodel]))
     if (length(kk) > 0) {
       AD = substrate.db ( p=pS, DS="aggregated_data"  )  # 16 GB in RAM just to store!
@@ -207,7 +207,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
       M[kk, pS$variabletomodel] = oo[jj ]
     }
 
-    # if any still missing then use a randomly chosen depth by StrataID
+    # if any still missing then use a mean temp by StrataID
     kk =  which( !is.finite(M[, pT$variabletomodel]))
     if (length(kk) > 0) {
       AD = temperature.db ( p=pT, DS="aggregated_data"  )  # 16 GB in RAM just to store!
@@ -251,22 +251,29 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     jj =NULL
     SI = NULL
 
-    TI = carstm_model ( p=pT, DS="carstm_modelled" )
-    jj = match( as.character( APS$StrataID), as.character( TI$StrataID) )  #and time too
+    # to this point APS is static, now add time dynamics (teperature)
+    # ---------------------
 
-    # --------------------- to do
-
-    APS[, pT$variabletomodel] = TI[jj, paste(pT$variabletomodel,"predicted",sep="." )]
-    jj =NULL
-    TI = NULL
-
-    vn = c( p$variabletomodel, pB$variabletomodel,  pS$variabletomodel,  pT$variabletomodel, "tag", "StrataID" )
+    vn = c( p$variabletomodel, pB$variabletomodel,  pS$variabletomodel, "tag", "StrataID" )
     APS = APS[, vn]
 
     # expand APS to all time slices
     n_aps = nrow(APS)
     APS = cbind( APS[ rep.int(1:n_aps, p$nt), ], rep.int( p$prediction_ts, rep(n_aps, p$nt )) )
     names(APS) = c(vn, "tiyr")
+
+
+    TI = carstm_model ( p=pT, DS="carstm_modelled" )
+    TI = as.data.frame(TI)
+    TI_uid = paste( as.character( TI$StrataID), TI$yr, TI$dyear, sep="." )
+
+    APS_uid = paste( as.character( APS$StrataID), APS$yr, APS$dyear, sep="." )
+
+    jj = match( APS_uid, TI_uid )  #and time too
+
+    APS[, pT$variabletomodel] = TI[jj, paste(pT$variabletomodel, "predicted",sep="." )]
+    jj =NULL
+    TI = NULL
 
     M$tiyr = M$yr + M$dyear
     M = rbind( M[, names(APS)], APS )

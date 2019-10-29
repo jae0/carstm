@@ -164,7 +164,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       M[kk, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[kk, c("lon", "lat")] )
     }
 
-    # if any still missing then use a randomly chosen depth by StrataID
+    # if any still missing then use a mean depth by StrataID
     kk =  which( !is.finite(M[, pB$variabletomodel]))
     if (length(kk) > 0) {
       AD = bathymetry.db ( p=pB, DS="aggregated_data"  )  # 16 GB in RAM just to store!
@@ -175,7 +175,6 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       jj = match( as.character( M$StrataID[kk]), as.character( names(oo )) )
       M[kk, pB$variabletomodel] = oo[jj ]
     }
-
 
     APS = as.data.frame(sppoly)
     APS$StrataID = as.character( APS$StrataID )
@@ -188,7 +187,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     jj =NULL
     BM = NULL
 
-    vn = c( p$variabletomodel, pB$variabletomodel, "tag", "StrataID", "z" )
+    vn = c( p$variabletomodel, pB$variabletomodel, "tag", "StrataID"  )
     APS = APS[, vn]
 
     # expand APS to all time slices
