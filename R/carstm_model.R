@@ -32,6 +32,9 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
     StrataID = sppoly[["StrataID"]],
     strata   = as.numeric(sppoly[["StrataID"]] )  )
 
+  # permit passing a function rather than data directly .. less RAM usage in parent call
+  if (class(M)=="character") assign("M", eval(parse(text=M) ) )
+
   if (exists("data_transformation", p)) M[, p$variabletomodel]  = p$data_transformation$forward( M[, p$variabletomodel] ) # make all positive
 
   if ( grepl("inla", p$carstm_modelengine) ) {

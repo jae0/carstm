@@ -31,6 +31,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       areal_units_proj4string_planar_km = p$areal_units_proj4string_planar_km,  # coord system to use for areal estimation and gridding for carstm
       inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
       inputdata_temporal_discretization_yr = p$inputdata_temporal_discretization_yr,  # ie., weekly .. controls resolution of data prior to modelling to reduce data set and speed up modelling
+      modeldir = p$modeldir,  # outputs all go the the main project's model output directory
       auid = p$auid
     )
     return(pc)
@@ -73,11 +74,10 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
         p$carstm_modelcall = paste('
           inla(
             formula = ', p$variabletomodel, ' ~ 1
-              + f(tiyr, model="ar1", hyper=H$ar1 )
-              + f(year, model="ar1", hyper=H$ar1 )
+              + f(year_factor, model="ar1", hyper=H$ar1 )
+              + f(dyri, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2 )
               + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-              + f(strata, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2)
-              + f(iid_error, model="iid", hyper=H$iid),
+              + f(strata, model="bym2", graph=sppoly@nb ,group= year_factor,  scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),
