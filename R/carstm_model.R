@@ -42,7 +42,6 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
       H = carstm_hyperparameters( sd(M[,p$variabletomodel], na.rm=TRUE), alpha=0.5, median( M[,p$variabletomodel], na.rm=TRUE) )
     }
     M$strata  = as.numeric( M$StrataID)
-    M$zi = discretize_data( M$z, p$discretization$z )
 
     M$iid_error = 1:nrow(M) # for inla indexing for set level variation
     if ( p$aegis_dimensionality == "space-year") {
@@ -81,7 +80,7 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
       M$year %in% p$yrs
     )  # filter by strata and years in case additional data in other areas and times are used in the input data
     matchfrom = list( strata=M$strata[ii], year=as.character(M$year[ii]) )
-    matchto   = list( strata=res$strata, year=as.character(p$yrs)  )
+    matchto   = list( strata=res$strata,   year=as.character(p$yrs)  )
   }
 
   if ( p$aegis_dimensionality == "space-year-season") {
@@ -91,7 +90,7 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
       M$year %in% p$yrs
     )  # filter by strata and years in case additional data in other areas and times are used in the input data
     matchfrom = list( strata=M$strata[ii], year=as.character(M$year[ii]), dyear=M$dyear[ii] )
-    matchto   = list( strata=res$strata, year=as.character(p$yrs), dyear=factor(p$dyears) )
+    matchto   = list( strata=res$strata,   year=as.character(p$yrs),      dyear=factor(p$dyears) )
  }
 
 
