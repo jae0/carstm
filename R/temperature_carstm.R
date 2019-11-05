@@ -71,6 +71,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       if ( grepl("inla", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "INLA" ) ) )
 
+        p$carstm_model_label = "default_inla"
         p$carstm_modelcall = paste('
           inla(
             formula = ', p$variabletomodel, ' ~ 1

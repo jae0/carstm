@@ -71,6 +71,7 @@
     if ( !exists("carstm_modelcall", p)) {
       if ( grepl("inla", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "INLA" ) ) )
+        p$carstm_model_label = "default_inla"
         p$carstm_modelcall = paste(
           'inla(
             formula = ', p$variabletomodel, ' ~ 1
@@ -89,10 +90,12 @@
           ) ' )
       }
       if ( grepl("glm", p$carstm_modelengine) ) {
+        p$carstm_model_label = "default_glm"
         p$carstm_modelcall = paste( 'glm( formula = ', p$variabletomodel, '  ~ 1 + StrataID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="log")  ) ' ) # for modelengine='glm'
       }
       if ( grepl("gam", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "mgcv" ) ) )
+        p$carstm_model_label = "default_gam"
         p$carstm_modelcall = paste( 'gam( formula = ', p$variabletomodel, '  ~ 1 + StrataID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="log")  ) ' )  # for modelengine='gam'
       }
 
