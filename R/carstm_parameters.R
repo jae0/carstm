@@ -76,6 +76,10 @@ carstm_parameters = function( p=NULL, DS="default", redo=FALSE, ... ) {
     if (!exists("tmax", p$discretization) ) p$discretization$tmax = c( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15 )
     if (!exists("degreedays", p$discretization) ) p$discretization$degreedays = c(10, 100, 200, 400, 800, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000)
 
+    if (!exists("dyear", p$discretization) ) p$discretization$dyear = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+
+    p$n.season = length(p$discretization[["dyear"]]) - 1
+
 
    return(p)
   }
