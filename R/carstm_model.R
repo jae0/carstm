@@ -6,8 +6,8 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
   if (exists( "inputdata_temporal_discretization_yr", p )) auids = paste( auids, round(p$inputdata_temporal_discretization_yr, 6),   sep="_" )
 
   auids_suffix = paste( auids, p$variabletomodel, p$carstm_modelengine,  "rdata", sep="." )
-  fn = file.path( p$modeldir, paste("carstm_modelled_results", auids_suffix, sep="." ) )
-  fn_fit = file.path( p$modeldir, paste( "carstm_modelled_fit", auids_suffix, sep=".") )
+  fn = file.path( p$modeldir, p$carstm_model_label, paste("carstm_modelled_results", auids_suffix, sep="." ) )
+  fn_fit = file.path( p$modeldir, p$carstm_model_label, paste( "carstm_modelled_fit", auids_suffix, sep=".") )
 
   if (DS %in% c("carstm_modelled_fit", "carstm_modelled"))  {
     if (DS=="carstm_modelled") {

@@ -53,6 +53,8 @@ carstm_parameters = function( p=NULL, DS="default", redo=FALSE, ... ) {
     if (!exists("areal_units_proj4string_planar_km", p )) stop( "areal_units_proj4string_planar_km should be defined ... " ) # km
     if (!exists("timeperiod", p) )  p$timeperiod="default"
 
+    if ( !exists("carstm_model_label", p) ) p$carstm_model_label = "default"
+
     if (!exists("auid", p) ) p$auid = paste(
       p$spatial_domain,
       paste0(p$areal_units_overlay, collapse="_"),

@@ -19,7 +19,7 @@
   str(M)
 
 # run the model ... about 24 hrs
-  res = carstm_model( p=p, M=bathymetry_cartsm( p=p, DS="carstm_inputs" ) ) # run model and obtain predictions
+  res = carstm_model( p=p, M='bathymetry_cartsm( p=p, DS="carstm_inputs" )' ) # run model and obtain predictions
 
 # loading saved results
   res = carstm_model( p=p, DS="carstm_modelled" ) # to load currently saved sppoly
