@@ -202,10 +202,16 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M$strata  = as.numeric( M$StrataID)
     M$year = trunc( M$tiyr)
     M$year_factor = as.numeric( factor( M$year, levels=p$yrs))
+    M$dyear =  M$tiyr - M$year
+
+    M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
+
+    M$seasonal = (as.numeric(M$year_factor) - 1) * length(p$dyears)  + as.numeric(M$dyear)
 
     M$zi = discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] )
 
     M$iid_error = 1:nrow(M) # for inla indexing for set level variation
+
 
     save( M, file=fn, compress=TRUE )
     return( M )
