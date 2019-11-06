@@ -31,6 +31,7 @@ for ( variabletomodel in p$varstomodel)  {
         # choose model:
 
         # basic model, single CAR effect across time
+        p$carstm_model_label="production"
         p$carstm_modelcall = paste('
           inla(
             formula =', p$variabletomodel, ' ~ 1
@@ -55,6 +56,7 @@ for ( variabletomodel in p$varstomodel)  {
 
 
         # CAR effect for each year
+        p$carstm_model_label="production"
         p$carstm_modelcall = paste('
           inla(
             formula =', p$variabletomodel, ' ~ 1
@@ -79,6 +81,7 @@ for ( variabletomodel in p$varstomodel)  {
 
 
         # CAR effect for each year, no year AC
+        p$carstm_model_label="production"
         p$carstm_modelcall = paste('
           inla(
             formula =', p$variabletomodel, ' ~ 1
@@ -105,14 +108,14 @@ for ( variabletomodel in p$varstomodel)  {
 
       # to recreate the underlying data
       sppoly = areal_units( p=p, redo=TRUE )  # this has already been done in aegis.polygons::01 polygons.R .. should nto have to redo
-      M = speciescomposition_carstm( p=p, DS="carstm_inputs", redo=TRUE )  # will redo if not found
+      M = speciescomposition_carstm( p=p, DS="carstm_inputs", redo=TRUE, carstm_model_label="production" )  # will redo if not found
       # to extract fits and predictions
 
       # run model and obtain predictions
       res = carstm_model( p=p, M=M )
 
-      res = carstm_model( p=p, DS="carstm_modelled" ) # to load currently saved res
-      fit =  carstm_model( p=p, DS="carstm_modelled_fit" )  # extract currently saved model fit
+      res = carstm_model( p=p, DS="carstm_modelled", carstm_model_label="production" ) # to load currently saved res
+      fit =  carstm_model( p=p, DS="carstm_modelled_fit"carstm_model_label="production" )  # extract currently saved model fit
       plot(fit)
       plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
       s = summary(fit)

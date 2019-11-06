@@ -19,11 +19,11 @@
   str(M)
 
 # run the model ... about 24 hrs
-  res = carstm_model( p=p, M='bathymetry_cartsm( p=p, DS="carstm_inputs" )' ) # run model and obtain predictions
+  res = carstm_model( p=p, M='bathymetry_cartsm( p=p, DS="carstm_inputs", carstm_model_label="production" )' ) # run model and obtain predictions
 
 # loading saved results
-  res = carstm_model( p=p, DS="carstm_modelled" ) # to load currently saved sppoly
-  fit = carstm_model( p=p, DS="carstm_modelled_fit" )  # extract currently saved model fit
+  res = carstm_model( p=p, DS="carstm_modelled", carstm_model_label="production" ) # to load currently saved sppoly
+  fit = carstm_model( p=p, DS="carstm_modelled_fit", carstm_model_label="production" )  # extract currently saved model fit
 
   plot(fit)
   plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
