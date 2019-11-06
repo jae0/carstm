@@ -1,5 +1,12 @@
 
-carstm_model = function( p, M=NULL, DS="redo" ) {
+carstm_model = function( p, M=NULL, DS="redo", ... ) {
+
+  # deal with additional passed parameters
+  p_add = list(...)
+  if ( is.null(p) ) p=list()
+  if (length(p_add) > 0 ) p = c(p, p_add)
+  i = which(duplicated(names(p), fromLast = TRUE ))
+  if ( length(i) > 0 ) p = p[-i] # give any passed parameters a higher priority, overwriting pre-existing variable
 
   auids = p$auid
   if (exists( "inputdata_spatial_discretization_planar_km", p )) auids = paste( auids, round(p$inputdata_spatial_discretization_planar_km, 6),   sep="_" )
