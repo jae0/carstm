@@ -57,9 +57,6 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
       M$dyear  =  factor( as.character( trunc(  (M$tiyr - M$year )/ p$tres )*p$tres), levels=p$dyears)
     }
 
-    m = get("inla.models", INLA:::inla.get.inlaEnv())
-    m$latent$rw2$min.diff = NULL
-    assign("inla.models", m, INLA:::inla.get.inlaEnv())
 
   }
 
