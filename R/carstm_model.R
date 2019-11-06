@@ -51,12 +51,16 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
     M$strata  = as.numeric( M$StrataID)
 
     M$iid_error = 1:nrow(M) # for inla indexing for set level variation
+    if ( p$aegis_dimensionality == "space") {
+      #nothing to do (yet)
+    }
+
     if ( p$aegis_dimensionality == "space-year") {
-      M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
+      M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla
       M$year = floor(M$tiyr)
     }
     if ( p$aegis_dimensionality == "space-year-season") {
-      M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
+      M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla
       M$year = floor(M$tiyr)
       M$dyear  =  factor( as.character( trunc(  (M$tiyr - M$year )/ p$tres )*p$tres), levels=p$dyears)
     }
@@ -97,8 +101,8 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
       M$strata %in% res$strata &
       M$year %in% p$yrs
     )  # filter by strata and years in case additional data in other areas and times are used in the input data
-    matchfrom = list( strata=M$strata[ii], year=as.character(M$year[ii]), dyear=M$dyear[ii] )
-    matchto   = list( strata=res$strata,   year=as.character(p$yrs),      dyear=factor(p$dyears) )
+    matchfrom = list( strata=M$strata[ii], year=as.character(M$year[ii]), dyear=as.character(M$dyear[ii]) )
+    matchto   = list( strata=res$strata,   year=as.character(p$yrs),      dyear=as.character(p$dyears) )
  }
 
 
@@ -232,47 +236,57 @@ carstm_model = function( p, M=NULL, DS="redo" ) {
 
       if (exists("strata", fit$summary.random)) {
 
+
         if (nrow(fit$summary.random$strata) == nstrata*2) {
           # a single nonspatial effect (no grouping across time)
-          kk = 1:nstrata
-          matchfrom = list( strata=fit$summary.random$strata$ID[kk]  )
+          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial") )
+          kk = which(resout$type=="nonspatial")
+          matchfrom = list( strata=resout$strata[kk]  )
           matchto   = list( strata=res$strata  )
+          input = fit$summary.random$strata[ kk, "mean" ]
         } else if (nrow(fit$summary.random$strata) == nstrata*2 * p$ny ) {
           #  nonspatial effects grouped by year
-          kk = ii
-          matchfrom = list( strata=M$strata[kk], year=M$year[kk] )
-          matchto   = list( strata=res$strata, year=p$yrs )
+          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial"), year=p$yrs )
+          kk = which(resout$type=="nonspatial")
+          matchfrom = list( strata=resout$strata[kk], year=resout$year[kk] )
+          matchto   = list( strata=res$strata, year=as.character(p$yrs) )
+          input = fit$summary.random$strata[ kk, "mean" ]
         } else if (nrow(fit$summary.random$strata) == nstrata*2 * p$nt ) {
           # nonspatial at all time slices
-          kk = ii
-          matchfrom = list( strata=M$strata[kk], year=M$year[kk], dyear=M$dyear[kk] )
-          matchto   = list( strata=res$strata, year=p$yrs, dyear=factor(p$dyears) )
+          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
+          kk = which(resout$type=="nonspatial")
+          matchfrom = list( strata=resout$strata[kk], year=resout$year[kk], dyear=resout$dyear[kk] )
+          matchto   = list( strata=res$strata, year=as.character(p$yrs), dyear=as.character(p$dyears) )
+          input = fit$summary.random$strata[ kk, "mean" ]
         }
+
         vn = paste( p$variabletomodel, "random_strata_nonspatial", sep=".")
-        input = fit$summary.random$strata[ kk, "mean" ]
         res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
         # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
 
-
         if (nrow(fit$summary.random$strata) == nstrata*2) {
           # a single spatial effect (no grouping across time)
-          kk = 1:nstrata
-          matchfrom = list( strata=fit$summary.random$strata$ID[kk]  )
+          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial") )
+          kk = which(resout$type=="spatial")
+          matchfrom = list( strata=resout$strata[kk]  )
           matchto   = list( strata=res$strata  )
+          input = fit$summary.random$strata[ kk, "mean" ]  # offset structure due to bym2
         } else if (nrow(fit$summary.random$strata) == nstrata*2 * p$ny ) {
           # spatial effects grouped by year
-          kk = ii
-          matchfrom = list( strata=M$strata[kk], year=M$year[kk] )
+          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial"), year=p$yrs )
+          kk = which(resout$type=="spatial")
+          matchfrom = list( strata=resout$strata[kk], year=resout$year[kk] )
           matchto   = list( strata=res$strata, year=p$yrs )
+          input = fit$summary.random$strata[ kk, "mean" ]  # offset structure due to bym2
         } else if (nrow(fit$summary.random$strata) == nstrata*2 * p$nt ) {
           # at every time slice
-          kk = ii
-          matchfrom = list( strata=M$strata[kk], year=M$year[kk], dyear=M$dyear[kk] )
-          matchto   = list( strata=res$strata, year=p$yrs, dyear=factor(p$dyears) )
+          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
+          kk = which(resout$type=="spatial")
+          matchfrom = list( strata=resout$strata[kk], year=resout$year[kk], dyear=resout$dyear[kk] )
+          matchto   = list( strata=res$strata, year=p$yrs, dyear=as.character(p$dyears) )
+          input = fit$summary.random$strata[ kk, "mean" ]  # offset structure due to bym2
         }
-
         vn = paste( p$variabletomodel, "random_strata_spatial", sep=".")
-        input = fit$summary.random$strata[ kk+max(kk), "mean" ]  # offset structure due to bym2
         res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
         # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
 
