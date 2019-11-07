@@ -259,8 +259,6 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     M$zi = discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] )
 
-    M$iid_error = 1:nrow(M) # for inla indexing for set level variation
-
     save( M, file=fn, compress=TRUE )
     return( M )
   }

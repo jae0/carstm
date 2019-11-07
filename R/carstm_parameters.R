@@ -66,11 +66,11 @@ carstm_parameters = function( p=NULL, DS="default", redo=FALSE, ... ) {
     )
 
     if (!exists("discretization", p) ) p$discretization = list()
-    if (!exists("z", p$discretization) ) p$discretization$z = c(1.25, 2.5, 5, 10, 20, 40, 80, 160, 320, 640, 1280, 3000 )  # depth cut points
+    if (!exists("z", p$discretization) ) p$discretization$z = c(0.1, 2.5, 5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560, 5120 )  # depth cut points
     # if (!exists("z", p$discretization) ) p$discretization$z = c(2.5, 5, 10, 20, 40, 80, 160, 320, 640 )
     if (!exists("dz", p$discretization) ) p$discretization$dz = c(0.01, 0.1,  1, 2, 4, 6, 8, 10, 12 )  # slope cut points
     if (!exists("ddz", p$discretization) ) p$discretization$ddz = c(0.01, 0.1, 0.2, 0.4, 0.8, 1, 2, 4  )  # slope cut points
-    if (!exists("substrate.grainsize", p$discretization) ) p$discretization$substrate.grainsize = c( 0, 0.1, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16 )
+    if (!exists("substrate.grainsize", p$discretization) ) p$discretization$substrate.grainsize = c( 0, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 51.2 )
 
     if (!exists("t", p$discretization) ) p$discretization$t = c( -2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 25 )
     if (!exists("tsd", p$discretization) ) p$discretization$tsd = c( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 25 )

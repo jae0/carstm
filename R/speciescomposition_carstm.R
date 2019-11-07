@@ -78,8 +78,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
             + f(ti, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
             + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
             + f(gsi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-            + f(strata, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2)
-            + f(iid_error, model="iid", hyper=H$iid),
+            + f(strata, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),
@@ -301,7 +300,6 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     APS = NULL
 
     M$strata  = as.numeric( M$StrataID)
-    M$iid_error = 1:nrow(M) # for inla indexing for set level variation
 
     M$zi  = discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] )
     M$ti  = discretize_data( M[, pT$variabletomodel], p$discretization[[pT$variabletomodel]] )
