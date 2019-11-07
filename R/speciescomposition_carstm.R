@@ -290,7 +290,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     jj = match( APS_uid, TI_uid )  #and time too
 
-    APS[, pT$variabletomodel] = TI[[ paste(pT$variabletomodel, "predicted",sep="." ) ]] [ jj]
+    APS[, pT$variabletomodel] = TI[ jj,]
     jj =NULL
     TI = NULL
 
