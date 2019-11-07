@@ -155,7 +155,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     } else {
       M = temperature.db( p=p, DS="bottom.all"  )
-      names(M)[which(names(M)=="t"] = p$variabletomodel
+      names(M)[which(names(M)=="t")] = p$variabletomodel
       attr( M, "proj4string_planar" ) =  p$aegis_proj4string_planar_km
       attr( M, "proj4string_lonlat" ) =  projection_proj4string("lonlat_wgs84")
 
