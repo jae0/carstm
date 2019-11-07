@@ -114,11 +114,13 @@
 
     aggregate_data = FALSE
     if (exists("carstm_inputs_aggregated", p)) {
+      # just testing mode ... not used for production
       if (p$carstm_inputs_aggregated)  aggregate_data = TRUE
     }
 
 
     if (aggregate_data) {
+      # just testing mode ... not used for production
       fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", p$auid,
         p$inputdata_spatial_discretization_planar_km,
         "rdata", sep=".") )
