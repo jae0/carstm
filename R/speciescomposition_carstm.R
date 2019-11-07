@@ -252,16 +252,17 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     APS$tag ="predictions"
     APS[,p$variabletomodel] = NA
 
+browser()
 
     BI = carstm_model ( p=pB, DS="carstm_modelled" )
     jj = match( as.character( APS$StrataID), as.character( BI$StrataID) )
-    APS[, pB$variabletomodel] = BI[jj, paste(pB$variabletomodel,"predicted",sep="." )]
+    APS[, pB$variabletomodel] = BI[[ paste(pB$variabletomodel,"predicted",sep="." ) ]] [jj]
     jj =NULL
     BI = NULL
 
     SI = carstm_model ( p=pS, DS="carstm_modelled" )
     jj = match( as.character( APS$StrataID), as.character( SI$StrataID) )
-    APS[, pS$variabletomodel] = SI[jj, paste(pS$variabletomodel,"predicted",sep="." )]
+    APS[, pS$variabletomodel] = SI[[ paste(pS$variabletomodel,"predicted",sep="." )]] [jj]
     jj =NULL
     SI = NULL
 
@@ -285,7 +286,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     jj = match( APS_uid, TI_uid )  #and time too
 
-    APS[, pT$variabletomodel] = TI[jj, paste(pT$variabletomodel, "predicted",sep="." )]
+    APS[, pT$variabletomodel] = TI[[ paste(pT$variabletomodel, "predicted",sep="." ) ]] [ jj]
     jj =NULL
     TI = NULL
 

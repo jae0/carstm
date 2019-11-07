@@ -170,6 +170,9 @@
 
     pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
 
+    if (!(exists(pB$variabletomodel, M ))) M[,pB$variabletomodel] = NA
+
+    kk =  which( !is.finite(M[, pB$variabletomodel]))
     M[, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[, c("lon", "lat")] )
 
     # if any still missing then use a randomly chosen depth by StrataID

@@ -206,10 +206,11 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     # already has depth .. but in case some are missing data
     pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
+
+    if (!(exists(pB$variabletomodel, M ))) M[,pB$variabletomodel] = NA
+
     kk = which(!is.finite( M[, pB$variabletomodel] ))
-    if (length(kk > 0)) {
-      M[kk, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[kk, c("lon", "lat")] )
-    }
+    if (length(kk > 0)) M[kk, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[kk, c("lon", "lat")] )
 
     # if any still missing then use a mean depth by StrataID
     kk =  which( !is.finite(M[, pB$variabletomodel]))
