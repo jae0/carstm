@@ -112,9 +112,21 @@
 
   if ( DS=="carstm_inputs") {
 
-    fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", p$auid,
-      p$inputdata_spatial_discretization_planar_km,
-      "rdata", sep=".") )
+    aggregate_data = FALSE
+    if (exists("carstm_inputs_aggregated", p)) {
+      if (p$carstm_inputs_aggregated)  aggregate_data = TRUE
+    }
+
+
+    if (aggregate_data) {
+      fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", p$auid,
+        p$inputdata_spatial_discretization_planar_km,
+        "rdata", sep=".") )
+    } else {
+      fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", p$auid,
+        "rawdata",
+        "rdata", sep=".") )
+    }
 
     if (!redo)  {
       if (file.exists(fn)) {
@@ -130,7 +142,14 @@
     crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
 
     # reduce size
-    M = bathymetry.db ( p=p, DS="aggregated_data"  )  # 16 GB in RAM just to store!
+    if (aggregate_data) {
+      M = bathymetry.db ( p=p, DS="aggregated_data"  )  # 16 GB in RAM just to store!
+    } else {
+      M = bathymetry.db ( p=p, DS="z.lonlat.rawdata" )  # 16 GB in RAM just to store!
+      attr( M, "proj4string_planar" ) =  p$aegis_proj4string_planar_km
+      attr( M, "proj4string_lonlat" ) =  projection_proj4string("lonlat_wgs84")
+    }
+
     M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
     # levelplot( eval(paste(p$variabletomodel, "mean", sep="."))~plon+plat, data=M, aspect="iso")
 
@@ -142,7 +161,9 @@
     M = M[ which(is.finite(M$StrataID)),]
     M$StrataID = as.character( M$StrataID )  # match each datum to an area
 
-    names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
+    if (aggregate_data) {
+      names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
+    }
 
     M$tag = "observations"
 

@@ -109,9 +109,22 @@
 
   if ( DS=="carstm_inputs") {
 
-    fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", p$auid,
-      p$inputdata_spatial_discretization_planar_km,
-      "rdata", sep=".") )
+    aggregate_data = FALSE
+    if (exists("carstm_inputs_aggregated", p)) {
+      if (p$carstm_inputs_aggregated)  aggregate_data = TRUE
+    }
+
+
+    if (aggregate_data) {
+      fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", p$auid,
+        p$inputdata_spatial_discretization_planar_km,
+        "rdata", sep=".") )
+    } else {
+      fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", p$auid,
+        "rawdata",
+        "rdata", sep=".") )
+    }
+
 
     if (!redo)  {
       if (file.exists(fn)) {
@@ -127,8 +140,17 @@
 
 
     # do this immediately to reduce storage for sppoly (before adding other variables)
-    M = substrate.db ( p=p, DS="aggregated_data" )  # 16 GB in RAM just to store!
-    names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
+
+    if (aggregate_data) {
+      M = substrate.db ( p=p, DS="aggregated_data" )  # 16 GB in RAM just to store!
+      names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
+    } else {
+      M = substrate.db( p=p, DS="lonlat.highres" )
+      names(M)[which(names(M)=="grainsize" )] = p$variabletomodel
+      attr( M, "proj4string_planar" ) =  p$aegis_proj4string_planar_km
+      attr( M, "proj4string_lonlat" ) =  projection_proj4string("lonlat_wgs84")
+    }
+
     M = M[ which(is.finite(M[, p$variabletomodel] )), ]
 
     # reduce size
