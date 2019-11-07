@@ -277,11 +277,10 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     APS$yr = floor( APS$tiyr)
     APS$dyear = discretize_data( APS$tiyr - APS$yr, p$discretization$dyear )
 
-
     TI = carstm_model ( p=pT, DS="carstm_modelled" )
     TI = TI[[ paste(pT$variabletomodel,"predicted",sep="." )]]
     TI = as.data.frame.table( TI )
-    names(TI) = c("StrataID", "yr", "dyear", "t")
+    names(TI) = c("StrataID", "yr", "dyear", pT$variabletomodel)
     TI$dyear = discretize_data( as.numeric(as.character(TI$dyear)), p$discretization$dyear )  # shift to center (rather than left edge of discretization)
 
     TI_uid = paste( as.character( TI$StrataID), as.character(TI$yr), as.character(TI$dyear), sep="." )
@@ -290,7 +289,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     jj = match( APS_uid, TI_uid )  #and time too
 
-    APS[, pT$variabletomodel] = as.numeric(TI[ jj,])
+    APS[, pT$variabletomodel] = as.numeric(TI[ jj, pT$variabletomodel])
     jj =NULL
     TI = NULL
 
