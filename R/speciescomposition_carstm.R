@@ -183,9 +183,18 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     pS = substrate_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
     pT = temperature_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load
 
-    M[, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[, c("lon", "lat")] )
-    M[, pS$variabletomodel] = lookup_substrate_from_surveys(  p=pS, locs=M[, c("lon", "lat")] )
-    M[, pT$variabletomodel] = lookup_temperature_from_surveys(  p=pT, locs=M[, c("lon", "lat")], timestamp=M$timestamp )
+    if (!(exists(pB$variabletomodel, M ))) M[,pB$variabletomodel] = NA
+    if (!(exists(pS$variabletomodel, M ))) M[,pS$variabletomodel] = NA
+    if (!(exists(pT$variabletomodel, M ))) M[,pT$variabletomodel] = NA
+
+    kk = which(!is.finite(M[, pB$variabletomodel]))
+    if (length(kk) > 0 ) M[kk, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[kk, c("lon", "lat")] )
+
+    kk = which(!is.finite(M[, pS$variabletomodel]))
+    if (length(kk) > 0 ) M[kk, pS$variabletomodel] = lookup_substrate_from_surveys(  p=pS, locs=M[kk, c("lon", "lat")] )
+
+    kk = which(!is.finite(M[, pT$variabletomodel]))
+    if (length(kk) > 0 ) M[kk, pT$variabletomodel] = lookup_temperature_from_surveys(  p=pT, locs=M[kk, c("lon", "lat")], timestamp=M$timestamp )
 
 
     # if any still missing then use a mean depth by StrataID
