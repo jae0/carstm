@@ -242,9 +242,9 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     M$lon = NULL
     M$lat = NULL
 
-    M = M[ which(is.finite(M[, pB$variabletomodel]])),]
-    M = M[ which(is.finite(M[, pS$variabletomodel]])),]
-    M = M[ which(is.finite(M[, pT$variabletomodel]])),]
+    M = M[ which(is.finite(M[, pB$variabletomodel] )),]
+    M = M[ which(is.finite(M[, pS$variabletomodel] )),]
+    M = M[ which(is.finite(M[, pT$variabletomodel] )),]
     M = M[ which(is.finite(M$StrataID)),]
     M$StrataID = as.character( M$StrataID )  # match each datum to an area
 
