@@ -290,15 +290,13 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     jj = match( APS_uid, TI_uid )  #and time too
 
-    APS[, pT$variabletomodel] = TI[ jj,]
+    APS[, pT$variabletomodel] = as.numeric(TI[ jj,])
     jj =NULL
     TI = NULL
 
     M$tiyr = M$yr + M$dyear
     M = rbind( M[, names(APS)], APS )
     APS = NULL
-
-browser()
 
     M$strata  = as.numeric( M$StrataID)
     M$iid_error = 1:nrow(M) # for inla indexing for set level variation
