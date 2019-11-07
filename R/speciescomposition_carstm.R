@@ -171,7 +171,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     M$tiyr = lubridate::decimal_date ( M$timestamp )
 
     M$dyear = M$tiyr - M$yr
-    M$dyear = discretize_data( M$dyear, seq(0, 1, by=p$inputdata_temporal_discretization_yr), digits=6 )
+    M$dyear = discretize_data( M$dyear, p$discretization$dyear )
 
     # reduce size
     # levelplot(z.mean~plon+plat, data=M, aspect="iso")
@@ -252,8 +252,6 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     APS$tag ="predictions"
     APS[,p$variabletomodel] = NA
 
-browser()
-
     BI = carstm_model ( p=pB, DS="carstm_modelled" )
     jj = match( as.character( APS$StrataID), as.character( BI$StrataID) )
     APS[, pB$variabletomodel] = BI[[ paste(pB$variabletomodel,"predicted",sep="." ) ]] [jj]
@@ -276,11 +274,17 @@ browser()
     n_aps = nrow(APS)
     APS = cbind( APS[ rep.int(1:n_aps, p$nt), ], rep.int( p$prediction_ts, rep(n_aps, p$nt )) )
     names(APS) = c(vn, "tiyr")
+    APS$yr = floor( APS$tiyr)
+    APS$dyear = discretize_data( APS$tiyr - APS$yr, p$discretization$dyear )
 
 
     TI = carstm_model ( p=pT, DS="carstm_modelled" )
-    TI = as.data.frame(TI)
-    TI_uid = paste( as.character( TI$StrataID), TI$yr, TI$dyear, sep="." )
+    TI = TI[[ paste(pT$variabletomodel,"predicted",sep="." )]]
+    TI = as.data.frame.table( TI )
+    names(TI) = c("StrataID", "yr", "dyear", "t")
+    TI$dyear = discretize_data( as.numeric(as.character(TI$dyear)), p$discretization$dyear )  # shift to center (rather than left edge of discretization)
+
+    TI_uid = paste( as.character( TI$StrataID), as.character(TI$yr), as.character(TI$dyear), sep="." )
 
     APS_uid = paste( as.character( APS$StrataID), APS$yr, APS$dyear, sep="." )
 
