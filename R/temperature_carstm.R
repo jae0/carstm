@@ -116,10 +116,23 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
   if ( DS=="carstm_inputs") {
 
-    fn = file.path( p$modeldir, paste( "temperature", "carstm_inputs", p$auid,
-      p$inputdata_spatial_discretization_planar_km,
-      round(p$inputdata_temporal_discretization_yr, 6),
-      "rdata", sep=".") )
+
+    aggregate_data = FALSE
+    if (exists("carstm_inputs_aggregated", p)) {
+      if (p$carstm_inputs_aggregated)  aggregate_data = TRUE
+    }
+
+    if (aggregate_data) {
+      fn = file.path( p$modeldir, paste( "temperature", "carstm_inputs", p$auid,
+        p$inputdata_spatial_discretization_planar_km,
+        round(p$inputdata_temporal_discretization_yr, 6),
+        "rdata", sep=".") )
+
+    } else {
+      fn = file.path( p$modeldir, paste( "temperature", "carstm_inputs", p$auid,
+        "rawdata",
+        "rdata", sep=".") )
+    }
 
     if (!redo)  {
       if (file.exists(fn)) {
@@ -134,7 +147,46 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
 
     # do this immediately to reduce storage for sppoly (before adding other variables)
-    M = temperature.db( p=p, DS="aggregated_data"  )
+
+    if (aggregate_data) {
+
+      M = temperature.db( p=p, DS="aggregated_data"  )
+      names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
+
+    } else {
+      M = temperature.db( p=p, DS="bottom.all"  )
+      names(M)[which(names(M)=="t"] = p$variabletomodel
+      attr( M, "proj4string_planar" ) =  p$aegis_proj4string_planar_km
+      attr( M, "proj4string_lonlat" ) =  projection_proj4string("lonlat_wgs84")
+
+      M = M[ which(M$yr %in% p$yrs), ]
+      M$tiyr = lubridate::decimal_date ( M$date )
+
+      # globally remove all unrealistic data
+      keep = which( M[,p$variabletomodel] >= -3 & M[,p$variabletomodel] <= 25 ) # hard limits
+      if (length(keep) > 0 ) M = M[ keep, ]
+
+      # p$quantile_bounds_data = c(0.0005, 0.9995)
+      if (exists("quantile_bounds_data", p)) {
+        TR = quantile(M[,p$variabletomodel], probs=p$quantile_bounds_data, na.rm=TRUE ) # this was -1.7, 21.8 in 2015
+        keep = which( M[,p$variabletomodel] >=  TR[1] & M[,p$variabletomodel] <=  TR[2] )
+        if (length(keep) > 0 ) M = M[ keep, ]
+        # this was -1.7, 21.8 in 2015
+      }
+
+      keep = which( M$z >=  2 ) # ignore very shallow areas ..
+      if (length(keep) > 0 ) M = M[ keep, ]
+
+      # in case plon/plats are from an alternate projection  .. as there are multiple data sources
+      M = lonlat2planar( M, p$aegis_proj4string_planar_km)
+
+      M$plon = round(M$plon / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
+      M$plat = round(M$plat / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
+
+      M$dyear = M$tiyr - M$yr
+      M$dyear = discretize_data( M$dyear, seq(0, 1, by=p$inputdata_temporal_discretization_yr), digits=6 )
+
+    }
 
     # reduce size
     M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
@@ -154,8 +206,6 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M = M[ which(is.finite(M$StrataID)),]
     M$StrataID = as.character( M$StrataID )  # match each datum to an area
     M$tiyr = M$yr + M$dyear
-    # M[, p$variabletomodel] = M$temperature.mean
-    names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
     M$tag = "observations"
 
     # already has depth .. but in case some are missing data
@@ -213,7 +263,6 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M$zi = discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] )
 
     M$iid_error = 1:nrow(M) # for inla indexing for set level variation
-
 
     save( M, file=fn, compress=TRUE )
     return( M )
