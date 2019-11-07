@@ -88,8 +88,8 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
             control.fixed=H$fixed,  # priors for fixed effects, generic is ok
             # control.inla=list(int.strategy="eb") ,# to get empirical Bayes results much faster.
             # control.inla=list( strategy="laplace", cutoff=1e-6, correct=TRUE, correct.verbose=FALSE ),
-            num.threads=4,
-            #blas.num.threads=4,
+            # num.threads=4,
+            # blas.num.threads=4,
             verbose=TRUE
           )'
         )

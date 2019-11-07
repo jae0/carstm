@@ -80,7 +80,7 @@
             # control.inla=list(int.strategy="eb") ,# to get empirical Bayes results much faster.
             # control.inla=list( strategy="laplace", cutoff=1e-6, correct=TRUE, correct.verbose=FALSE ),
             # num.threads=4,
-            blas.num.threads=8,
+            # blas.num.threads=8,
             verbose=TRUE
           ) ' )
       }
@@ -149,6 +149,15 @@
       names(M)[which(names(M)=="grainsize" )] = p$variabletomodel
       attr( M, "proj4string_planar" ) =  p$aegis_proj4string_planar_km
       attr( M, "proj4string_lonlat" ) =  projection_proj4string("lonlat_wgs84")
+
+      # p$quantile_bounds_data = c(0.0005, 0.9995)
+      if (exists("quantile_bounds_data", p)) {
+        TR = quantile(M[,p$variabletomodel], probs=p$quantile_bounds_data, na.rm=TRUE ) # this was -1.7, 21.8 in 2015
+        keep = which( M[,p$variabletomodel] >=  TR[1] & M[,p$variabletomodel] <=  TR[2] )
+        if (length(keep) > 0 ) M = M[ keep, ]
+        # this was -1.7, 21.8 in 2015
+      }
+
     }
 
     M = M[ which(is.finite(M[, p$variabletomodel] )), ]

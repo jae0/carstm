@@ -85,11 +85,11 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
             control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
             control.predictor=list(compute=FALSE, link=1 ),
             control.fixed=H$fixed,  # priors for fixed effects, generic is ok
-            control.inla=list(strategy="gaussian", int.strategy="eb") ,# to get empirical Bayes results much faster.
+            # control.inla=list(strategy="gaussian", int.strategy="eb") ,# to get empirical Bayes results much faster.
             # control.inla=list(int.strategy="eb") ,# to get empirical Bayes results much faster.
             # control.inla=list( strategy="laplace", cutoff=1e-6, correct=TRUE, correct.verbose=FALSE ),
-            num.threads=4,
-            blas.num.threads=4,
+            # num.threads=4,
+            # blas.num.threads=4,
             verbose=TRUE
           ) ' )
       }
@@ -180,11 +180,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       # in case plon/plats are from an alternate projection  .. as there are multiple data sources
       M = lonlat2planar( M, p$aegis_proj4string_planar_km)
 
-      M$plon = round(M$plon / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
-      M$plat = round(M$plat / p$inputdata_spatial_discretization_planar_km + 1 ) * p$inputdata_spatial_discretization_planar_km
-
       M$dyear = M$tiyr - M$yr
-      M$dyear = discretize_data( M$dyear, seq(0, 1, by=p$inputdata_temporal_discretization_yr), digits=6 )
 
     }
 
