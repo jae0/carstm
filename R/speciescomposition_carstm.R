@@ -298,6 +298,8 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     M = rbind( M[, names(APS)], APS )
     APS = NULL
 
+browser()
+
     M$strata  = as.numeric( M$StrataID)
     M$iid_error = 1:nrow(M) # for inla indexing for set level variation
 
