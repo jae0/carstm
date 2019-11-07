@@ -215,7 +215,6 @@
     M$StrataID  = factor( as.character(M$StrataID), levels=levels( sppoly$StrataID ) ) # revert to factors
     M$strata  = as.numeric( M$StrataID)
     M$zi = discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] )
-    M$iid_error = 1:nrow(M) # for inla indexing for set level variation
 
     save( M, file=fn, compress=TRUE )
     return( M )
