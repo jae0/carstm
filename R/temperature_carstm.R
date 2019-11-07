@@ -71,14 +71,14 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       if ( grepl("inla", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "INLA" ) ) )
 
-        p$carstm_model_label = "default_inla"
+        p$carstm_model_label = "production"
         p$carstm_modelcall = paste('
           inla(
             formula = ', p$variabletomodel, ' ~ 1
               + f(year_factor, model="ar1", hyper=H$ar1 )
               + f(dyri, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2 )
               + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-              + f(strata, model="bym2", graph=sppoly@nb ,group= year_factor,  scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+              + f(strata, model="bym2", graph=sppoly@nb, group= year_factor,  scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),

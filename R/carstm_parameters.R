@@ -53,7 +53,7 @@ carstm_parameters = function( p=NULL, DS="default", redo=FALSE, ... ) {
     if (!exists("areal_units_proj4string_planar_km", p )) stop( "areal_units_proj4string_planar_km should be defined ... " ) # km
     if (!exists("timeperiod", p) )  p$timeperiod="default"
 
-    if ( !exists("carstm_model_label", p) ) p$carstm_model_label = "production"
+    if ( !exists("carstm_model_label", p) ) p$carstm_model_label = "production"  # default is to choose production results
 
     if (!exists("auid", p) ) p$auid = paste(
       p$spatial_domain,

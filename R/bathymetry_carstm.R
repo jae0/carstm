@@ -71,7 +71,7 @@
     if ( !exists("carstm_modelcall", p)) {
       if ( grepl("inla", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "INLA" ) ) )
-        p$carstm_model_label = "default_inla"
+        p$carstm_model_label = "production"
         p$carstm_modelcall = paste(
           'inla(
             formula = ', p$variabletomodel, ' ~ 1
