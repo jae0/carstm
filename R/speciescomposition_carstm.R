@@ -277,7 +277,8 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     APS = cbind( APS[ rep.int(1:n_aps, p$nt), ], rep.int( p$prediction_ts, rep(n_aps, p$nt )) )
     names(APS) = c(vn, "tiyr")
     APS$yr = floor( APS$tiyr)
-    APS$dyear = discretize_data( APS$tiyr - APS$yr, p$discretization$dyear )
+    APS$dyear = APS$tiyr - APS$yr
+    APS$dyear = discretize_data( APS$dyear, p$discretization$dyear )
 
     TI = carstm_model ( p=pT, DS="carstm_modelled" )
     TI = TI[[ paste(pT$variabletomodel,"predicted",sep="." )]]
