@@ -74,11 +74,12 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
         p$carstm_modelcall = paste(
           'inla( formula = ', p$variabletomodel,
           ' ~ 1
-            + f(tiyr2, model="seasonal", season.length=10 )
+            + f(year_factor, model="ar1", hyper=H$ar1 )
+            + f(dyri, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2 )
             + f(ti, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
             + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
             + f(gsi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-            + f(strata, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+            + f(strata, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),
@@ -300,6 +301,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     M = rbind( M[, names(APS)], APS )
     APS = NULL
 
+    M$StrataID  = factor( as.character(M$StrataID), levels=levels( sppoly$StrataID ) ) # revert to factors
     M$strata  = as.numeric( M$StrataID)
 
     M$zi  = discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] )
@@ -308,8 +310,13 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
 
-    M$year = floor(M$tiyr)
-    M$dyear  =  factor( as.character( trunc(  (M$tiyr - M$year )/ p$tres )*p$tres), levels=p$dyears)
+    M$year = trunc( M$tiyr)
+    M$year_factor = as.numeric( factor( M$year, levels=p$yrs))
+    M$dyear =  M$tiyr - M$year
+
+    M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
+
+    # M$seasonal = (as.numeric(M$year_factor) - 1) * length(p$dyears)  + as.numeric(M$dyear)
 
     save( M, file=fn, compress=TRUE )
     return( M )
