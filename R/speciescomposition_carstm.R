@@ -306,7 +306,6 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     M$gsi = discretize_data( M[, pS$variabletomodel], p$discretization[[pS$variabletomodel]] )
 
     M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
-    M$tiyr2 = M$tiyr  # a copy
 
     M$year = floor(M$tiyr)
     M$dyear  =  factor( as.character( trunc(  (M$tiyr - M$year )/ p$tres )*p$tres), levels=p$dyears)
