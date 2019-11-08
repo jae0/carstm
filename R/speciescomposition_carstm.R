@@ -221,6 +221,16 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
       M[kk, pS$variabletomodel] = oo[jj ]
     }
 
+
+    # substrate coverage poor .. add from modelled results
+    kk =  which( !is.finite(M[, pS$variabletomodel]))
+    if (length(kk) > 0) {
+      SI = carstm_model ( p=pS, DS="carstm_modelled" )
+      jj = match( as.character( M$StrataID[kk]), as.character( SI$StrataID) )
+      M[kk, pS$variabletomodel] = SI[[ paste(pS$variabletomodel,"predicted",sep="." )]] [jj]
+    }
+
+
     # if any still missing then use a mean temp by StrataID
     kk =  which( !is.finite(M[, pT$variabletomodel]))
     if (length(kk) > 0) {
