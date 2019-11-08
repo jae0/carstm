@@ -113,7 +113,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
         p$carstm_model_label = "default_gam"
         p$carstm_modelcall = paste(
           'gam( formula =',  p$variabletomodel,
-          ' ~ 1 + StrataID + s(t) + s(z) + s(substrate.grainsize) + s(yr) + s(dyear),
+          ' ~ 1 + StrataID + s(t) + s(z) + s(substrate.grainsize) + s(year) + s(dyear),
             data= M[ which(M$tag=="observations"), ],
             family=gaussian(link="identity")
           )'
@@ -147,7 +147,6 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     # prediction surface
     sppoly = areal_units( p=p )  # will redo if not found
-
     crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
 
     # do this immediately to reduce storage for sppoly (before adding other variables)
@@ -168,11 +167,11 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
 
-    M = M[ which(M$yr %in% p$yrs), ]
+    names(M)[which(names(M)=="yr") ] = "year"
+    M = M[ which(M$year %in% p$yrs), ]
     M$tiyr = lubridate::decimal_date ( M$timestamp )
+    M$dyear = M$tiyr - M$year
 
-    M$dyear = M$tiyr - M$yr
-    M$dyear = discretize_data( M$dyear, p$discretization$dyear )
 
     # reduce size
     # levelplot(z.mean~plon+plat, data=M, aspect="iso")
@@ -230,8 +229,10 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
       # levelplot( eval(paste(p$variabletomodel, "mean", sep="."))~plon+plat, data=M, aspect="iso")
 
       AD$StrataID = over( SpatialPoints( AD[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
-      AD$uid = paste(AD$StrataID, AD$yr, AD$dyear, sep=".")
-      M$uid =  paste(M$StrataID, M$yr, M$dyear, sep=".")
+      AD$uid = paste(AD$StrataID, AD$year, AD$dyear, sep=".")
+
+      M_dyear_discret = discretize_data( M$dyear, p$discretization$dyear )  # AD$dyear is discretized. . match discretization
+      M$uid =  paste(M$StrataID, M$year, M_dyear_discret, sep=".")
 
       oo = tapply( AD[, paste(pT$variabletomodel, "mean", sep="." )], AD$uid, FUN=median, na.rm=TRUE )
 
@@ -278,15 +279,15 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     n_aps = nrow(APS)
     APS = cbind( APS[ rep.int(1:n_aps, p$nt), ], rep.int( p$prediction_ts, rep(n_aps, p$nt )) )
     names(APS) = c(vn, "tiyr")
-    APS$yr = floor( APS$tiyr)
-    APS$dyear = APS$tiyr - APS$yr
+    APS$year = floor( APS$tiyr)
+    APS$dyear = APS$tiyr - APS$year
 
 
     TI = carstm_model ( p=pT, DS="carstm_modelled" )
     TI = TI[[ paste(pT$variabletomodel,"predicted",sep="." )]]
 
     strata_map = match( as.numeric(APS$StrataID),levels(sppoly$StrataID[as.numeric(dimnames(TI)$strata)]  ) )
-    year_map = match( as.character(APS$yr), dimnames(TI)$year )
+    year_map = match( as.character(APS$year), dimnames(TI)$year )
 
     dyear_breaks = c(p$dyears, p$dyears[length(p$dyears)]+ diff(p$dyears)[1] )
     dyear_map = as.numeric( cut( APS$dyear, breaks=dyear_breaks, include.lowest=TRUE, ordered_result=TRUE, right=FALSE ) )
@@ -297,7 +298,6 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     jj =NULL
     TI = NULL
 
-    M$tiyr = M$yr + M$dyear
     M = rbind( M[, names(APS)], APS )
     APS = NULL
 
@@ -312,7 +312,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     M$year = trunc( M$tiyr)
     M$year_factor = as.numeric( factor( M$year, levels=p$yrs))
-    M$dyear =  M$tiyr - M$year
+    M$dyear =  M$tiyr - M$year   # revert dyear to non-discretized form
 
     M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
 

@@ -159,7 +159,8 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       attr( M, "proj4string_planar" ) =  p$aegis_proj4string_planar_km
       attr( M, "proj4string_lonlat" ) =  projection_proj4string("lonlat_wgs84")
 
-      M = M[ which(M$yr %in% p$yrs), ]
+      names(M)[which(names(M)=="yr") ] = "year"
+      M = M[ which(M$year %in% p$yrs), ]
       M$tiyr = lubridate::decimal_date ( M$date )
 
       # globally remove all unrealistic data
@@ -180,7 +181,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       # in case plon/plats are from an alternate projection  .. as there are multiple data sources
       M = lonlat2planar( M, p$aegis_proj4string_planar_km)
 
-      M$dyear = M$tiyr - M$yr
+      M$dyear = M$tiyr - M$year
 
     }
 
@@ -201,7 +202,8 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M$plat = NULL
     M = M[ which(is.finite(M$StrataID)),]
     M$StrataID = as.character( M$StrataID )  # match each datum to an area
-    M$tiyr = M$yr + M$dyear
+
+    M$tiyr = M$year + M$dyear
     M$tag = "observations"
 
     # already has depth .. but in case some are missing data
@@ -249,9 +251,10 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     M$StrataID  = factor( as.character(M$StrataID), levels=levels( sppoly$StrataID ) ) # revert to factors
     M$strata  = as.numeric( M$StrataID)
+
     M$year = trunc( M$tiyr)
     M$year_factor = as.numeric( factor( M$year, levels=p$yrs))
-    M$dyear =  M$tiyr - M$year
+    M$dyear =  M$tiyr - M$year  # reset in case it has been discretized
 
     M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
 
