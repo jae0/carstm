@@ -278,21 +278,20 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     names(APS) = c(vn, "tiyr")
     APS$yr = floor( APS$tiyr)
     APS$dyear = APS$tiyr - APS$yr
-    APS$dyear = discretize_data( APS$dyear, p$discretization$dyear )
+
 
     TI = carstm_model ( p=pT, DS="carstm_modelled" )
     TI = TI[[ paste(pT$variabletomodel,"predicted",sep="." )]]
-    TI = as.data.frame.table( TI )
-    names(TI) = c("StrataID", "yr", "dyear", pT$variabletomodel)
-    TI$dyear = discretize_data( as.numeric(as.character(TI$dyear)), p$discretization$dyear )  # shift to center (rather than left edge of discretization)
 
-    TI_uid = paste( as.character( TI$StrataID), as.character(TI$yr), as.character(TI$dyear), sep="." )
+    strata_map = match( as.numeric(APS$StrataID),levels(sppoly$StrataID[as.numeric(dimnames(TI)$strata)]  ) )
+    year_map = match( as.character(APS$yr), dimnames(TI)$year )
 
-    APS_uid = paste( as.character( APS$StrataID), APS$yr, APS$dyear, sep="." )
+    dyear_breaks = c(p$dyears, p$dyears[length(p$dyears)]+ diff(p$dyears)[1] )
+    dyear_map = as.numeric( cut( APS$dyear, breaks=dyear_breaks, include.lowest=TRUE, ordered_result=TRUE, right=FALSE ) )
 
-    jj = match( APS_uid, TI_uid )  #and time too
+    dindex = cbind(strata_map, year_map, dyear_map )
 
-    APS[, pT$variabletomodel] = as.numeric(TI[ jj, pT$variabletomodel])
+    APS[, pT$variabletomodel] = TI[ dindex]
     jj =NULL
     TI = NULL
 
