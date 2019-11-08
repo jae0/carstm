@@ -131,6 +131,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     p = speciescomposition_carstm(p=p, DS="parameters_override"  )
 
     fn = file.path( p$modeldir, paste( "speciescomposition", "carstm_inputs", p$auid,
+      p$variabletomodel,
       p$inputdata_spatial_discretization_planar_km,
       round(p$inputdata_temporal_discretization_yr, 6),
       "rdata", sep=".") )
