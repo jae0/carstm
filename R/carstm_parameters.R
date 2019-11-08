@@ -72,8 +72,8 @@ carstm_parameters = function( p=NULL, DS="default", redo=FALSE, ... ) {
     if (!exists("ddz", p$discretization) ) p$discretization$ddz = c(0.01, 0.1, 0.2, 0.4, 0.8, 1, 2, 4  )  # slope cut points
     if (!exists("substrate.grainsize", p$discretization) ) p$discretization$substrate.grainsize = c( 0, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 51.2 )
 
-    if (!exists("pca1", p$discretization) ) p$discretization$pca1 = c( -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3 0.4, 0.5, 0.6 )
-    if (!exists("pca2", p$discretization) ) p$discretization$pca2 = c( -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3 0.4, 0.5, 0.6 )
+    if (!exists("pca1", p$discretization) ) p$discretization$pca1 = c( -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6 )
+    if (!exists("pca2", p$discretization) ) p$discretization$pca2 = c( -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6 )
 
     if (!exists("t", p$discretization) ) p$discretization$t = c( -2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 25 )
     if (!exists("tsd", p$discretization) ) p$discretization$tsd = c( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 25 )
