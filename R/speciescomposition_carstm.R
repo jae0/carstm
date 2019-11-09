@@ -262,6 +262,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     M$tag = "observations"
 
+
     APS = as.data.frame(sppoly)
     APS$StrataID = as.character( APS$StrataID )
     APS$tag ="predictions"

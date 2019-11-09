@@ -66,19 +66,19 @@ carstm_parameters = function( p=NULL, DS="default", redo=FALSE, ... ) {
     )
 
     if (!exists("discretization", p) ) p$discretization = list()
-    if (!exists("z", p$discretization) ) p$discretization$z = c(0.1, 2.5, 5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560, 5120 )  # depth cut points
+    if (!exists("z", p$discretization) ) p$discretization$z = c(0, 5, 10, 20, 40, 60, 80, 100, 150, 200, 250, 300, 350, 400, 500, 1000, 2000, 5000 )  # depth cut points
     # if (!exists("z", p$discretization) ) p$discretization$z = c(2.5, 5, 10, 20, 40, 80, 160, 320, 640 )
     if (!exists("dz", p$discretization) ) p$discretization$dz = c(0.01, 0.1,  1, 2, 4, 6, 8, 10, 12 )  # slope cut points
     if (!exists("ddz", p$discretization) ) p$discretization$ddz = c(0.01, 0.1, 0.2, 0.4, 0.8, 1, 2, 4  )  # slope cut points
-    if (!exists("substrate.grainsize", p$discretization) ) p$discretization$substrate.grainsize = c( 0, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 51.2 )
+    if (!exists("substrate.grainsize", p$discretization) ) p$discretization$substrate.grainsize = c( 0, 1, 2, 4, 6, 8, 10, 12, 16, 24, 32 )
 
     if (!exists("pca1", p$discretization) ) p$discretization$pca1 = c( -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6 )
     if (!exists("pca2", p$discretization) ) p$discretization$pca2 = c( -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6 )
 
-    if (!exists("t", p$discretization) ) p$discretization$t = c( -2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 25 )
+    if (!exists("t", p$discretization) ) p$discretization$t = c( -4, -2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 25 )
     if (!exists("tsd", p$discretization) ) p$discretization$tsd = c( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 25 )
-    if (!exists("tmin", p$discretization) ) p$discretization$tmin = c( -2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 25  )
-    if (!exists("tmax", p$discretization) ) p$discretization$tmax = c( 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25 )
+    if (!exists("tmin", p$discretization) ) p$discretization$tmin = c( -4, -2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25  )
+    if (!exists("tmax", p$discretization) ) p$discretization$tmax = c( -2, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 25 )
     if (!exists("degreedays", p$discretization) ) p$discretization$degreedays = c(10, 100, 200, 400, 800, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000)
 
     if (!exists("dyear", p$discretization) ) p$discretization$dyear = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
