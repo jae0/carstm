@@ -56,12 +56,12 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     } else {
       H = carstm_hyperparameters( sd(M[,p$variabletomodel], na.rm=TRUE), alpha=0.5, median( M[,p$variabletomodel], na.rm=TRUE) )
     }
-    M$strata  = as.numeric( M$StrataID)
+    # M$strata  = as.numeric( M$StrataID)
 
-    M$iid_error = 1:nrow(M) # for inla indexing for set level variation
-    if ( p$aegis_dimensionality == "space") {
-      #nothing to do (yet)
-    }
+    # M$iid_error = 1:nrow(M) # for inla indexing for set level variation
+    # if ( p$aegis_dimensionality == "space") {
+    #   #nothing to do (yet)
+    # }
 
     if ( p$aegis_dimensionality == "space-year") {
       M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla

@@ -86,6 +86,10 @@ carstm_parameters = function( p=NULL, DS="default", redo=FALSE, ... ) {
     p$n.season = length(p$discretization[["dyear"]]) - 1
 
 
+    if (!exists("inla_nthreads", p ))  p$inla_nthreads = 1
+
+    if (!exists("inla_nthreads_blas", p ))  p$inla_nthreads_blas = 1
+
    return(p)
   }
 
