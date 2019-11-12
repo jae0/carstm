@@ -165,7 +165,7 @@
     M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
     # levelplot( eval(paste(p$variabletomodel, "mean", sep="."))~plon+plat, data=M, aspect="iso")
 
-    if( exists("spatial_domain", p))
+    if( exists("spatial_domain", p)) {
         # need to be careful with extrapolation ...  filter depths
       M = lonlat2planar(M, p$aegis_proj4string_planar_km)  # should not be required but to make sure
       M = geo_subset( spatial_domain=p$spatial_domain, Z=M )
