@@ -95,6 +95,8 @@
 
     p = carstm_parameters( p=p, DS="basic" )
 
+    p$carstm_inputs_aggregated = TRUE
+
     return(p)
   }
 
@@ -164,7 +166,6 @@
     M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
     # levelplot(substrate.grainsize.mean~plon+plat, data=M, aspect="iso")
 
-
     M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
     M = M[ which(is.finite(M$StrataID)),]
 
@@ -174,6 +175,7 @@
 
     kk =  which( !is.finite(M[, pB$variabletomodel]))
     M[, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[, c("lon", "lat")] )
+
 
     # if any still missing then use a randomly chosen depth by StrataID
     kk =  which( !is.finite(M[, pB$variabletomodel]))
@@ -187,8 +189,6 @@
       jj = match( as.character( M$StrataID[kk]), as.character( names(oo )) )
       M[kk, pB$variabletomodel] = oo[jj ]
     }
-
-
 
     if( exists("spatial_domain", p)) {
         # need to be careful with extrapolation ...  filter depths

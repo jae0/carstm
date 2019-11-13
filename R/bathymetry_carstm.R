@@ -101,6 +101,8 @@
 
       p = carstm_parameters( p=p, DS="basic" )  # fill in anything missing and some checks
 
+      p$carstm_inputs_aggregated = TRUE
+
     }
 
     return(p)

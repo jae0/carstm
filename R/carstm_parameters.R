@@ -83,12 +83,9 @@ carstm_parameters = function( p=NULL, DS="default", redo=FALSE, ... ) {
 
     if (!exists("dyear", p$discretization) ) p$discretization$dyear = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 
-    p$n.season = length(p$discretization[["dyear"]]) - 1
+    p$n.season = length(p$discretization[["dyear"]]) - 1   # used by seasonal error in inla ... not really useful
 
-
-    if (!exists("inla_nthreads", p ))  p$inla_nthreads = 1
-
-    if (!exists("inla_nthreads_blas", p ))  p$inla_nthreads_blas = 1
+    if (!exists("carstm_inputs_aggregated", p )) p$carstm_inputs_aggregated = FALSE  # default is to use all daat .. unless density is too thigh such as bathy and substrate
 
    return(p)
   }

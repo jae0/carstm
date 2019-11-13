@@ -78,7 +78,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
               + f(year_factor, model="ar1", hyper=H$ar1 )
               + f(dyri, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2 )
               + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-              + f(strata, model="bym2", graph=sppoly@nb, group= year_factor,  scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+              + f(strata, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),
@@ -89,8 +89,9 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
             verbose=TRUE
           ) ' )
       }
-         #     + f(tiyr2, model="seasonal", season.length=10 )
-        # + f(dyear, model="ar1", hyper=H$ar1 )
+        #  + f(tiyr2, model="seasonal", season.length=10 )
+        #  + f(dyear, model="ar1", hyper=H$ar1 )
+        #  + f(seasonal, model="seasonal", season.length=', pT$n.season, ', scale.model=TRUE )  # using seasonal effect is not recommended as it is not smoothed well .. rw2 is better
 
       if ( grepl("glm", p$carstm_modelengine) ) {
         p$carstm_modelcall = paste( 'glm( formula = ', p$variabletomodel, ' ~ 1 + StrataID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="identity")  ) ' )  # for modelengine='glm'
