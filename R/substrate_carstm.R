@@ -67,10 +67,6 @@
         p$libs = unique( c( p$libs, project.library ("INLA" ) ) )
         p$carstm_model_label = "production"
 
-
-        inla_nthreads = ifelse( exists("inla_nthreads", p ), p$inla_nthreads, 1 )
-        inla_nthreads_blas = ifelse ( exists("inla_nthreads_blas", p ), p$inla_nthreads_blas, 1 )
-
         p$carstm_modelcall = paste('
           inla(
             formula =', p$variabletomodel, ' ~ 1
@@ -82,10 +78,7 @@
             control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
             control.predictor=list(compute=FALSE, link=1 ),
             control.fixed=H$fixed,  # priors for fixed effects, generic is ok
-            # control.inla=list(int.strategy="eb") ,# to get empirical Bayes results much faster.
             control.inla=list( strategy="laplace", cutoff=1e-6, correct=TRUE, correct.verbose=FALSE ),  # extra work to get tails
-            num.threads=', inla_nthreads, ' ,
-            blas.num.threads=', inla_nthreads_blas, ' ,
             verbose=TRUE
           ) ' )
       }
@@ -170,6 +163,8 @@
     # reduce size
     M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
     # levelplot(substrate.grainsize.mean~plon+plat, data=M, aspect="iso")
+
+
     M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
     M = M[ which(is.finite(M$StrataID)),]
 
@@ -191,6 +186,14 @@
       oo = tapply( AD[, paste(pB$variabletomodel, "mean", sep="." )], AD$StrataID, FUN=median, na.rm=TRUE )
       jj = match( as.character( M$StrataID[kk]), as.character( names(oo )) )
       M[kk, pB$variabletomodel] = oo[jj ]
+    }
+
+
+
+    if( exists("spatial_domain", p)) {
+        # need to be careful with extrapolation ...  filter depths
+      M = lonlat2planar(M, p$aegis_proj4string_planar_km)  # should not be required but to make sure
+      M = geo_subset( spatial_domain=p$spatial_domain, Z=M )
     }
 
 
