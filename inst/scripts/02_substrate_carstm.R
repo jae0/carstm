@@ -38,10 +38,10 @@
   vn = paste(p$variabletomodel, "random_sample_iid", sep=".")
   carstm_plot( p=p, res=res, vn=vn )
 
-  vn = paste(p$variabletomodel, "random_strata_nonspatial", sep=".")
+  vn = paste(p$variabletomodel, "random_auid_nonspatial", sep=".")
   carstm_plot( p=p, res=res, vn=vn )
 
-  vn = paste(p$variabletomodel, "random_strata_spatial", sep="._carstm  carstm_plot( p=p, res=res, vn=vn )
+  vn = paste(p$variabletomodel, "random_auid_spatial", sep="._carstm  carstm_plot( p=p, res=res, vn=vn )
 
 
 # end

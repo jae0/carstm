@@ -38,7 +38,7 @@ for ( variabletomodel in p$varstomodel)  {
               + f(tiyr, model="ar1", hyper=H$ar1 )
               + f(year, model="ar1", hyper=H$ar1 )
               + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-              + f(strata, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2)
+              + f(auid, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2)
               + f(iid_error, model="iid", hyper=H$iid),
             family = "normal",
             data= M,
@@ -63,7 +63,7 @@ for ( variabletomodel in p$varstomodel)  {
               + f(tiyr, model="ar1", hyper=H$ar1 )
               + f(year, model="ar1", hyper=H$ar1 )
               + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-              + f(strata, model="bym2", graph=sppoly@nb ,group= year,  scale.model=TRUE, constr=TRUE, hyper=H$bym2)
+              + f(auid, model="bym2", graph=sppoly@nb ,group= year,  scale.model=TRUE, constr=TRUE, hyper=H$bym2)
               + f(iid_error, model="iid", hyper=H$iid),
             family = "normal",
             data= M,
@@ -87,7 +87,7 @@ for ( variabletomodel in p$varstomodel)  {
             formula =', p$variabletomodel, ' ~ 1
               + f(tiyr, model="ar1", hyper=H$ar1 )
               + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-              + f(strata, model="bym2", graph=sppoly@nb ,group= year,  scale.model=TRUE, constr=TRUE, hyper=H$bym2)
+              + f(auid, model="bym2", graph=sppoly@nb ,group= year,  scale.model=TRUE, constr=TRUE, hyper=H$bym2)
               + f(iid_error, model="iid", hyper=H$iid),
             family = "normal",
             data= M,
@@ -128,7 +128,7 @@ for ( variabletomodel in p$varstomodel)  {
       vn = paste(p$variabletomodel, "random_sample_iid", sep=".")
       if (exists(vn, res)) carstm_plot( p=p, res=res, vn=vn, time_match=list(year="1950", dyear="0") )
 
-      vn = paste(p$variabletomodel, "random_strata_nonspatial", sep=".")
+      vn = paste(p$variabletomodel, "random_auid_nonspatial", sep=".")
       if (exists(vn, res)) {
         res_dim = dim( res[[vn]] )
         if (res_dim == 1 ) time_match = NULL
@@ -137,7 +137,7 @@ for ( variabletomodel in p$varstomodel)  {
         carstm_plot( p=p, res=res, vn=vn, time_match=time_match )
       }
 
-      vn = paste(p$variabletomodel, "random_strata_spatial", sep=".")
+      vn = paste(p$variabletomodel, "random_auid_spatial", sep=".")
       if (exists(vn, res)) {
         res_dim = dim( res[[vn]] )
         if (res_dim == 1 ) time_match = NULL
