@@ -51,28 +51,17 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
   if ( grepl("inla", p$carstm_modelengine) ) {
     # hyperparms
+    j = which( is.finite(M[,p$variabletomodel]) )
     if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) {
-      H = carstm_hyperparameters( sd( log(M[,p$variabletomodel]), na.rm=TRUE), alpha=0.5, median( log(M[,p$variabletomodel]), na.rm=TRUE) )
+      m = log( M[ j, p$variabletomodel ])
+    } else if ( grepl( "family.*=.*poisson", p$carstm_modelcall)) {
+      m = log( M[ j, p$variabletomodel ] / M[ j, "data_offset" ]  )
     } else {
-      H = carstm_hyperparameters( sd(M[,p$variabletomodel], na.rm=TRUE), alpha=0.5, median( M[,p$variabletomodel], na.rm=TRUE) )
-    }
-    # M$strata  = as.numeric( M$StrataID)
-
-    # M$iid_error = 1:nrow(M) # for inla indexing for set level variation
-    # if ( p$aegis_dimensionality == "space") {
-    #   #nothing to do (yet)
-    # }
-
-    if ( p$aegis_dimensionality == "space-year") {
-      M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla
-      M$year = floor(M$tiyr)
-    }
-    if ( p$aegis_dimensionality == "space-year-season") {
-      M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla
-      M$year = floor(M$tiyr)
-      M$dyear  =  factor( as.character( trunc(  (M$tiyr - M$year )/ p$tres )*p$tres), levels=p$dyears)
+      m = M[,p$variabletomodel]
     }
 
+    H = carstm_hyperparameters( sd(m), alpha=0.5, median(m) )
+    m = NULL
 
   }
 

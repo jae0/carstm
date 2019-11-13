@@ -258,6 +258,8 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M$year = trunc( M$tiyr)
     M$year_factor = as.numeric( factor( M$year, levels=p$yrs))
     M$dyear =  M$tiyr - M$year  # reset in case it has been discretized
+    # M$tiyri  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla
+
 
     M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
 

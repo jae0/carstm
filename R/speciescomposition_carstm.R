@@ -331,6 +331,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
 
+
     # M$seasonal = (as.numeric(M$year_factor) - 1) * length(p$dyears)  + as.numeric(M$dyear)
 
     save( M, file=fn, compress=TRUE )
