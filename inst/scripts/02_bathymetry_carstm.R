@@ -13,7 +13,7 @@
   )
 
 # example sequence to force creating of input data for modelling
-  sppoly = areal_units( p=p, redo=TRUE ); plot(sppoly) # or: spplot( sppoly, "StrataID", main="StrataID", sp.layout=p$coastLayout )
+  sppoly = areal_units( p=p, redo=TRUE ); plot(sppoly) # or: spplot( sppoly, "AUID", main="AUID", sp.layout=p$coastLayout )
   M = bathymetry.db( p=p, DS="aggregated_data", redo=TRUE )  # will redo if not found .. not used here but used for data matching/lookup in other aegis projects that use bathymetry
   M = bathymetry_carstm( p=p, DS="carstm_inputs", redo=TRUE )  # will redo if not found
   str(M)
@@ -38,10 +38,10 @@
   vn = paste(p$variabletomodel, "random_sample_iid", sep=".")
   carstm_plot( p=p, res=res, vn=vn )
 
-  vn = paste(p$variabletomodel, "random_strata_nonspatial", sep=".")
+  vn = paste(p$variabletomodel, "random_auid_nonspatial", sep=".")
   carstm_plot( p=p, res=res, vn=vn )
 
-  vn = paste(p$variabletomodel, "random_strata_spatial", sep=".")
+  vn = paste(p$variabletomodel, "random_auid_spatial", sep=".")
   carstm_plot( p=p, res=res, vn=vn )
 
 # end

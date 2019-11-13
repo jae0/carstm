@@ -50,11 +50,11 @@ strata_dataformat = function( p ) {
       if (exists("selection", p)) {
         if (exists("survey", p$selection)) {  # filter survey information
           if (exists("polygon_enforce", p$selection$survey) ) {
-            set = set[ which(!is.na(set$StrataID)), ] # remove unsetegorized sets
+            set = set[ which(!is.na(set$AUID)), ] # remove unsetegorized sets
           }
           if (exists("months", p$selection$survey) ) set = set[ which(month(set$timestamp) %in% p$selection$survey[["months"]] ), ]
           if (exists("strata_toremove", p$selection$survey) ) {
-            todrop = which(set$StrataID %in% strata_definitions( p$selection$survey[["strata_toremove"]] ) )
+            todrop = which(set$AUID %in% strata_definitions( p$selection$survey[["strata_toremove"]] ) )
             if (length(todrop) > 0) set = set[- todrop , ]
           }
           isc = filter_data( set, p$selection$survey )

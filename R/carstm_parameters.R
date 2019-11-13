@@ -46,7 +46,7 @@ carstm_parameters = function( p=NULL, DS="default", redo=FALSE, ... ) {
     if ( !exists("datadir", p) )   p$datadir  = file.path( p$data_root, "data" )
     if ( !exists("modeldir", p) )  p$modeldir = file.path( p$data_root, "modelled" )
 
-    if (!exists("areal_units_strata_type", p )) p$areal_units_strata_type = "lattice" #
+    if (!exists("areal_units_source", p )) p$areal_units_source = "lattice" #
     if (!exists("areal_units_constraint", p )) p$areal_units_constraint = "none" #
     if (!exists("areal_units_overlay", p )) p$areal_units_overlay = "none" #
     if (!exists("areal_units_resolution_km", p )) stop( "areal_units_resolution_km should be defined ... " ) # km
@@ -55,11 +55,11 @@ carstm_parameters = function( p=NULL, DS="default", redo=FALSE, ... ) {
 
     if ( !exists("carstm_model_label", p) ) p$carstm_model_label = "production"  # default is to choose production results
 
-    if (!exists("auid", p) ) p$auid = paste(
+    if (!exists("areal_unit_type", p) ) p$areal_unit_type = paste(
       p$spatial_domain,
       paste0(p$areal_units_overlay, collapse="_"),
       p$areal_units_resolution_km,
-      p$areal_units_strata_type,
+      p$areal_units_source,
       p$areal_units_constraint,
       p$timeperiod,
       sep="_"

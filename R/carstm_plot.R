@@ -7,7 +7,7 @@
     # first index is spatial strata
     data_dimensionality = length( dim(res[[vn]]) )
 
-    if (is.null(poly_match)) poly_match = match( res$StrataID, sppoly[["StrataID"]] )  # should match exactly but in case a subset is sent as sppoly
+    if (is.null(poly_match)) poly_match = match( res$AUID, sppoly[["AUID"]] )  # should match exactly but in case a subset is sent as sppoly
 
     if (data_dimensionality==1) {
       sppoly@data[, vn] = res[[vn]] [ poly_match ]  # year only

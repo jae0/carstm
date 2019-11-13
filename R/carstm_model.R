@@ -8,18 +8,18 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   i = which(duplicated(names(p), fromLast = TRUE ))
   if ( length(i) > 0 ) p = p[-i] # give any passed parameters a higher priority, overwriting pre-existing variable
 
-  auids = p$auid
-  if (exists( "inputdata_spatial_discretization_planar_km", p )) auids = paste( auids, round(p$inputdata_spatial_discretization_planar_km, 6),   sep="_" )
-  if (exists( "inputdata_temporal_discretization_yr", p )) auids = paste( auids, round(p$inputdata_temporal_discretization_yr, 6),   sep="_" )
+  areal_unit_types = p$areal_unit_type
+  if (exists( "inputdata_spatial_discretization_planar_km", p )) areal_unit_types = paste( areal_unit_types, round(p$inputdata_spatial_discretization_planar_km, 6),   sep="_" )
+  if (exists( "inputdata_temporal_discretization_yr", p )) areal_unit_types = paste( areal_unit_types, round(p$inputdata_temporal_discretization_yr, 6),   sep="_" )
 
 
-  auids_suffix = paste( auids, p$variabletomodel, p$carstm_modelengine,  "rdata", sep="." )
+  areal_unit_types_suffix = paste( areal_unit_types, p$variabletomodel, p$carstm_modelengine,  "rdata", sep="." )
   outputdir = file.path(p$modeldir, p$carstm_model_label)
 
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
 
-  fn = file.path( outputdir, paste("carstm_modelled_results", auids_suffix, sep="." ) )
-  fn_fit = file.path( outputdir, paste( "carstm_modelled_fit", auids_suffix, sep=".") )
+  fn = file.path( outputdir, paste("carstm_modelled_results", areal_unit_types_suffix, sep="." ) )
+  fn_fit = file.path( outputdir, paste( "carstm_modelled_fit", areal_unit_types_suffix, sep=".") )
 
   if (DS %in% c("carstm_modelled_fit", "carstm_modelled"))  {
     if (DS=="carstm_modelled") {
@@ -41,8 +41,8 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
   # init results list
   res = list(
-    StrataID = sppoly[["StrataID"]],
-    strata   = as.numeric(sppoly[["StrataID"]] )  )
+    AUID = sppoly[["AUID"]],
+    auid = as.numeric( factor(sppoly[["AUID"]]) )  )
 
   # permit passing a function rather than data directly .. less RAM usage in parent call
   if (class(M)=="character") assign("M", eval(parse(text=M) ) )
@@ -76,30 +76,30 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   if ( p$aegis_dimensionality == "space") {
     ii = which(
       M$tag=="predictions" &
-      M$strata %in% res$strata
-    )  # filter by strata and years in case additional data in other areas and times are used in the input data
-    matchfrom = list( strata=M$strata[ii] )
-    matchto   = list( strata=res$strata )
+      M$auid %in% res$auid
+    )  # filter by auid and years in case additional data in other areas and times are used in the input data
+    matchfrom = list( auid=M$auid[ii] )
+    matchto   = list( auid=res$auid )
   }
 
   if ( p$aegis_dimensionality == "space-year") {
     ii = which(
       M$tag=="predictions" &
-      M$strata %in% res$strata &
+      M$auid %in% res$auid &
       M$year %in% p$yrs
-    )  # filter by strata and years in case additional data in other areas and times are used in the input data
-    matchfrom = list( strata=M$strata[ii], year=as.character(M$year[ii]) )
-    matchto   = list( strata=res$strata,   year=as.character(p$yrs)  )
+    )  # filter by auid and years in case additional data in other areas and times are used in the input data
+    matchfrom = list( auid=M$auid[ii], year=as.character(M$year[ii]) )
+    matchto   = list( auid=res$auid,   year=as.character(p$yrs)  )
   }
 
   if ( p$aegis_dimensionality == "space-year-season") {
     ii = which(
       M$tag=="predictions" &
-      M$strata %in% res$strata &
+      M$auid %in% res$auid &
       M$year %in% p$yrs
-    )  # filter by strata and years in case additional data in other areas and times are used in the input data
-    matchfrom = list( strata=M$strata[ii], year=as.character(M$year[ii]), dyear=as.character(M$dyear[ii]) )
-    matchto   = list( strata=res$strata,   year=as.character(p$yrs),      dyear=as.character(p$dyears) )
+    )  # filter by auid and years in case additional data in other areas and times are used in the input data
+    matchfrom = list( auid=M$auid[ii], year=as.character(M$year[ii]), dyear=as.character(M$dyear[ii]) )
+    matchto   = list( auid=res$auid,   year=as.character(p$yrs),      dyear=as.character(p$dyears) )
  }
 
 
@@ -190,7 +190,7 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
   if ( grepl("inla", p$carstm_modelengine) ) {
 
-    nstrata = length(res$StrataID)
+    nauid = length(res$AUID)
 
     # match conditions for random effects .. ii are locations of predictions in "fit"
     # random effects results ..
@@ -201,89 +201,89 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
         if ( p$aegis_dimensionality == "space") {
           ii = which(
             M$tag=="predictions" &
-            M$strata %in% res$strata
-          )  # filter by strata and years in case additional data in other areas and times are used in the input data
-          matchfrom = list( strata=M$strata[ii] )
-          matchto   = list( strata=res$strata )
+            M$auid %in% res$auid
+          )  # filter by auid and years in case additional data in other areas and times are used in the input data
+          matchfrom = list( auid=M$auid[ii] )
+          matchto   = list( auid=res$auid )
         }
 
         if ( p$aegis_dimensionality == "space-year") {
           ii = which(
             M$tag=="predictions" &
-            M$strata %in% res$strata &
+            M$auid %in% res$auid &
             M$year %in% p$yrs
-          )  # filter by strata and years in case additional data in other areas and times are used in the input data
-          matchfrom = list( strata=M$strata[ii], year=as.character(M$year[ii]) )
-          matchto   = list( strata=res$strata, year=as.character(p$yrs)  )
+          )  # filter by auid and years in case additional data in other areas and times are used in the input data
+          matchfrom = list( auid=M$auid[ii], year=as.character(M$year[ii]) )
+          matchto   = list( auid=res$auid, year=as.character(p$yrs)  )
         }
 
         if ( p$aegis_dimensionality == "space-year-season") {
           ii = which(
             M$tag=="predictions" &
-            M$strata %in% res$strata &
+            M$auid %in% res$auid &
             M$year %in% p$yrs
-          )  # filter by strata and years in case additional data in other areas and times are used in the input data
-          matchfrom = list( strata=M$strata[ii], year=as.character(M$year[ii]), dyear=M$dyear[ii] )
-          matchto   = list( strata=res$strata, year=as.character(p$yrs), dyear=factor(p$dyears) )
+          )  # filter by auid and years in case additional data in other areas and times are used in the input data
+          matchfrom = list( auid=M$auid[ii], year=as.character(M$year[ii]), dyear=M$dyear[ii] )
+          matchto   = list( auid=res$auid, year=as.character(p$yrs), dyear=factor(p$dyears) )
         }
         vn = paste( p$variabletomodel, "random_sample_iid", sep=".")
         input = fit$summary.random$iid_error[ii, "mean" ]
         res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
       }
 
-      if (exists("strata", fit$summary.random)) {
+      if (exists("auid", fit$summary.random)) {
 
 
-        if (nrow(fit$summary.random$strata) == nstrata*2) {
+        if (nrow(fit$summary.random$auid) == nauid*2) {
           # a single nonspatial effect (no grouping across time)
-          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial") )
+          resout = expand.grid( auid=res$auid, type = c("nonspatial", "spatial") )
           kk = which(resout$type=="nonspatial")
-          matchfrom = list( strata=resout$strata[kk]  )
-          matchto   = list( strata=res$strata  )
-          input = fit$summary.random$strata[ kk, "mean" ]
-        } else if (nrow(fit$summary.random$strata) == nstrata*2 * p$ny ) {
+          matchfrom = list( auid=resout$auid[kk]  )
+          matchto   = list( auid=res$auid  )
+          input = fit$summary.random$auid[ kk, "mean" ]
+        } else if (nrow(fit$summary.random$auid) == nauid*2 * p$ny ) {
           #  nonspatial effects grouped by year
-          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial"), year=p$yrs )
+          resout = expand.grid( auid=res$auid, type = c("nonspatial", "spatial"), year=p$yrs )
           kk = which(resout$type=="nonspatial")
-          matchfrom = list( strata=resout$strata[kk], year=resout$year[kk] )
-          matchto   = list( strata=res$strata, year=as.character(p$yrs) )
-          input = fit$summary.random$strata[ kk, "mean" ]
-        } else if (nrow(fit$summary.random$strata) == nstrata*2 * p$nt ) {
+          matchfrom = list( auid=resout$auid[kk], year=resout$year[kk] )
+          matchto   = list( auid=res$auid, year=as.character(p$yrs) )
+          input = fit$summary.random$auid[ kk, "mean" ]
+        } else if (nrow(fit$summary.random$auid) == nauid*2 * p$nt ) {
           # nonspatial at all time slices
-          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
+          resout = expand.grid( auid=res$auid, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
           kk = which(resout$type=="nonspatial")
-          matchfrom = list( strata=resout$strata[kk], year=resout$year[kk], dyear=resout$dyear[kk] )
-          matchto   = list( strata=res$strata, year=as.character(p$yrs), dyear=as.character(p$dyears) )
-          input = fit$summary.random$strata[ kk, "mean" ]
+          matchfrom = list( auid=resout$auid[kk], year=resout$year[kk], dyear=resout$dyear[kk] )
+          matchto   = list( auid=res$auid, year=as.character(p$yrs), dyear=as.character(p$dyears) )
+          input = fit$summary.random$auid[ kk, "mean" ]
         }
 
-        vn = paste( p$variabletomodel, "random_strata_nonspatial", sep=".")
+        vn = paste( p$variabletomodel, "random_auid_nonspatial", sep=".")
         res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
         # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
 
-        if (nrow(fit$summary.random$strata) == nstrata*2) {
+        if (nrow(fit$summary.random$auid) == nauid*2) {
           # a single spatial effect (no grouping across time)
-          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial") )
+          resout = expand.grid( auid=res$auid, type = c("nonspatial", "spatial") )
           kk = which(resout$type=="spatial")
-          matchfrom = list( strata=resout$strata[kk]  )
-          matchto   = list( strata=res$strata  )
-          input = fit$summary.random$strata[ kk, "mean" ]  # offset structure due to bym2
-        } else if (nrow(fit$summary.random$strata) == nstrata*2 * p$ny ) {
+          matchfrom = list( auid=resout$auid[kk]  )
+          matchto   = list( auid=res$auid  )
+          input = fit$summary.random$auid[ kk, "mean" ]  # offset structure due to bym2
+        } else if (nrow(fit$summary.random$auid) == nauid*2 * p$ny ) {
           # spatial effects grouped by year
-          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial"), year=p$yrs )
+          resout = expand.grid( auid=res$auid, type = c("nonspatial", "spatial"), year=p$yrs )
           kk = which(resout$type=="spatial")
-          matchfrom = list( strata=resout$strata[kk], year=resout$year[kk] )
-          matchto   = list( strata=res$strata, year=p$yrs )
-          input = fit$summary.random$strata[ kk, "mean" ]  # offset structure due to bym2
-        } else if (nrow(fit$summary.random$strata) == nstrata*2 * p$nt ) {
+          matchfrom = list( auid=resout$auid[kk], year=resout$year[kk] )
+          matchto   = list( auid=res$auid, year=p$yrs )
+          input = fit$summary.random$auid[ kk, "mean" ]  # offset structure due to bym2
+        } else if (nrow(fit$summary.random$auid) == nauid*2 * p$nt ) {
           # at every time slice
-          resout = expand.grid( strata=res$strata, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
+          resout = expand.grid( auid=res$auid, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
           kk = which(resout$type=="spatial")
-          matchfrom = list( strata=resout$strata[kk], year=resout$year[kk], dyear=resout$dyear[kk] )
-          matchto   = list( strata=res$strata, year=p$yrs, dyear=as.character(p$dyears) )
-          input = fit$summary.random$strata[ kk, "mean" ]  # offset structure due to bym2
+          matchfrom = list( auid=resout$auid[kk], year=resout$year[kk], dyear=resout$dyear[kk] )
+          matchto   = list( auid=res$auid, year=p$yrs, dyear=as.character(p$dyears) )
+          input = fit$summary.random$auid[ kk, "mean" ]  # offset structure due to bym2
         }
-        vn = paste( p$variabletomodel, "random_strata_spatial", sep=".")
+        vn = paste( p$variabletomodel, "random_auid_spatial", sep=".")
         res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
         # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
 

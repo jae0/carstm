@@ -32,7 +32,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
       inputdata_temporal_discretization_yr = p$inputdata_temporal_discretization_yr,  # ie., weekly .. controls resolution of data prior to modelling to reduce data set and speed up modelling
       modeldir = p$modeldir,  # outputs all go the the main project's model output directory
-      auid = p$auid
+      areal_unit_type = p$areal_unit_type
     )
     return(pc)
   }
@@ -46,7 +46,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     if ( !exists("project_name", p)) p$project_name = "temperature"
 
-    if ( !exists("areal_units_strata_type", p)) p$areal_units_strata_type = "lattice" # "stmv_lattice" to use ageis fields instead of carstm fields ... note variables are not the same
+    if ( !exists("areal_units_source", p)) p$areal_units_source = "lattice" # "stmv_lattice" to use ageis fields instead of carstm fields ... note variables are not the same
 
     if ( p$spatial_domain == "SSE" ) {
       if ( !exists("areal_units_overlay", p)) p$areal_units_overlay = "groundfish_strata" #.. additional polygon layers for subsequent analysis for now ..
@@ -78,7 +78,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
               + f(year_factor, model="ar1", hyper=H$ar1 )
               + f(dyri, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2 )
               + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-              + f(strata, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+              + f(auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),
@@ -94,11 +94,11 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
         #  + f(seasonal, model="seasonal", season.length=', pT$n.season, ', scale.model=TRUE )  # using seasonal effect is not recommended as it is not smoothed well .. rw2 is better
 
       if ( grepl("glm", p$carstm_modelengine) ) {
-        p$carstm_modelcall = paste( 'glm( formula = ', p$variabletomodel, ' ~ 1 + StrataID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="identity")  ) ' )  # for modelengine='glm'
+        p$carstm_modelcall = paste( 'glm( formula = ', p$variabletomodel, ' ~ 1 + AUID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="identity")  ) ' )  # for modelengine='glm'
       }
       if ( grepl("gam", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "mgcv"  ) ) )
-        p$carstm_modelcall = paste( 'gam( formula = ', p$variabletomodel, ' ~ 1 + StrataID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="identity")  ) ' ) # for modelengine='gam'
+        p$carstm_modelcall = paste( 'gam( formula = ', p$variabletomodel, ' ~ 1 + AUID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="identity")  ) ' ) # for modelengine='gam'
       }
     }
 
@@ -120,13 +120,13 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     }
 
     if (aggregate_data) {
-      fn = file.path( p$modeldir, paste( "temperature", "carstm_inputs", p$auid,
+      fn = file.path( p$modeldir, paste( "temperature", "carstm_inputs", p$areal_unit_type,
         p$inputdata_spatial_discretization_planar_km,
         round(p$inputdata_temporal_discretization_yr, 6),
         "rdata", sep=".") )
 
     } else {
-      fn = file.path( p$modeldir, paste( "temperature", "carstm_inputs", p$auid,
+      fn = file.path( p$modeldir, paste( "temperature", "carstm_inputs", p$areal_unit_type,
         "rawdata",
         "rdata", sep=".") )
     }
@@ -186,7 +186,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
     # levelplot(z.mean~plon+plat, data=M, aspect="iso")
 
-    M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
+    M$AUID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$AUID # match each datum to an area
 
     pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
 
@@ -197,8 +197,8 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M$lat = NULL
     M$plon = NULL
     M$plat = NULL
-    M = M[ which(is.finite(M$StrataID)),]
-    M$StrataID = as.character( M$StrataID )  # match each datum to an area
+    M = M[ which(is.finite(M$AUID)),]
+    M$AUID = as.character( M$AUID )  # match each datum to an area
 
     M$tiyr = M$year + M$dyear
     M$tag = "observations"
@@ -211,31 +211,31 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     kk = which(!is.finite( M[, pB$variabletomodel] ))
     if (length(kk > 0)) M[kk, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[kk, c("lon", "lat")] )
 
-    # if any still missing then use a mean depth by StrataID
+    # if any still missing then use a mean depth by AUID
     kk =  which( !is.finite(M[, pB$variabletomodel]))
     if (length(kk) > 0) {
       AD = bathymetry.db ( p=pB, DS="aggregated_data"  )  # 16 GB in RAM just to store!
       AD = AD[ which( AD$lon > p$corners$lon[1] & AD$lon < p$corners$lon[2]  & AD$lat > p$corners$lat[1] & AD$lat < p$corners$lat[2] ), ]
       # levelplot( eval(paste(p$variabletomodel, "mean", sep="."))~plon+plat, data=M, aspect="iso")
-      AD$StrataID = over( SpatialPoints( AD[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
-      oo = tapply( AD[, paste(pB$variabletomodel, "mean", sep="." )], AD$StrataID, FUN=median, na.rm=TRUE )
-      jj = match( as.character( M$StrataID[kk]), as.character( names(oo )) )
+      AD$AUID = over( SpatialPoints( AD[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$AUID # match each datum to an area
+      oo = tapply( AD[, paste(pB$variabletomodel, "mean", sep="." )], AD$AUID, FUN=median, na.rm=TRUE )
+      jj = match( as.character( M$AUID[kk]), as.character( names(oo )) )
       M[kk, pB$variabletomodel] = oo[jj ]
     }
 
     APS = as.data.frame(sppoly)
-    APS$StrataID = as.character( APS$StrataID )
+    APS$AUID = as.character( APS$AUID )
     APS$tag ="predictions"
     APS[, p$variabletomodel] = NA
 
     pB$carstm_model_label = "production"
     BM = carstm_model ( p=pB, DS="carstm_modelled" )
-    jj = match( as.character( APS$StrataID), as.character( BM$StrataID) )
+    jj = match( as.character( APS$AUID), as.character( BM$AUID) )
     APS[, pB$variabletomodel] = BM[[ paste(pB$variabletomodel, "predicted", sep=".") ]] [jj]
     jj =NULL
     BM = NULL
 
-    vn = c( p$variabletomodel, pB$variabletomodel, "tag", "StrataID"  )
+    vn = c( p$variabletomodel, pB$variabletomodel, "tag", "AUID"  )
     APS = APS[, vn]
 
     # expand APS to all time slices
@@ -246,8 +246,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M = rbind( M[, names(APS)], APS )
     APS = NULL
 
-    M$StrataID  = factor( as.character(M$StrataID), levels=levels( sppoly$StrataID ) ) # revert to factors
-    M$strata  = as.numeric( M$StrataID)
+    M$auid  = as.numeric( factor( M$AUID) )
 
     M$year = trunc( M$tiyr)
     M$year_factor = as.numeric( factor( M$year, levels=p$yrs))

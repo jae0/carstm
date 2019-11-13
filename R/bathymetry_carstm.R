@@ -31,7 +31,7 @@
         areal_units_proj4string_planar_km = p$areal_units_proj4string_planar_km,  # coord system to use for areal estimation and gridding for carstm
         inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
         modeldir = p$modeldir,  # outputs all go the the main project's model output directory
-        auid = p$auid
+        areal_unit_type = p$areal_unit_type
       )
 
       return(pc)  #override
@@ -47,7 +47,7 @@
 
     if ( !exists("data_transformation", p)) p$data_transformation=list( forward=function(x){ x+2500 }, backward=function(x) {x-2500} )
 
-    if ( !exists("areal_units_strata_type", p)) p$areal_units_strata_type = "lattice" # "stmv_lattice" to use ageis fields instead of carstm fields ... note variables are not the same
+    if ( !exists("areal_units_source", p)) p$areal_units_source = "lattice" # "stmv_lattice" to use ageis fields instead of carstm fields ... note variables are not the same
 
     if ( p$spatial_domain == "SSE" ) {
       if ( !exists("areal_units_overlay", p)) p$areal_units_overlay = "groundfish_strata" #.. additional polygon layers for subsequent analysis for now ..
@@ -77,7 +77,7 @@
         p$carstm_modelcall = paste(
           'inla(
             formula = ', p$variabletomodel, ' ~ 1
-              + f(strata, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+              + f(auid, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "lognormal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),  # config=TRUE if doing posterior simulations
@@ -91,12 +91,12 @@
 
       if ( grepl("glm", p$carstm_modelengine) ) {
         p$carstm_model_label = "default_glm"
-        p$carstm_modelcall = paste( 'glm( formula = ', p$variabletomodel, '  ~ 1 + StrataID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="log")  ) ' ) # for modelengine='glm'
+        p$carstm_modelcall = paste( 'glm( formula = ', p$variabletomodel, '  ~ 1 + AUID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="log")  ) ' ) # for modelengine='glm'
       }
       if ( grepl("gam", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "mgcv" ) ) )
         p$carstm_model_label = "default_gam"
-        p$carstm_modelcall = paste( 'gam( formula = ', p$variabletomodel, '  ~ 1 + StrataID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="log")  ) ' )  # for modelengine='gam'
+        p$carstm_modelcall = paste( 'gam( formula = ', p$variabletomodel, '  ~ 1 + AUID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="log")  ) ' )  # for modelengine='gam'
       }
 
       p = carstm_parameters( p=p, DS="basic" )  # fill in anything missing and some checks
@@ -123,11 +123,11 @@
 
     if (aggregate_data) {
       # just testing mode ... not used for production
-      fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", p$auid,
+      fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", p$areal_unit_type,
         p$inputdata_spatial_discretization_planar_km,
         "rdata", sep=".") )
     } else {
-      fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", p$auid,
+      fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", p$areal_unit_type,
         "rawdata",
         "rdata", sep=".") )
     }
@@ -174,28 +174,27 @@
     }
 
 
-    M$StrataID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$StrataID # match each datum to an area
+    M$AUID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$AUID # match each datum to an area
     M$lon = NULL
     M$lat = NULL
     M$plon = NULL
     M$plat = NULL
-    M = M[ which(is.finite(M$StrataID)),]
-    M$StrataID = as.character( M$StrataID )  # match each datum to an area
+    M = M[ which(is.finite(M$AUID)),]
+    M$AUID = as.character( M$AUID )  # match each datum to an area
 
     M$tag = "observations"
 
     sppoly_df = as.data.frame(sppoly)
     sppoly_df[, p$variabletomodel] = NA
-    sppoly_df$StrataID = as.character( sppoly_df$StrataID )
+    sppoly_df$AUID = as.character( sppoly_df$AUID )
     sppoly_df$tag ="predictions"
 
-    vn = c("z", "tag", "StrataID")
+    vn = c("z", "tag", "AUID")
 
     M = rbind( M[, vn], sppoly_df[, vn] )
     sppoly_df = NULL
 
-    M$StrataID  = factor( as.character(M$StrataID), levels=levels( sppoly$StrataID ) ) # revert to factors
-    M$strata  = as.numeric( M$StrataID)
+    M$auid  = as.numeric( factor(M$AUID) )
 
     save( M, file=fn, compress=TRUE )
     return( M )

@@ -72,16 +72,16 @@ for (tu in c( "standardtow", "towdistance", "sweptarea") ) {
     set = aegis.survey::survey.db( p=p, DS="filter", add_groundfish_strata=TRUE )   # return values in kg or no per set
 
     if (0) {
-      # the above merges based upon StrataID's designated in groundfish tables.  Alternatively one can use positions directly:
+      # the above merges based upon AUID's designated in groundfish tables.  Alternatively one can use positions directly:
       set = survey.db( p=p, DS="filter" )
       # categorize Strata
-      sppoly = areal_units( areal_units_strata_type="stratanal_polygons",  areal_units_proj4string_planar_km=p$areal_units_proj4string_planar_km, timeperiod="pre2014" )
-      sppoly$strata_to_keep = ifelse( as.character(sppoly$StrataID) %in% strata_definitions( c("Gulf", "Georges_Bank", "Spring", "Deep_Water") ), FALSE,  TRUE )
+      sppoly = areal_units( areal_units_source="stratanal_polygons",  areal_units_proj4string_planar_km=p$areal_units_proj4string_planar_km, timeperiod="pre2014" )
+      sppoly$strata_to_keep = ifelse( as.character(sppoly$AUID) %in% strata_definitions( c("Gulf", "Georges_Bank", "Spring", "Deep_Water") ), FALSE,  TRUE )
 
       o = over( SpatialPoints( set[,c("lon", "lat")], sp::CRS(projection_proj4string("lonlat_wgs84")) ), spTransform(sppoly, sp::CRS(projection_proj4string("lonlat_wgs84")) ) ) # match each datum to an area
-      set$StrataID = o$StrataID
+      set$AUID = o$AUID
       o = NULL
-      set = set[ which(!is.na(set$StrataID)),]
+      set = set[ which(!is.na(set$AUID)),]
     }
 
 
@@ -95,7 +95,7 @@ for (tu in c( "standardtow", "towdistance", "sweptarea") ) {
     # compute no of trawlable units for each stratum
 
     # "strat" and "nh" are used by stratanal
-    set$strat = set$StrataID
+    set$strat = set$AUID
 
     ft2m = 0.3048
     m2km = 1/1000
@@ -105,12 +105,12 @@ for (tu in c( "standardtow", "towdistance", "sweptarea") ) {
     # = 0.0405 and NOT 0.011801 .. where did this come from?
     # set up trawlable units used in stratanal
     set$nh = switch( p$trawlable_units,
-      sweptarea = as.numeric(set$sa_strata_km2) * set$cf_cat, # convert strata area to trawlable units 41ft by 1.75 nm, divide area by sweptarea
-      standardtow = as.numeric(set$sa_strata_km2) / standardtow_sakm2, # convert strata area to trawlable units 41ft by 1.75 nm, divide area by 0.011801
-      towdistance = as.numeric(set$sa_strata_km2) / set$sa_towdistance # convert strata area to trawlable units 41ft by 1.75 nm, divide area by 0.011801
+      sweptarea = as.numeric(set$au_sa_km2) * set$cf_cat, # convert strata area to trawlable units 41ft by 1.75 nm, divide area by sweptarea
+      standardtow = as.numeric(set$au_sa_km2) / standardtow_sakm2, # convert strata area to trawlable units 41ft by 1.75 nm, divide area by 0.011801
+      towdistance = as.numeric(set$au_sa_km2) / set$sa_towdistance # convert strata area to trawlable units 41ft by 1.75 nm, divide area by 0.011801
     )
     i = which(!is.finite(set$nh))
-    set$nh[i] = as.numeric(set$sa_strata_km2[i]) / standardtow_sakm2  # override missing with "standard set" .. also if no trawlable_units set
+    set$nh[i] = as.numeric(set$au_sa_km2[i]) / standardtow_sakm2  # override missing with "standard set" .. also if no trawlable_units set
 
 
 
@@ -212,11 +212,11 @@ plot( RES[, c("stratanal_standardtow", "stratanal_towdistance", "stratanal_swept
 # TODO basic corelations and plots, summarizing the above
 
 
-set$strata_year = paste( set$StrataID, set$yr, sep=".")
+set$strata_year = paste( set$AUID, set$yr, sep=".")
 nn = applySummary( set[, c("strata_year", "totno")]  )
 
-V = expand.grid( StrataID=levels(set$StrataID), yr=sort( unique(set$yr) ) )
-V$strata_year = paste( V$StrataID, V$yr, sep=".")
+V = expand.grid( AUID=levels(set$AUID), yr=sort( unique(set$yr) ) )
+V$strata_year = paste( V$AUID, V$yr, sep=".")
 V = merge( V, nn, by="strata_year", all.x=TRUE, all.y=FALSE, suffixes=c("", ".totno") )
 
 dev.new(); plot( log(totno.mean) ~ log(totno.sd), V ); abline(0,1)

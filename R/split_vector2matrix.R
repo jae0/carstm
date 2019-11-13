@@ -1,4 +1,4 @@
-split_vector2matrix = function( u, vnames=c("StrataID", "yr_factor"), sep=":", matchto=NULL ) {
+split_vector2matrix = function( u, vnames=c("AUID", "yr_factor"), sep=":", matchto=NULL ) {
   # could be array .. alter matrix to array ..
   un = names(u)
   if(is.null(un)) un=rownames(u)
