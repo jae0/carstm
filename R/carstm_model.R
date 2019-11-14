@@ -8,18 +8,18 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   i = which(duplicated(names(p), fromLast = TRUE ))
   if ( length(i) > 0 ) p = p[-i] # give any passed parameters a higher priority, overwriting pre-existing variable
 
-  areal_unit_types = p$areal_unit_type
-  if (exists( "inputdata_spatial_discretization_planar_km", p )) areal_unit_types = paste( areal_unit_types, round(p$inputdata_spatial_discretization_planar_km, 6),   sep="_" )
-  if (exists( "inputdata_temporal_discretization_yr", p )) areal_unit_types = paste( areal_unit_types, round(p$inputdata_temporal_discretization_yr, 6),   sep="_" )
+  areal_units_fns = p$areal_units_fn
+  if (exists( "inputdata_spatial_discretization_planar_km", p )) areal_units_fns = paste( areal_units_fns, round(p$inputdata_spatial_discretization_planar_km, 6),   sep="_" )
+  if (exists( "inputdata_temporal_discretization_yr", p )) areal_units_fns = paste( areal_units_fns, round(p$inputdata_temporal_discretization_yr, 6),   sep="_" )
 
 
-  areal_unit_types_suffix = paste( areal_unit_types, p$variabletomodel, p$carstm_modelengine,  "rdata", sep="." )
+  areal_units_fns_suffix = paste( areal_units_fns, p$variabletomodel, p$carstm_modelengine,  "rdata", sep="." )
   outputdir = file.path(p$modeldir, p$carstm_model_label)
 
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
 
-  fn = file.path( outputdir, paste("carstm_modelled_results", areal_unit_types_suffix, sep="." ) )
-  fn_fit = file.path( outputdir, paste( "carstm_modelled_fit", areal_unit_types_suffix, sep=".") )
+  fn = file.path( outputdir, paste("carstm_modelled_results", areal_units_fns_suffix, sep="." ) )
+  fn_fit = file.path( outputdir, paste( "carstm_modelled_fit", areal_units_fns_suffix, sep=".") )
 
   if (DS %in% c("carstm_modelled_fit", "carstm_modelled"))  {
     if (DS=="carstm_modelled") {

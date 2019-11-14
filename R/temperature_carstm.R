@@ -32,7 +32,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
       inputdata_temporal_discretization_yr = p$inputdata_temporal_discretization_yr,  # ie., weekly .. controls resolution of data prior to modelling to reduce data set and speed up modelling
       modeldir = p$modeldir,  # outputs all go the the main project's model output directory
-      areal_unit_type = p$areal_unit_type
+      areal_units_fn = p$areal_units_fn
     )
     return(pc)
   }
@@ -120,13 +120,13 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     }
 
     if (aggregate_data) {
-      fn = file.path( p$modeldir, paste( "temperature", "carstm_inputs", p$areal_unit_type,
+      fn = file.path( p$modeldir, paste( "temperature", "carstm_inputs", p$areal_units_fn,
         p$inputdata_spatial_discretization_planar_km,
         round(p$inputdata_temporal_discretization_yr, 6),
         "rdata", sep=".") )
 
     } else {
-      fn = file.path( p$modeldir, paste( "temperature", "carstm_inputs", p$areal_unit_type,
+      fn = file.path( p$modeldir, paste( "temperature", "carstm_inputs", p$areal_units_fn,
         "rawdata",
         "rdata", sep=".") )
     }

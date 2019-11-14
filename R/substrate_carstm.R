@@ -28,7 +28,7 @@
       areal_units_proj4string_planar_km = p$areal_units_proj4string_planar_km,  # coord system to use for areal estimation and gridding for carstm
       inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
       modeldir = p$modeldir,  # outputs all go the the main project's model output directory
-      areal_unit_type = p$areal_unit_type
+      areal_units_fn = p$areal_units_fn
     )
     return(pc)
   }
@@ -116,11 +116,11 @@
 
 
     if (aggregate_data) {
-      fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", p$areal_unit_type,
+      fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", p$areal_units_fn,
         p$inputdata_spatial_discretization_planar_km,
         "rdata", sep=".") )
     } else {
-      fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", p$areal_unit_type,
+      fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", p$areal_units_fn,
         "rawdata",
         "rdata", sep=".") )
     }
