@@ -21,8 +21,11 @@ for ( variabletomodel in p$varstomodel)  {
       yrs = 1999:2019,
       aegis_dimensionality="space-year",
       spatial_domain = "SSE",  # defines spatial area, currenty: "snowcrab" or "SSE"
+      areal_units_fn = "default",  # identifyer for areal units polygon filename
       areal_units_resolution_km = 25, # km dim of lattice ~ 1 hr
-      areal_units_proj4string_planar_km = aegis::projection_proj4string("utm20")  # coord system to use for areal estimation and gridding for carstm
+      areal_units_proj4string_planar_km = aegis::projection_proj4string("utm20"),  # coord system to use for areal estimation and gridding for carstm
+      areal_units_source = "lattice", # "stmv_fields" to use ageis fields instead of carstm fields ... note variables are not the same
+      areal_units_overlay = "none"
     )
 
     if (0) {
