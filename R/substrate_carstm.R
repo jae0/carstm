@@ -167,7 +167,7 @@
     # levelplot(substrate.grainsize.mean~plon+plat, data=M, aspect="iso")
 
     M$AUID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$AUID # match each datum to an area
-    M = M[ which(is.finite(M$AUID)),]
+    M = M[ which(!is.na(M$AUID)),]
 
     pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
 
@@ -184,7 +184,7 @@
       AD = AD[ which( AD$lon > p$corners$lon[1] & AD$lon < p$corners$lon[2]  & AD$lat > p$corners$lat[1] & AD$lat < p$corners$lat[2] ), ]
       # levelplot( eval(paste(p$variabletomodel, "mean", sep="."))~plon+plat, data=M, aspect="iso")
       AD$AUID = over( SpatialPoints( AD[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$AUID # match each datum to an area
-      AD = AD[ which(is.finite(AD$AUID)),]
+      AD = AD[ which(!is.na(AD$AUID)),]
       oo = tapply( AD[, paste(pB$variabletomodel, "mean", sep="." )], AD$AUID, FUN=median, na.rm=TRUE )
       jj = match( as.character( M$AUID[kk]), as.character( names(oo )) )
       M[kk, pB$variabletomodel] = oo[jj ]

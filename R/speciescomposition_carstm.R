@@ -255,8 +255,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     M = M[ which(is.finite(M[, pB$variabletomodel] )),]
     M = M[ which(is.finite(M[, pS$variabletomodel] )),]
     M = M[ which(is.finite(M[, pT$variabletomodel] )),]
-    M = M[ which(is.finite(M$AUID)),]
-    M$AUID = as.character( M$AUID )  # match each datum to an area
+    M = M[ which(!is.na(M$AUID)),]
 
     M$tag = "observations"
 

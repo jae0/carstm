@@ -197,8 +197,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M$lat = NULL
     M$plon = NULL
     M$plat = NULL
-    M = M[ which(is.finite(M$AUID)),]
-    M$AUID = as.character( M$AUID )  # match each datum to an area
+    M = M[ which(!is.na(M$AUID)),]
 
     M$tiyr = M$year + M$dyear
     M$tag = "observations"

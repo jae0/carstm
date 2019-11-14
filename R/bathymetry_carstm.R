@@ -179,7 +179,7 @@
     M$lat = NULL
     M$plon = NULL
     M$plat = NULL
-    M = M[ which(is.finite(M$AUID)),]
+    M = M[ which(!is.na(M$AUID)),]
     M$AUID = as.character( M$AUID )  # match each datum to an area
 
     M$tag = "observations"
