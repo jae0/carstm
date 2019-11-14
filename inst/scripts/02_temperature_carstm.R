@@ -97,7 +97,7 @@ if (0) {
 
   # to recreate the underlying data
   sppoly = areal_units( p=p, redo=TRUE )  # this has already been done in aegis.polygons::01 polygons.R .. should nto have to redo
-
+  spplot( sppoly, "AUID", main="AUID", sp.layout=p$coastLayout )
 
 
   M = temperature.db( p=p, DS="aggregated_data", redo=TRUE )  # will redo if not found .. not used here but used for data matching/lookup in other aegis projects that use bathymetry
