@@ -11,8 +11,11 @@ p = carstm::temperature_carstm(
   inputdata_temporal_discretization_yr = 24/365,  # ie., every 2 weeks .. controls resolution of data prior to modelling to reduce data set and speed up modelling
   yrs = 1999:2010,
   spatial_domain = "SSE",  # defines spatial area, currenty: "snowcrab" or "SSE"
+  areal_units_fn = "default",  # identifyer for areal units polygon filename
   areal_units_resolution_km = 25, # km dim of lattice ~ 1 hr
-  areal_units_proj4string_planar_km = aegis::projection_proj4string("utm20")  # coord system to use for areal estimation and gridding for carstm
+  areal_units_proj4string_planar_km = aegis::projection_proj4string("utm20"),  # coord system to use for areal estimation and gridding for carstm
+  areal_units_source = "lattice", # "stmv_fields" to use ageis fields instead of carstm fields ... note variables are not the same
+  areal_units_overlay = "none"
 )
 
 

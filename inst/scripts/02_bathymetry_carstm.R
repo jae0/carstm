@@ -7,6 +7,7 @@
     DS = "parameters",
     project_name = "bathymetry",
     spatial_domain = "SSE",  # defines spatial area, currenty: "snowcrab" or "SSE"
+    variabletomodel ="z",
     inputdata_spatial_discretization_planar_km = 1,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
     areal_units_fn = "default",  # identifyer for areal units polygon filename
     areal_units_resolution_km = 25, # km dim of lattice ~ 1 hr
