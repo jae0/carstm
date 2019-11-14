@@ -31,7 +31,9 @@
         areal_units_proj4string_planar_km = p$areal_units_proj4string_planar_km,  # coord system to use for areal estimation and gridding for carstm
         inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
         modeldir = p$modeldir,  # outputs all go the the main project's model output directory
-        areal_units_fn = p$areal_units_fn
+        areal_units_fn = p$areal_units_fn,
+        inla_num.threads= p$inla_num.threads,
+        inla_blas.num.threads= p$inla_blas.num.threads
       )
 
       return(pc)  #override
@@ -114,14 +116,7 @@
 
   if ( DS=="carstm_inputs") {
 
-    aggregate_data = FALSE
-    if (exists("carstm_inputs_aggregated", p)) {
-      # just testing mode ... not used for production
-      if (p$carstm_inputs_aggregated)  aggregate_data = TRUE
-    }
-
-
-    if (aggregate_data) {
+    if (p$carstm_inputs_aggregated) {
       # just testing mode ... not used for production
       fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", p$areal_units_fn,
         p$inputdata_spatial_discretization_planar_km,
@@ -146,7 +141,7 @@
     crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
 
     # reduce size
-    if (aggregate_data) {
+    if (p$carstm_inputs_aggregated) {
       M = bathymetry.db ( p=p, DS="aggregated_data"  )  # 16 GB in RAM just to store!
       names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
 

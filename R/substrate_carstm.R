@@ -22,13 +22,15 @@
       DS = "parameters",
       project_name = "substrate",
       variabletomodel = "substrate.grainsize",
+      modeldir = p$modeldir,  # outputs all go the the main project's model output directory
       spatial_domain = p$spatial_domain,  # defines spatial area, currenty: "snowcrab" or "SSE"
+      inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
       areal_units_overlay = p$areal_units_overlay, # currently: "snowcrab_managementareas",  "groundfish_strata" .. additional polygon layers for subsequent analysis for now ..
       areal_units_resolution_km = p$areal_units_resolution_km, # km dim of lattice ~ 1 hr
       areal_units_proj4string_planar_km = p$areal_units_proj4string_planar_km,  # coord system to use for areal estimation and gridding for carstm
-      inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
-      modeldir = p$modeldir,  # outputs all go the the main project's model output directory
-      areal_units_fn = p$areal_units_fn
+      areal_units_fn = p$areal_units_fn,
+      inla_num.threads= p$inla_num.threads,
+      inla_blas.num.threads= p$inla_blas.num.threads
     )
     return(pc)
   }
@@ -109,13 +111,7 @@
 
   if ( DS=="carstm_inputs") {
 
-    aggregate_data = FALSE
-    if (exists("carstm_inputs_aggregated", p)) {
-      if (p$carstm_inputs_aggregated)  aggregate_data = TRUE
-    }
-
-
-    if (aggregate_data) {
+    if (p$carstm_inputs_aggregated) {
       fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", p$areal_units_fn,
         p$inputdata_spatial_discretization_planar_km,
         "rdata", sep=".") )
@@ -141,7 +137,7 @@
 
     # do this immediately to reduce storage for sppoly (before adding other variables)
 
-    if (aggregate_data) {
+    if (p$carstm_inputs_aggregated) {
       M = substrate.db ( p=p, DS="aggregated_data" )  # 16 GB in RAM just to store!
       names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
     } else {
