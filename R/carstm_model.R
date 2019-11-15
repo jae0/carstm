@@ -1,7 +1,6 @@
 
 carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
-
   # deal with additional passed parameters
   p_add = list(...)
   if ( is.null(p) ) p=list()
@@ -12,7 +11,6 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   areal_units_fns = p$areal_units_fn
   if (exists( "inputdata_spatial_discretization_planar_km", p )) areal_units_fns = paste( areal_units_fns, round(p$inputdata_spatial_discretization_planar_km, 6),   sep="_" )
   if (exists( "inputdata_temporal_discretization_yr", p )) areal_units_fns = paste( areal_units_fns, round(p$inputdata_temporal_discretization_yr, 6),   sep="_" )
-
 
   areal_units_fns_suffix = paste( areal_units_fns, p$variabletomodel, p$carstm_modelengine,  "rdata", sep="." )
   outputdir = file.path(p$modeldir, p$carstm_model_label)
@@ -67,6 +65,8 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     inla.setOption(blas.num.threads=p$inla_blas.num.threads)
 
   }
+
+  gc()
 
   fit  = NULL
   assign("fit", eval(parse(text=paste( "try(", p$carstm_modelcall, ")" ) ) ))
