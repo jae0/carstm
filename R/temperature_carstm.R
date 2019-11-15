@@ -106,7 +106,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     p = carstm_parameters( p=p, DS="basic" )  # fill in anything missing and some checks
 
-    p$carstm_inputs_aggregated = TRUE
+    p$carstm_inputs_aggregated = FALSE
 
     return(p)
   }
