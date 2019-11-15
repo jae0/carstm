@@ -5,7 +5,7 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   p_add = list(...)
   if ( is.null(p) ) p=list()
   if (length(p_add) > 0 ) p = c(p, p_add)
-  i = which(duplicated(names(p), fromLast = TRUE ))
+  i = which(duplicated(names(p), fromLast = TRUE ) )
   if ( length(i) > 0 ) p = p[-i] # give any passed parameters a higher priority, overwriting pre-existing variable
 
   areal_units_fns = p$areal_units_fn
@@ -101,8 +101,8 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
       M$AUID %in% res$AUID &
       M$year %in% p$yrs
     )  # filter by AUID and years in case additional data in other areas and times are used in the input data
-    matchfrom = list( AUID=M$AUID[ii], year=as.character(M$year[ii]), dyear=as.character(M$dyear[ii]) )
-    matchto   = list( AUID=res$AUID,   year=as.character(p$yrs),      dyear=as.character(p$dyears) )
+    matchfrom = list( AUID=M$AUID[ii], year=as.character(M$year[ii]), dyear=as.character( discretize_data( M$dyear[ii], p$discretization[["dyear"]] ) ) )
+    matchto   = list( AUID=res$AUID,   year=as.character(p$yrs),      dyear=as.character( discretize_data( c(p$dyears, 1), p$discretization[["dyear"]] ) ) )
  }
 
 
@@ -226,65 +226,64 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
             M$AUID %in% res$AUID &
             M$year %in% p$yrs
           )  # filter by AUID and years in case additional data in other areas and times are used in the input data
-          matchfrom = list( AUID=M$AUID[ii], year=as.character(M$year[ii]), dyear=M$dyear[ii] )
-          matchto   = list( AUID=res$AUID, year=as.character(p$yrs), dyear=factor(p$dyears) )
+          matchfrom = list( AUID=M$AUID[ii], year=as.character(M$year[ii]), dyear=as.character( discretize_data( M$dyear[ii], p$discretization[["dyear"]] ) ) )
+          matchto   = list( AUID=res$AUID,   year=as.character(p$yrs),      dyear=as.character( discretize_data( c(p$dyears, 1), p$discretization[["dyear"]] ) ) )
         }
         vn = paste( p$variabletomodel, "random_sample_iid", sep=".")
         input = fit$summary.random$iid_error[ii, "mean" ]
         res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
       }
 
-      if (exists("AUID", fit$summary.random)) {
+      if (exists("auid", fit$summary.random)) {
 
-
-        if (nrow(fit$summary.random$AUID) == nAUID*2) {
+        if (nrow(fit$summary.random$auid) == nAUID*2) {
           # a single nonspatial effect (no grouping across time)
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial") )
           kk = which(resout$type=="nonspatial")
           matchfrom = list( AUID=resout$AUID[kk]  )
           matchto   = list( AUID=res$AUID  )
-          input = fit$summary.random$AUID[ kk, "mean" ]
-        } else if (nrow(fit$summary.random$AUID) == nAUID*2 * p$ny ) {
+          input = fit$summary.random$auid[ kk, "mean" ]
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$ny ) {
           #  nonspatial effects grouped by year
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs )
           kk = which(resout$type=="nonspatial")
           matchfrom = list( AUID=resout$AUID[kk], year=resout$year[kk] )
           matchto   = list( AUID=res$AUID, year=as.character(p$yrs) )
-          input = fit$summary.random$AUID[ kk, "mean" ]
-        } else if (nrow(fit$summary.random$AUID) == nAUID*2 * p$nt ) {
+          input = fit$summary.random$auid[ kk, "mean" ]
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$nt ) {
           # nonspatial at all time slices
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
           kk = which(resout$type=="nonspatial")
-          matchfrom = list( AUID=resout$AUID[kk], year=resout$year[kk], dyear=resout$dyear[kk] )
-          matchto   = list( AUID=res$AUID, year=as.character(p$yrs), dyear=as.character(p$dyears) )
-          input = fit$summary.random$AUID[ kk, "mean" ]
+          matchfrom = list( AUID=resout$AUID[kk], year=as.character(resout$year[kk]), dyear=as.character( discretize_data( resout$dyear[kk], p$discretization[["dyear"]] ) ) )
+          matchto   = list( AUID=res$AUID,   year=as.character(p$yrs),      dyear=as.character( discretize_data( c(p$dyears, 1), p$discretization[["dyear"]] ) ) )
+          input = fit$summary.random$auid[ kk, "mean" ]
         }
 
         vn = paste( p$variabletomodel, "random_auid_nonspatial", sep=".")
         res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
         # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
 
-        if (nrow(fit$summary.random$AUID) == nAUID*2) {
+        if (nrow(fit$summary.random$auid) == nAUID*2) {
           # a single spatial effect (no grouping across time)
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial") )
           kk = which(resout$type=="spatial")
           matchfrom = list( AUID=resout$AUID[kk]  )
           matchto   = list( AUID=res$AUID  )
-          input = fit$summary.random$AUID[ kk, "mean" ]  # offset structure due to bym2
-        } else if (nrow(fit$summary.random$AUID) == nAUID*2 * p$ny ) {
+          input = fit$summary.random$auid[ kk, "mean" ]  # offset structure due to bym2
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$ny ) {
           # spatial effects grouped by year
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs )
           kk = which(resout$type=="spatial")
           matchfrom = list( AUID=resout$AUID[kk], year=resout$year[kk] )
           matchto   = list( AUID=res$AUID, year=p$yrs )
-          input = fit$summary.random$AUID[ kk, "mean" ]  # offset structure due to bym2
-        } else if (nrow(fit$summary.random$AUID) == nAUID*2 * p$nt ) {
+          input = fit$summary.random$auid[ kk, "mean" ]  # offset structure due to bym2
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$nt ) {
           # at every time slice
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
           kk = which(resout$type=="spatial")
-          matchfrom = list( AUID=resout$AUID[kk], year=resout$year[kk], dyear=resout$dyear[kk] )
-          matchto   = list( AUID=res$AUID, year=p$yrs, dyear=as.character(p$dyears) )
-          input = fit$summary.random$AUID[ kk, "mean" ]  # offset structure due to bym2
+          matchfrom = list( AUID=resout$AUID[kk], year=as.character(resout$year[kk]), dyear=as.character( discretize_data( resout$dyear[kk], p$discretization[["dyear"]] ) ) )
+          matchto   = list( AUID=res$AUID,   year=as.character(p$yrs),      dyear=as.character( discretize_data( c(p$dyears, 1), p$discretization[["dyear"]] ) ) )
+          input = fit$summary.random$auid[ kk, "mean" ]  # offset structure due to bym2
         }
         vn = paste( p$variabletomodel, "random_auid_spatial", sep=".")
         res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
