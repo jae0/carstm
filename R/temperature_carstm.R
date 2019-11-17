@@ -175,8 +175,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       keep = which( M$z >=  2 ) # ignore very shallow areas ..
       if (length(keep) > 0 ) M = M[ keep, ]
 
-      # in case plon/plats are from an alternate projection  .. as there are multiple data sources
-      M = lonlat2planar( M, p$aegis_proj4string_planar_km)
+      M = lonlat2planar( M, p$aegis_proj4string_planar_km) # in case plon/plats are from an alternate projection  .. as there are multiple data sources
 
       M$dyear = M$tiyr - M$year
 
