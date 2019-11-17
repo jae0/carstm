@@ -82,7 +82,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
             + f(ti, model="rw2", scale.model=TRUE, diagonal=1e-4, hyper=H$rw2)
             + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-4, hyper=H$rw2)
             + f(gsi, model="rw2", scale.model=TRUE, diagonal=1e-4, hyper=H$rw2)
-            + f(auid, model="bym2", graph=sppoly@nb,  scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+            + f(auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),
