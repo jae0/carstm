@@ -78,19 +78,24 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
           'inla( formula = ', p$variabletomodel,
           ' ~ 1
             + f(year_factor, model="ar1", hyper=H$ar1 )
-            + f(dyri, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2 )
-            + f(ti, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-            + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-            + f(gsi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-            + f(auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+            + f(dyri, model="rw2", scale.model=TRUE, diagonal=1e-4, hyper=H$rw2 )
+            + f(ti, model="rw2", scale.model=TRUE, diagonal=1e-4, hyper=H$rw2)
+            + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-4, hyper=H$rw2)
+            + f(gsi, model="rw2", scale.model=TRUE, diagonal=1e-4, hyper=H$rw2)
+            + f(auid, model="bym2", graph=sppoly@nb,  scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),
             control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
             control.predictor=list(compute=FALSE, link=1 ),
             control.fixed=H$fixed,  # priors for fixed effects, generic is ok
+            # control.fixed = list(prec.intercept = 0.1),
+            # control.inla=list( strategy="eb"),
             # control.inla=list( strategy="laplace", cutoff=1e-6, correct=TRUE, correct.verbose=FALSE ),
-            control.inla = list(cmin = 0 ),
+            # control.inla = list(cmin = 0 ),
+            # control.inla = list( h=1e-6, tolerance=1e-12), # increase in case values are too close to zero
+            # control.mode = list( restart=TRUE, result=RES ), # restart from previous estimates
+            # control.inla = list(h=1e-6, tolerance=1e-12, cmin=0), # restart=3), # restart a few times in case posteriors are poorly defined
             verbose=TRUE
           )'
         )
