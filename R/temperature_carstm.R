@@ -182,21 +182,17 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     }
 
+
+
     # reduce size
     M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
     # levelplot(z.mean~plon+plat, data=M, aspect="iso")
 
     M$AUID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$AUID # match each datum to an area
 
-    pB = bathymetry_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
-
     # pS = substrate_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
     # M[, pS$variabletomodel] = lookup_substrate_from_surveys(  p=pS, locs=M[, c("lon", "lat")] )
 
-    M$lon = NULL
-    M$lat = NULL
-    M$plon = NULL
-    M$plat = NULL
     M = M[ which(!is.na(M$AUID)),]
 
     M$tiyr = M$year + M$dyear
@@ -221,6 +217,13 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       jj = match( as.character( M$AUID[kk]), as.character( names(oo )) )
       M[kk, pB$variabletomodel] = oo[jj ]
     }
+
+    if( exists("spatial_domain", p)) M = geo_subset( spatial_domain=p$spatial_domain, Z=M ) # need to be careful with extrapolation ...  filter depths
+
+    M$lon = NULL
+    M$lat = NULL
+    M$plon = NULL
+    M$plat = NULL
 
     APS = as.data.frame(sppoly)
     APS$AUID = as.character( APS$AUID )

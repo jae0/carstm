@@ -163,8 +163,9 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
         # this was -1.7, 21.8 in 2015
     }
 
-    M = planar2lonlat(M, proj.type=p$aegis_proj4string_planar_km) # get planar projections of lon/lat in km
     M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
+    M = planar2lonlat(M, proj.type=p$aegis_proj4string_planar_km) # get planar projections of lon/lat in km
+
 
     M$AUID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$AUID # match each datum to an area
 
@@ -252,8 +253,13 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     }
 
 
+    if( exists("spatial_domain", p)) M = geo_subset( spatial_domain=p$spatial_domain, Z=M ) # need to be careful with extrapolation ...  filter depths
+
+
     M$lon = NULL
     M$lat = NULL
+    M$plon = NULL
+    M$plat = NULL
 
     M = M[ which(is.finite(M[, pB$variabletomodel] )),]
     M = M[ which(is.finite(M[, pS$variabletomodel] )),]

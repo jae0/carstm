@@ -161,6 +161,7 @@
 
     # reduce size
     M = M[ which( M$lon > p$corners$lon[1] & M$lon < p$corners$lon[2]  & M$lat > p$corners$lat[1] & M$lat < p$corners$lat[2] ), ]
+    M = lonlat2planar(M, p$aegis_proj4string_planar_km)  # should not be required but to make sure
     # levelplot(substrate.grainsize.mean~plon+plat, data=M, aspect="iso")
 
     M$AUID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$AUID # match each datum to an area
@@ -187,12 +188,7 @@
       M[kk, pB$variabletomodel] = oo[jj ]
     }
 
-    if( exists("spatial_domain", p)) {
-        # need to be careful with extrapolation ...  filter depths
-      M = lonlat2planar(M, p$aegis_proj4string_planar_km)  # should not be required but to make sure
-      M = geo_subset( spatial_domain=p$spatial_domain, Z=M )
-    }
-
+    if( exists("spatial_domain", p)) M = geo_subset( spatial_domain=p$spatial_domain, Z=M ) # need to be careful with extrapolation ...  filter depths
 
     M$lon = NULL
     M$lat = NULL
