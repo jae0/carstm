@@ -66,9 +66,6 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
   }
 
-
-  qn_limits = quantile( M[,p$variabletomodel], probs=c(0, 0.99), na.rm=TRUE )  # force truncation of upper bound
-
   gc()
 
   fit  = NULL
@@ -163,38 +160,29 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   if ( grepl("inla", p$carstm_modelengine) ) {
 
     if (exists("summary.fitted.values", fit)) {
+
       vn = paste( p$variabletomodel, "predicted", sep=".")
       input = fit$summary.fitted.values[ ii, "mean" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
-      toolow = which( res[[vn]] > qn_limits[1] )
-      if (length(toolow) > 0 ) res[[vn]] = res[[vn]][toolow] = qn_limits[1]
-      toohigh = which( res[[vn]] > qn_limits[2] )
-      if (length(toohigh) > 0 ) res[[vn]] = res[[vn]][toohigh] = qn_limits[2]
       if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
-      vn = paste( p$variabletomodel, "predicted_se", sep=".")
-      input = fit$summary.fitted.values[ ii, "sd" ]
-      res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
 
       vn = paste( p$variabletomodel, "predicted_lb", sep=".")
       input = fit$summary.fitted.values[ ii, "0.025quant" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
-      toolow = which( res[[vn]] > qn_limits[1] )
-      if (length(toolow) > 0 ) res[[vn]] = res[[vn]][toolow] = qn_limits[1]
-      toohigh = which( res[[vn]] > qn_limits[2] )
-      if (length(toohigh) > 0 ) res[[vn]] = res[[vn]][toohigh] = qn_limits[2]
       if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn = paste( p$variabletomodel, "predicted_ub", sep=".")
       input = fit$summary.fitted.values[ ii, "0.975quant" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
-      toolow = which( res[[vn]] > qn_limits[1] )
-      if (length(toolow) > 0 ) res[[vn]] = res[[vn]][toolow] = qn_limits[1]
-      toohigh = which( res[[vn]] > qn_limits[2] )
-      if (length(toohigh) > 0 ) res[[vn]] = res[[vn]][toohigh] = qn_limits[2]
       if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
+
+      vn = paste( p$variabletomodel, "predicted_se", sep=".")
+      input = fit$summary.fitted.values[ ii, "sd" ]
+      res[[vn]] = reformat_to_array( input=input, matchfrom=matchfrom, matchto=matchto )
+
     }
   }
 
