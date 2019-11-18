@@ -72,7 +72,7 @@
         p$carstm_modelcall = paste('
           inla(
             formula =', p$variabletomodel, ' ~ 1
-              + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
+              + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
               + f(auid, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "lognormal",
             data= M,
@@ -214,7 +214,7 @@
     sppoly_df = NULL
 
     M$auid  = as.numeric( factor(M$AUID) )
-    M$zi = discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] )
+    M$zi = log( discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] ) )
 
     save( M, file=fn, compress=TRUE )
     return( M )
