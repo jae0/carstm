@@ -102,7 +102,7 @@
         p$carstm_modelcall = paste( 'gam( formula = ', p$variabletomodel, '  ~ 1 + AUID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="log")  ) ' )  # for modelengine='gam'
       }
 
-      p = carstm_parameters( p=p, DS="basic" )  # fill in anything missing and some checks
+      p = carstm_parameters( p=p )  # fill in anything missing and some checks
 
       p$carstm_inputs_aggregated = TRUE
 

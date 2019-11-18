@@ -19,17 +19,24 @@ yrs =2000:2018
 
 for (tu in c( "standardtow", "towdistance", "sweptarea") ) {
 
+
     # construct basic parameter list defining the main characteristics of the study and some plotting params
     p = carstm::carstm_parameters(
       label ="Atlantic cod summer standardtow",
       speciesname = "Atlantic_cod",
       groundfish_species_code = 10,   #  10= cod
       yrs = yrs,
+      polygon_source = "pre2014",   # "pre2014" for older
+      areal_units_proj4string_planar_km = projection_proj4string("omerc_nova_scotia"),  # oblique mercator, centred on Scotian Shelf rotated by 325 degrees
       trawlable_units = tu
     )
 
+
+
     # specific selection params required for survey.db(DS="filter") data selection mechanism
-    p$selection=list(
+    p = aegis.survey::survey_parameters(
+      p=p,
+      selection=list(
         biologicals=list(
           spec_bio = bio.taxonomy::taxonomy.recode( from="spec", to="parsimonious", tolookup=p$groundfish_species_code )
         ),

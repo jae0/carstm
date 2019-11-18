@@ -96,7 +96,7 @@
       }
     }
 
-    p = carstm_parameters( p=p, DS="basic" )
+    p = carstm_parameters( p=p )
 
     p$carstm_inputs_aggregated = TRUE
 
