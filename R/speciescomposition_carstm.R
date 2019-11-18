@@ -78,10 +78,10 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
           'inla( formula = ', p$variabletomodel,
           ' ~ 1
             + f(year_factor, model="ar1", hyper=H$ar1 )
-            + f(dyri, model="rw2", scale.model=TRUE, diagonal=1e-3, hyper=H$rw2 )
-            + f(ti, model="rw2", scale.model=TRUE, diagonal=1e-3, hyper=H$rw2)
-            + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-3, hyper=H$rw2)
-            + f(gsi, model="rw2", scale.model=TRUE, diagonal=1e-3, hyper=H$rw2)
+            + f(dyri, model="rw2", scale.model=TRUE, hyper=H$rw2 )
+            + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
+            + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
+            + f(gsi, model="rw2", scale.model=TRUE, hyper=H$rw2)
             + f(auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
@@ -95,7 +95,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
             # control.inla = list(cmin = 0 ),
             # control.inla = list( h=1e-6, tolerance=1e-12), # increase in case values are too close to zero
             # control.mode = list( restart=TRUE, result=RES ), # restart from previous estimates
-            control.inla = list(h=1e-3, tolerance=1e-9, cmin=0), # restart=3), # restart a few times in case posteriors are poorly defined
+            # control.inla = list(h=1e-3, tolerance=1e-9, cmin=0), # restart=3), # restart a few times in case posteriors are poorly defined
             verbose=TRUE
           )'
         )
@@ -173,6 +173,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
 
     M$AUID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$AUID # match each datum to an area
+    M = M[ which(!is.na(M$AUID)),]
 
     names(M)[which(names(M)=="yr") ] = "year"
     M = M[ which(M$year %in% p$yrs), ]
@@ -269,7 +270,6 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     M = M[ which(is.finite(M[, pB$variabletomodel] )),]
     M = M[ which(is.finite(M[, pS$variabletomodel] )),]
     M = M[ which(is.finite(M[, pT$variabletomodel] )),]
-    M = M[ which(!is.na(M$AUID)),]
 
     M$tag = "observations"
 
@@ -308,7 +308,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     TI = carstm_model ( p=pT, DS="carstm_modelled" )
     TI = TI[[ paste(pT$variabletomodel,"predicted",sep="." )]]
 
-    auid_map = match( as.numeric(APS$AUID),levels(sppoly$AUID[as.numeric(dimnames(TI)$auid)]  ) )
+    auid_map = match( APS$AUID, dimnames(TI)$AUID )
     year_map = match( as.character(APS$year), dimnames(TI)$year )
 
     dyear_breaks = c(p$dyears, p$dyears[length(p$dyears)]+ diff(p$dyears)[1] )
