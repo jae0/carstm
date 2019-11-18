@@ -325,9 +325,9 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     M$auid  = as.numeric( factor(M$AUID) )
 
-    M$zi  = discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] )
+    M$zi  = log( discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] ) )
     M$ti  = discretize_data( M[, pT$variabletomodel], p$discretization[[pT$variabletomodel]] )
-    M$gsi = discretize_data( M[, pS$variabletomodel], p$discretization[[pS$variabletomodel]] )
+    M$gsi = log( discretize_data( M[, pS$variabletomodel], p$discretization[[pS$variabletomodel]] ) )
 
     M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
 
@@ -336,7 +336,6 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     M$dyear =  M$tiyr - M$year   # revert dyear to non-discretized form
 
     M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
-
 
     # M$seasonal = (as.numeric(M$year_factor) - 1) * length(p$dyears)  + as.numeric(M$dyear)
 
