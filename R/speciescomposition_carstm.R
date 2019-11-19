@@ -90,12 +90,13 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
             control.predictor=list(compute=FALSE, link=1 ),
             control.fixed=H$fixed,  # priors for fixed effects, generic is ok
             # control.fixed = list(prec.intercept = 0.1),
-            # control.inla=list( strategy="eb"),
-            # control.inla=list( strategy="laplace", cutoff=1e-6, correct=TRUE, correct.verbose=FALSE ),
-            # control.inla = list(cmin = 0 ),
             # control.inla = list( h=1e-6, tolerance=1e-12), # increase in case values are too close to zero
             # control.mode = list( restart=TRUE, result=RES ), # restart from previous estimates
-            control.inla = list(h=1e-3, tolerance=1e-6, cmin=0), # restart=3), # restart a few times in case posteriors are poorly defined
+            # control.inla = list(cmin = 0 ),
+            # control.inla=list( strategy="laplace", cutoff=1e-6, correct=TRUE, correct.verbose=FALSE ),
+            # control.inla = list( h=1e-6, tolerance=1e-12), # increase in case values are too close to zero
+            # control.inla = list(h=1e-3, tolerance=1e-9, cmin=0), # restart=3), # restart a few times in case posteriors are poorly defined
+            # control.mode = list( restart=TRUE, result=RES ), # restart from previous estimates
             verbose=TRUE
           )'
         )
