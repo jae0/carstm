@@ -326,9 +326,9 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     M$auid  = as.numeric( factor(M$AUID) )
 
-    M$zi  = log( discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] ) )
+    M$zi  = discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] )
     M$ti  = discretize_data( M[, pT$variabletomodel], p$discretization[[pT$variabletomodel]] )
-    M$gsi = log( discretize_data( M[, pS$variabletomodel], p$discretization[[pS$variabletomodel]] ) )
+    M$gsi = discretize_data( M[, pS$variabletomodel], p$discretization[[pS$variabletomodel]] )
 
     M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
 

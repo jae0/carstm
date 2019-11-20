@@ -44,18 +44,18 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
   # if (!exists("z", p$discretization) ) p$discretization$z = c(2.5, 5, 10, 20, 40, 80, 160, 320, 640 )
   if (!exists("dz", p$discretization) ) p$discretization$dz = c(0.01, 0.1,  1, 2, 4, 6, 8, 10, 12 )  # slope cut points
   if (!exists("ddz", p$discretization) ) p$discretization$ddz = c(0.01, 0.1, 0.2, 0.4, 0.8, 1, 2, 4  )  # slope cut points
-  if (!exists("substrate.grainsize", p$discretization) ) p$discretization$substrate.grainsize = c( 0, 1, 2, 4, 8, 16, 32 )
+  if (!exists("substrate.grainsize", p$discretization) ) p$discretization$substrate.grainsize = c( 0, 1, 2, 4, 8, 12, 16, 20, 32 )
 
-  if (!exists("pca1", p$discretization) ) p$discretization$pca1 = c( -1, -0.8, -0.6, -0.4, -0.2, 0,  0.2, 0.4, 0.6, 0.8, 1 )
-  if (!exists("pca2", p$discretization) ) p$discretization$pca2 = c( -1, -0.8, -0.6, -0.4, -0.2, 0,  0.2, 0.4, 0.6, 0.8, 1 )
+  if (!exists("pca1", p$discretization) ) p$discretization$pca1 = seq( -1, 1, by=0.1  )
+  if (!exists("pca2", p$discretization) ) p$discretization$pca2 = seq( -1, 1, by=0.1  )
 
-  if (!exists("t", p$discretization) ) p$discretization$t = c( -4, -2, 0, 2, 4,  6,  8,  10, 12, 24 )
-  if (!exists("tsd", p$discretization) ) p$discretization$tsd = c( 0, 2,  4,  6,   8,   10,  12,  24 )
-  if (!exists("tmin", p$discretization) ) p$discretization$tmin = c( -4, -2, 0,  2,   4,  6,   8,  10, 25  )
-  if (!exists("tmax", p$discretization) ) p$discretization$tmax = c( -2, 0,  2,   4,  6,   8,  10, 12, 14, 25 )
+  if (!exists("t", p$discretization) ) p$discretization$t = seq( -4, 25, by=1  )
+  if (!exists("tsd", p$discretization) ) p$discretization$tsd = seq( 0, 25, by=1  )
+  if (!exists("tmin", p$discretization) ) p$discretization$tmin = seq( -4, 25, by=1  )
+  if (!exists("tmax", p$discretization) ) p$discretization$tmax = seq( -4, 25, by=1  )
   if (!exists("degreedays", p$discretization) ) p$discretization$degreedays = c(10, 100, 200, 400, 800, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000)
 
-  if (!exists("dyear", p$discretization) ) p$discretization$dyear = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+  if (!exists("dyear", p$discretization) ) p$discretization$dyear = seq( 0, 1, by=0.1  )
 
   p$n.season = length(p$discretization[["dyear"]]) - 1   # used by seasonal error in inla ... not really useful
 

@@ -220,7 +220,7 @@
     sppoly_df = NULL
 
     M$auid  = as.numeric( factor(M$AUID) )
-    M$zi = log( discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] ) )
+    M$zi = discretize_data( M[, pB$variabletomodel], p$discretization[[pB$variabletomodel]] )
 
     save( M, file=fn, compress=TRUE )
     return( M )
