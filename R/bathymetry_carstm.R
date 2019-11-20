@@ -11,7 +11,7 @@
     }
 
 
-  p$libs = c( p$libs, project.library ( "aegis", "aegis.bathymetry", "carstm"  ) )
+    p$libs = c( p$libs, project.library ( "aegis", "aegis.bathymetry", "carstm"  ) )
 
 
   # ------------------
