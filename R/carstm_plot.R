@@ -31,7 +31,7 @@
       if ( exists("coastLayout", p)) {
         sp.layout = p$coastLayout
       } else {
-        sp.layout = aegis.coastline::coastline_layout(p=p)
+        sp.layout = aegis.coastline::coastline_layout(p=p, redo=TRUE)
       }
       if ( exists("mypalette", p)) {
         mypalette = p$mypalette
@@ -42,7 +42,7 @@
       spplot( sppoly, vn, main=vn,
         col.regions=mypalette,
         at=breaksat,
-        sp.layout=sp.layout$coastLayout,
+        sp.layout=sp.layout,
         col="transparent",
         ...
       )
