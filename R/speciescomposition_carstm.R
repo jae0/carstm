@@ -78,10 +78,10 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
           'inla( formula = ', p$variabletomodel,
           ' ~ 1
             + f(year_factor, model="ar1", hyper=H$ar1 )
-            + f(dyri, model="rw2", scale.model=TRUE, hyper=H$rw2 )
-            + f(ti, model="rw2", scale.model=TRUE, hyper=H$rw2)
-            + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
-            + f(gsi, model="rw2", scale.model=TRUE, hyper=H$rw2)
+            + f(dyri, model="ar1", hyper=H$ar1 )
+            + f( inla.group( t, method="quantile", n=25 ), model="rw2", scale.model=TRUE, hyper=H$rw2)
+            + f( inla.group( z, method="quantile", n=25 ), model="rw2", scale.model=TRUE, hyper=H$rw2)
+            + f( inla.group( substrate.grainsize, method="quantile", n=25 ), model="rw2", scale.model=TRUE, hyper=H$rw2)
             + f(auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
