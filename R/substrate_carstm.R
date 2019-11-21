@@ -67,12 +67,13 @@
     if ( !exists("carstm_modelcall", p)) {
       if ( grepl("inla", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ("INLA" ) ) )
+
         p$carstm_model_label = "production"
 
         p$carstm_modelcall = paste('
           inla(
             formula =', p$variabletomodel, ' ~ 1
-              + f(zi, model="rw2", scale.model=TRUE, hyper=H$rw2)
+              + f( inla.group(z, method="quantile", n=25) ,  model="rw2", scale.model=TRUE, hyper=H$rw2)
               + f(auid, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "lognormal",
             data= M,
