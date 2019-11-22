@@ -77,19 +77,19 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
         p$carstm_modelcall = paste(
           'inla( formula = ', p$variabletomodel,
           ' ~ 1
-            + f(year_factor, model="ar1", hyper=H$ar1 )
-            + f(dyri, model="ar1", hyper=H$ar1 )
+            + f( year_factor, model="ar1", hyper=H$ar1 )
+            + f( dyri, model="ar1", hyper=H$ar1 )
             + f( inla.group( t, method="quantile", n=25 ), model="rw2", scale.model=TRUE, hyper=H$rw2)
             + f( inla.group( z, method="quantile", n=25 ), model="rw2", scale.model=TRUE, hyper=H$rw2)
             + f( inla.group( substrate.grainsize, method="quantile", n=25 ), model="rw2", scale.model=TRUE, hyper=H$rw2)
-            + f(auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+            + f( auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),
             control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
             control.predictor=list(compute=FALSE, link=1 ),
-            control.fixed=H$fixed,  # priors for fixed effects, generic is ok
-            # control.fixed = list(prec.intercept = 0.1),
+            # control.fixed=H$fixed,  # priors for fixed effects, generic is ok
+            control.fixed = list(prec.intercept = 0.1),
             # control.inla = list( h=1e-6, tolerance=1e-12), # increase in case values are too close to zero
             # control.mode = list( restart=TRUE, result=RES ), # restart from previous estimates
             # control.inla = list(cmin = 0 ),
