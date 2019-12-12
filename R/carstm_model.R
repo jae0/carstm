@@ -83,6 +83,14 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     )  # filter by AUID and years in case additional data in other areas and times are used in the input data
     matchfrom = list( AUID=M$AUID[ii] )
     matchto   = list( AUID=res$AUID )
+    if ( grepl("glm", p$carstm_modelengine) |  grepl("gam", p$carstm_modelengine) ) {
+      withsolutions = names( which(is.finite(fit$coefficients)) )
+      withsolutions = withsolutions[ - grep("Intercept", withsolutions) ]
+      withsolutions = gsub("AUID", "", withsolutions )
+      withsolutions = data.frame( matrix( unlist(strsplit( withsolutions, ":", fixed=TRUE)), ncol=1, byrow=TRUE), stringsAsFactors=FALSE )
+      ws_matchfrom = list( AUID=as.character(withsolutions[,1])  )
+      NA_mask = reformat_to_array( input =rep(1, nrow(withsolutions)), matchfrom=ws_matchfrom, matchto=matchto )
+    }
   }
 
   if ( p$aegis_dimensionality == "space-year") {
@@ -93,6 +101,16 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     )  # filter by AUID and years in case additional data in other areas and times are used in the input data
     matchfrom = list( AUID=M$AUID[ii], year=as.character(M$year[ii]) )
     matchto   = list( AUID=res$AUID,   year=as.character(p$yrs)  )
+
+    if ( grepl("glm", p$carstm_modelengine) |  grepl("gam", p$carstm_modelengine) ) {
+      withsolutions = names( which(is.finite(fit$coefficients)) )
+      withsolutions = withsolutions[ - grep("Intercept", withsolutions) ]
+      withsolutions = gsub("AUID", "", withsolutions )
+      withsolutions = gsub("year", "", withsolutions )
+      withsolutions = data.frame( matrix( unlist(strsplit( withsolutions, ":", fixed=TRUE)), ncol=2, byrow=TRUE), stringsAsFactors=FALSE )
+      ws_matchfrom = list( AUID=as.character(withsolutions[,1]), year=as.character(withsolutions[,2]) )
+      NA_mask = reformat_to_array( input =rep(1, nrow(withsolutions)), matchfrom=ws_matchfrom, matchto=matchto )
+    }
   }
 
   if ( p$aegis_dimensionality == "space-year-season") {
@@ -103,32 +121,44 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     )  # filter by AUID and years in case additional data in other areas and times are used in the input data
     matchfrom = list( AUID=M$AUID[ii], year=as.character(M$year[ii]), dyear=as.character( discretize_data( M$dyear[ii], p$discretization[["dyear"]] ) ) )
     matchto   = list( AUID=res$AUID,   year=as.character(p$yrs),      dyear=as.character( discretize_data( (p$dyears + diff(p$dyears)[1]/2), p$discretization[["dyear"]] ) ) )
- }
+
+    if ( grepl("glm", p$carstm_modelengine) |  grepl("gam", p$carstm_modelengine) ) {
+      withsolutions = names( which(is.finite(fit$coefficients)) )
+      withsolutions = withsolutions[ - grep("Intercept", withsolutions) ]
+      withsolutions = gsub("AUID", "", withsolutions )
+      withsolutions = gsub("dyear", "", withsolutions )
+      withsolutions = gsub("year", "", withsolutions )
+      withsolutions = data.frame( matrix( unlist(strsplit( withsolutions, ":", fixed=TRUE)), ncol=3, byrow=TRUE), stringsAsFactors=FALSE )
+      ws_matchfrom = list( AUID=as.character(withsolutions[,1]), year=as.character(withsolutions[,2]), dyear=as.character(withsolutions[,3])  )
+      NA_mask = reformat_to_array( input =rep(1, nrow(withsolutions)), matchfrom=ws_matchfrom, matchto=matchto )
+    }
+  }
 
 
   if ( grepl("glm", p$carstm_modelengine) ) {
 
     preds = predict( fit, newdata=M[ii,], type="response", na.action=na.omit, se.fit=TRUE )  # no/km2
 
+
     vn =  paste(p$variabletomodel, "predicted", sep=".")
     input = preds$fit
-    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto ) * NA_mask[]
     if ( grepl( "link.*=.*log", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
     vn =  paste(p$variabletomodel, "predicted_se", sep=".")
     input = preds$se.fit
-    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto ) * NA_mask[]
 
     vn =  paste(p$variabletomodel, "predicted_lb", sep=".")
     input = preds$fit - preds$se.fit
-    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto ) * NA_mask[]
     if ( grepl( "link.*=.*log", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
     vn =  paste(p$variabletomodel, "predicted_ub", sep=".")
     input = preds$fit + preds$se.fit
-    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto ) * NA_mask[]
     if ( grepl( "link.*=.*log", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
