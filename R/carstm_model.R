@@ -108,11 +108,12 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
   if ( grepl("glm", p$carstm_modelengine) ) {
 
-    preds = predict( fit, newdata=M[ii,], type="link", na.action=na.omit, se.fit=TRUE )  # no/km2
+    preds = predict( fit, newdata=M[ii,], type="response", na.action=na.omit, se.fit=TRUE )  # no/km2
 
     vn =  paste(p$variabletomodel, "predicted", sep=".")
     input = preds$fit
     res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if ( grepl( "link.*=.*log", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
     vn =  paste(p$variabletomodel, "predicted_se", sep=".")
@@ -122,11 +123,13 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     vn =  paste(p$variabletomodel, "predicted_lb", sep=".")
     input = preds$fit - preds$se.fit
     res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if ( grepl( "link.*=.*log", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
     vn =  paste(p$variabletomodel, "predicted_ub", sep=".")
     input = preds$fit + preds$se.fit
     res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if ( grepl( "link.*=.*log", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
   }
@@ -134,11 +137,12 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
   if ( grepl("gam", p$carstm_modelengine) ) {
 
-    preds = predict( fit, newdata=M[ii,], type="link", na.action=na.omit, se.fit=TRUE )  # no/km2
+    preds = predict( fit, newdata=M[ii,], type="response", na.action=na.omit, se.fit=TRUE )  # no/km2
 
     vn =  paste(p$variabletomodel, "predicted", sep=".")
     input = preds$fit
     res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if ( grepl( "link.*=.*log", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
     vn =  paste(p$variabletomodel, "predicted_se", sep=".")
@@ -148,11 +152,13 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     vn =  paste(p$variabletomodel, "predicted_lb", sep=".")
     input = preds$fit - preds$se.fit
     res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if ( grepl( "link.*=.*log", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
     vn =  paste(p$variabletomodel, "predicted_ub", sep=".")
     input = preds$fit + preds$se.fit
     res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if ( grepl( "link.*=.*log", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
   }
 
