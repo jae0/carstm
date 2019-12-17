@@ -82,7 +82,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
             + f( inla.group( t, method="quantile", n=25 ), model="rw2", scale.model=TRUE, hyper=H$rw2)
             + f( inla.group( z, method="quantile", n=25 ), model="rw2", scale.model=TRUE, hyper=H$rw2)
             + f( inla.group( substrate.grainsize, method="quantile", n=25 ), model="rw2", scale.model=TRUE, hyper=H$rw2)
-            + f( auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+            + f( auid, model="bym2", graph=sppoly@nb, group=year_factor_iid, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
             control.compute = list(dic=TRUE, config=TRUE),
@@ -333,6 +333,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     M$year = trunc( M$tiyr)
     M$year_factor = as.numeric( factor( M$year, levels=p$yrs))
+    M$year_factor_iid = M$year_factor  # copy to be used as an iid effect for bym groupings
     M$dyear =  M$tiyr - M$year   # revert dyear to non-discretized form
 
     M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )

@@ -80,7 +80,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
               + f( year_factor, model="ar1", hyper=H$ar1 )
               + f( dyri, model="ar1", hyper=H$ar1 )
               + f( inla.group( z, method="quantile", n=25 ), model="rw2", scale.model=TRUE, hyper=H$rw2)
-              + f( auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
+              + f( auid, model="bym2", graph=sppoly@nb, group=year_factor_iid, scale.model=TRUE, constr=TRUE, hyper=H$bym2),
             family = "normal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),
@@ -257,6 +257,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     M$year = trunc( M$tiyr)
     M$year_factor = as.numeric( factor( M$year, levels=p$yrs))
+    M$year_factor_iid = M$year_factor  # copy to be used as an iid effect for bym groupings
     M$dyear =  M$tiyr - M$year  # reset in case it has been discretized
     # M$tiyri  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla
 
