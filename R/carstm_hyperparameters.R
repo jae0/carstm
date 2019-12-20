@@ -46,6 +46,18 @@ carstm_hyperparameters = function( reference_sd, alpha=0.5, reference_mean=0 ) {
       )
     ),
 
+    # naming convention is a bit different in groups .. Must be one of  theta theta1 rho logit correlation
+    ar1_group = list(
+      theta = list(
+        prior = "pc.prec",  # exponential decay
+        param = c(reference_sd, alpha)
+      ),
+      rho = list(
+        prior = "pc.cor0", # inla.doc("pc.cor0") ..base model: rho = 0  --- expoential; will tend to 0 unless there is info
+        param = c(sqrt(1-0.5), 0.1)  # rho=0.5; u=sqrt(1-rho)  ... 100-10% of probablity weight to rho 0.5 or less .. forces smooth and only goes high if really high
+      )
+    ),
+
     # param=c(u, alpha); u=phi (proportion spatial); alpha=prob
     bym2 = list(
       prec = list(

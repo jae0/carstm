@@ -79,7 +79,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
             formula = ', p$variabletomodel, ' ~ 1
               + f( dyri, model="ar1", hyper=H$ar1 )
               + f( inla.group( z, method="quantile", n=13 ), model="rw2", scale.model=TRUE, hyper=H$rw2)
-              + f( auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2, control.group=list(model="ar1", hyper=H$ar1)),
+              + f( auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2, control.group=list(model="ar1", hyper=H$ar1_group)),
             family = "normal",
             data= M,
             control.compute=list(dic=TRUE, config=TRUE),
