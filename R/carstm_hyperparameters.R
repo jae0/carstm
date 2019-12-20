@@ -48,7 +48,7 @@ carstm_hyperparameters = function( reference_sd, alpha=0.5, reference_mean=0 ) {
 
     # naming convention is a bit different in groups .. Must be one of  theta theta1 rho logit correlation
     ar1_group = list(
-      theta = list(
+      theta1 = list(
         prior = "pc.prec",  # exponential decay
         param = c(reference_sd, alpha)
       ),
