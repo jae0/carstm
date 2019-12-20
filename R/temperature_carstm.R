@@ -256,7 +256,6 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     M$year = trunc( M$tiyr)
     M$year_factor = as.numeric( factor( M$year, levels=p$yrs))
-    M$year_factor_iid = M$year_factor  # copy to be used as an iid effect for bym groupings
     M$dyear =  M$tiyr - M$year  # reset in case it has been discretized
     # M$tiyri  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla
 

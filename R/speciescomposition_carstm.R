@@ -332,7 +332,6 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
 
     M$year = trunc( M$tiyr)
     M$year_factor = as.numeric( factor( M$year, levels=p$yrs))
-    M$year_factor_iid = M$year_factor  # copy to be used as an iid effect for bym groupings
     M$dyear =  M$tiyr - M$year   # revert dyear to non-discretized form
 
     M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
