@@ -53,6 +53,8 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
       m = log( M[ j, p$variabletomodel ])
     } else if ( grepl( "family.*=.*poisson", p$carstm_modelcall)) {
       m = log( M[ j, p$variabletomodel ] / M[ j, "data_offset" ]  )
+    } else if ( grepl( "family.*=.*binomial", p$carstm_modelcall)) {
+      m = M[ j, p$variabletomodel ]
     } else {
       m = M[,p$variabletomodel]
     }

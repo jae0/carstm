@@ -59,6 +59,8 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
 
   p$n.season = length(p$discretization[["dyear"]]) - 1   # used by seasonal error in inla ... not really useful
 
+  if (!exists("variabletomodel_type", p )) p$variabletomodel_type = "not_specified"
+
   if (!exists("carstm_inputs_aggregated", p )) p$carstm_inputs_aggregated = FALSE  # default is to use all daat .. unless density is too thigh such as bathy and substrate
   if (!exists("inla_num.threads", p )) p$inla_num.threads= 1
   if (!exists("inla_blas.num.threads", p )) p$inla_blas.num.threads=1
