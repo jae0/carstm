@@ -74,7 +74,7 @@ carstm_summary = function( p=NULL, operation="load_RES", wgts=1, extrapolation_l
     X = res[[ paste( p$variabletomodel, "predicted", sep=".")]]
     X[!is.finite(X)] = NA
 
-    if (p$variabletomodel_type == c("not_specified", "presence_absence") ) {
+    if (p$selection$type %in% c("presence_absence") ) {
       pa = X
       save( pa, file=fn_pa, compress=TRUE )
       RES = data.frame( yrs = p$yrs )
@@ -88,8 +88,8 @@ carstm_summary = function( p=NULL, operation="load_RES", wgts=1, extrapolation_l
       save( RES, file=fn, compress=TRUE )
     }
 
-    if (p$variabletomodel_type %in% c("biomass", "number") ) {
-      if (p$variabletomodel_type == "biomass") {
+    if (p$selection$type %in% c("biomass", "number") ) {
+      if (p$selection$type == "biomass") {
         biom = X
         if (is.na(extrapolation_limit)) extrapolation_limit = max(M$totwgt/M$data_offset, na.rm=T) # 28921.8426
         uu = which( biom > extrapolation_limit )
@@ -104,7 +104,7 @@ carstm_summary = function( p=NULL, operation="load_RES", wgts=1, extrapolation_l
       }
 
 
-      if (p$variabletomodel_type == "number") {
+      if (p$selection$type == "number") {
         nums = X
         if (is.na(extrapolation_limit)) extrapolation_limit = max(M$totno/M$data_offset, na.rm=T) # 17301.5199
         uu = which( nums > extrapolation_limit )
