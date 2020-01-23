@@ -28,128 +28,47 @@ for ( variabletomodel in p$varstomodel)  {
       areal_units_overlay = "none"
     )
 
-    if (0) {
+    # to recreate the underlying data
+    sppoly = areal_units( p=p, redo=TRUE )  # this has already been done in aegis.polygons::01 polygons.R .. should nto have to redo
+    M = speciescomposition_carstm( p=p, DS="carstm_inputs", redo=TRUE, carstm_model_label="production" )  # will redo if not found
+    # to extract fits and predictions
 
-      if (0) {
-        # choose model:
+    # run model and obtain predictions
+    res = carstm_model( p=p, M=M )
 
-        # basic model, single CAR effect across time
-        p$carstm_model_label="production"
-        p$carstm_modelcall = paste('
-          inla(
-            formula =', p$variabletomodel, ' ~ 1
-              + f(tiyr, model="ar1", hyper=H$ar1 )
-              + f(year, model="ar1", hyper=H$ar1 )
-              + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-              + f(auid, model="bym2", graph=sppoly@nb, scale.model=TRUE, constr=TRUE, hyper=H$bym2)
-              + f(iid_error, model="iid", hyper=H$iid),
-            family = "normal",
-            data= M,
-            control.compute=list(dic=TRUE, config=TRUE),
-            control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
-            control.predictor=list(compute=FALSE, link=1 ),
-            control.fixed=H$fixed,  # priors for fixed effects, generic is ok
-            control.inla=list(strategy="gaussian", int.strategy="eb") ,# to get empirical Bayes results much faster.
-            # control.inla=list(int.strategy="eb") ,# to get empirical Bayes results much faster.
-            # control.inla=list( strategy="laplace", cutoff=1e-6, correct=TRUE, correct.verbose=FALSE ),
-            num.threads=4,
-            blas.num.threads=4,
-            verbose=TRUE
-        ) ' )
+    res = carstm_model( p=p, DS="carstm_modelled", carstm_model_label="production" ) # to load currently saved res
+    fit =  carstm_model( p=p, DS="carstm_modelled_fit"carstm_model_label="production" )  # extract currently saved model fit
+    plot(fit)
+    plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
+    s = summary(fit)
+    s$dic$dic
+    s$dic$p.eff
 
+    # maps of some of the results
+    carstm_plot( p=p, res=res, vn=paste(p$variabletomodel, "predicted", sep=".") )
 
-        # CAR effect for each year
-        p$carstm_model_label="production"
-        p$carstm_modelcall = paste('
-          inla(
-            formula =', p$variabletomodel, ' ~ 1
-              + f(tiyr, model="ar1", hyper=H$ar1 )
-              + f(year, model="ar1", hyper=H$ar1 )
-              + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-              + f(auid, model="bym2", graph=sppoly@nb ,group= year,  scale.model=TRUE, constr=TRUE, hyper=H$bym2)
-              + f(iid_error, model="iid", hyper=H$iid),
-            family = "normal",
-            data= M,
-            control.compute=list(dic=TRUE, config=TRUE),
-            control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
-            control.predictor=list(compute=FALSE, link=1 ),
-            control.fixed=H$fixed,  # priors for fixed effects, generic is ok
-            control.inla=list(strategy="gaussian", int.strategy="eb") ,# to get empirical Bayes results much faster.
-            # control.inla=list(int.strategy="eb") ,# to get empirical Bayes results much faster.
-            # control.inla=list( strategy="laplace", cutoff=1e-6, correct=TRUE, correct.verbose=FALSE ),
-            num.threads=4,
-            blas.num.threads=4,
-            verbose=TRUE
-        ) ' )
+    vn = paste(p$variabletomodel, "random_sample_iid", sep=".")
+    if (exists(vn, res)) carstm_plot( p=p, res=res, vn=vn, time_match=list(year="1950", dyear="0") )
 
-
-        # CAR effect for each year, no year AC
-        p$carstm_model_label="production"
-        p$carstm_modelcall = paste('
-          inla(
-            formula =', p$variabletomodel, ' ~ 1
-              + f(tiyr, model="ar1", hyper=H$ar1 )
-              + f(zi, model="rw2", scale.model=TRUE, diagonal=1e-6, hyper=H$rw2)
-              + f(auid, model="bym2", graph=sppoly@nb ,group= year,  scale.model=TRUE, constr=TRUE, hyper=H$bym2)
-              + f(iid_error, model="iid", hyper=H$iid),
-            family = "normal",
-            data= M,
-            control.compute=list(dic=TRUE, config=TRUE),
-            control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
-            control.predictor=list(compute=FALSE, link=1 ),
-            control.fixed=H$fixed,  # priors for fixed effects, generic is ok
-            control.inla=list(strategy="gaussian", int.strategy="eb") ,# to get empirical Bayes results much faster.
-            # control.inla=list(int.strategy="eb") ,# to get empirical Bayes results much faster.
-            # control.inla=list( strategy="laplace", cutoff=1e-6, correct=TRUE, correct.verbose=FALSE ),
-            num.threads=4,
-            blas.num.threads=4,
-            verbose=TRUE
-        ) ' )
-
-      }
-
-
-      # to recreate the underlying data
-      sppoly = areal_units( p=p, redo=TRUE )  # this has already been done in aegis.polygons::01 polygons.R .. should nto have to redo
-      M = speciescomposition_carstm( p=p, DS="carstm_inputs", redo=TRUE, carstm_model_label="production" )  # will redo if not found
-      # to extract fits and predictions
-
-      # run model and obtain predictions
-      res = carstm_model( p=p, M=M )
-
-      res = carstm_model( p=p, DS="carstm_modelled", carstm_model_label="production" ) # to load currently saved res
-      fit =  carstm_model( p=p, DS="carstm_modelled_fit"carstm_model_label="production" )  # extract currently saved model fit
-      plot(fit)
-      plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
-      s = summary(fit)
-      s$dic$dic
-      s$dic$p.eff
-
-      # maps of some of the results
-      carstm_plot( p=p, res=res, vn=paste(p$variabletomodel, "predicted", sep=".") )
-
-      vn = paste(p$variabletomodel, "random_sample_iid", sep=".")
-      if (exists(vn, res)) carstm_plot( p=p, res=res, vn=vn, time_match=list(year="1950", dyear="0") )
-
-      vn = paste(p$variabletomodel, "random_auid_nonspatial", sep=".")
-      if (exists(vn, res)) {
-        res_dim = dim( res[[vn]] )
-        if (res_dim == 1 ) time_match = NULL
-        if (res_dim == 2 ) time_match = list(year="2000")
-        if (res_dim == 3 ) time_match = list(year="2000", dyear="0.8" )
-        carstm_plot( p=p, res=res, vn=vn, time_match=time_match )
-      }
-
-      vn = paste(p$variabletomodel, "random_auid_spatial", sep=".")
-      if (exists(vn, res)) {
-        res_dim = dim( res[[vn]] )
-        if (res_dim == 1 ) time_match = NULL
-        if (res_dim == 2 ) time_match = list(year="2000")
-        if (res_dim == 3 ) time_match = list(year="2000", dyear="0.8" )
-        carstm_plot( p=p, res=res, vn=vn, time_match=time_match )
-      }
-
+    vn = paste(p$variabletomodel, "random_auid_nonspatial", sep=".")
+    if (exists(vn, res)) {
+      res_dim = dim( res[[vn]] )
+      if (res_dim == 1 ) time_match = NULL
+      if (res_dim == 2 ) time_match = list(year="2000")
+      if (res_dim == 3 ) time_match = list(year="2000", dyear="0.8" )
+      carstm_plot( p=p, res=res, vn=vn, time_match=time_match )
     }
+
+    vn = paste(p$variabletomodel, "random_auid_spatial", sep=".")
+    if (exists(vn, res)) {
+      res_dim = dim( res[[vn]] )
+      if (res_dim == 1 ) time_match = NULL
+      if (res_dim == 2 ) time_match = list(year="2000")
+      if (res_dim == 3 ) time_match = list(year="2000", dyear="0.8" )
+      carstm_plot( p=p, res=res, vn=vn, time_match=time_match )
+    }
+
+  }
 
 }
 # end
