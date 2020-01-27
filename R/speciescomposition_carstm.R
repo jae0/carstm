@@ -195,13 +195,13 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     if (!(exists(pT$variabletomodel, M ))) M[,pT$variabletomodel] = NA
 
     kk = which(!is.finite(M[, pB$variabletomodel]))
-    if (length(kk) > 0 ) M[kk, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[kk, c("lon", "lat")] )
+    if (length(kk) > 0 ) M[kk, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=p, locs=M[kk, c("lon", "lat")] )
 
     kk = which(!is.finite(M[, pS$variabletomodel]))
-    if (length(kk) > 0 ) M[kk, pS$variabletomodel] = lookup_substrate_from_surveys(  p=pS, locs=M[kk, c("lon", "lat")] )
+    if (length(kk) > 0 ) M[kk, pS$variabletomodel] = lookup_substrate_from_surveys(  p=p, locs=M[kk, c("lon", "lat")] )
 
     kk = which(!is.finite(M[, pT$variabletomodel]))
-    if (length(kk) > 0 ) M[kk, pT$variabletomodel] = lookup_temperature_from_surveys(  p=pT, locs=M[kk, c("lon", "lat")], timestamp=M$timestamp )
+    if (length(kk) > 0 ) M[kk, pT$variabletomodel] = lookup_temperature_from_surveys(  p=p, locs=M[kk, c("lon", "lat")], timestamp=M$timestamp )
 
 
     # if any still missing then use a mean depth by AUID

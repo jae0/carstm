@@ -195,7 +195,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M$AUID = over( SpatialPoints( M[, c("lon", "lat")], crs_lonlat ), spTransform(sppoly, crs_lonlat ) )$AUID # match each datum to an area
 
     # pS = substrate_carstm( p=p, DS="parameters_override" ) # transcribes relevant parts of p to load bathymetry
-    # M[, pS$variabletomodel] = lookup_substrate_from_surveys(  p=pS, locs=M[, c("lon", "lat")] )
+    # M[, pS$variabletomodel] = lookup_substrate_from_surveys(  p=p, locs=M[, c("lon", "lat")] )
 
     M = M[ which(!is.na(M$AUID)),]
 
@@ -208,7 +208,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     if (!(exists(pB$variabletomodel, M ))) M[,pB$variabletomodel] = NA
 
     kk = which(!is.finite( M[, pB$variabletomodel] ))
-    if (length(kk > 0)) M[kk, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=pB, locs=M[kk, c("lon", "lat")] )
+    if (length(kk > 0)) M[kk, pB$variabletomodel] = lookup_bathymetry_from_surveys( p=p, locs=M[kk, c("lon", "lat")] )
 
     # if any still missing then use a mean depth by AUID
     kk =  which( !is.finite(M[, pB$variabletomodel]))
