@@ -38,14 +38,20 @@
       } else {
         mypalette = RColorBrewer::brewer.pal(9, "YlOrRd")
       }
-      if (is.null(breaksat)) breaksat=interval_break(X=sppoly[[vn]], n=length(mypalette), style="quantile")
-      spplot( sppoly, vn, main=vn,
-        col.regions=mypalette,
-        at=breaksat,
-        sp.layout=sp.layout,
-        col="transparent",
-        ...
-      )
+      if ( is.null(breaksat)) breaksat=interval_break(X=sppoly[[vn]], n=length(mypalette), style="quantile")
+
+      ellp = list(...)
+
+      if ( !exists("main", ellp ) )  ellp[["main"]]=vn
+      ellp$obj = sppoly
+      ellp$zcol=vn
+      ellp$col.regions=mypalette
+      ellp$at=breaksat
+      ellp$sp.layout=sp.layout
+      ellp$col="transparent"
+
+      do.call(spplot, ellp )
+
     }
   }
 
