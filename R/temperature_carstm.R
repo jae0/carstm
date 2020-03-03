@@ -235,7 +235,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     APS[, p$variabletomodel] = NA
 
     pB$carstm_model_label = "production"
-    BM = carstm_model ( p=pB, DS="carstm_modelled" )
+    BM = carstm_summary( p=pB, operation="load_carstm_modelled_results" )
     jj = match( as.character( APS$AUID), as.character( BM$AUID) )
     APS[, pB$variabletomodel] = BM[[ paste(pB$variabletomodel, "predicted", sep=".") ]] [jj]
     jj =NULL

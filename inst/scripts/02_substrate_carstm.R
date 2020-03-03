@@ -23,11 +23,15 @@
   M = substrate_carstm( p=p, DS="carstm_inputs", redo=TRUE )  # will redo if not found
 
 # run model and obtain predictions
-  res = carstm_model( p=p, M=M )
+  fit = carstm_model( p=p, M=M )
 
 # extract results and examine
-  res = carstm_model( p=p, DS="carstm_modelled" ) # to load currently saved results
   fit =  carstm_model( p=p, DS="carstm_modelled_fit" )  # extract currently saved model fit
+
+  res = carstm_summary( p=p, operation="compute"  ) #
+  res = carstm_summary( p=p, operation="load_carstm_modelled_results"  ) # to load currently saved sppoly
+
+
   plot(fit)
   plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
   s = summary(fit)

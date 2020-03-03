@@ -232,7 +232,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     # substrate coverage poor .. add from modelled results
     kk =  which( !is.finite(M[, pS$variabletomodel]))
     if (length(kk) > 0) {
-      SI = carstm_model ( p=pS, DS="carstm_modelled" )
+      SI = carstm_summary( p=pS, operation="load_carstm_modelled_results" )
       jj = match( as.character( M$AUID[kk]), as.character( SI$AUID) )
       M[kk, pS$variabletomodel] = SI[[ paste(pS$variabletomodel,"predicted",sep="." )]] [jj]
     }
@@ -278,13 +278,13 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     APS$tag ="predictions"
     APS[,p$variabletomodel] = NA
 
-    BI = carstm_model ( p=pB, DS="carstm_modelled" )
+    BI = carstm_summary( p=pB, operation="load_carstm_modelled_results" )
     jj = match( as.character( APS$AUID), as.character( BI$AUID) )
     APS[, pB$variabletomodel] = BI[[ paste(pB$variabletomodel,"predicted",sep="." ) ]] [jj]
     jj =NULL
     BI = NULL
 
-    SI = carstm_model ( p=pS, DS="carstm_modelled" )
+    SI = carstm_summary( p=pS, operation="load_carstm_modelled_results" )
     jj = match( as.character( APS$AUID), as.character( SI$AUID) )
     APS[, pS$variabletomodel] = SI[[ paste(pS$variabletomodel,"predicted",sep="." )]] [jj]
     jj =NULL
@@ -304,7 +304,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varna
     APS$dyear = APS$tiyr - APS$year
 
 
-    TI = carstm_model ( p=pT, DS="carstm_modelled" )
+    TI = carstm_summary( p=pT, operation="load_carstm_modelled_results" )
     TI = TI[[ paste(pT$variabletomodel,"predicted",sep="." )]]
 
     auid_map = match( APS$AUID, dimnames(TI)$AUID )
