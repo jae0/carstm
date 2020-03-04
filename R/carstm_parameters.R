@@ -39,6 +39,8 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
     sep="_"
   )
 
+  if (!exists("nsims", p) ) p$nsims = 5000
+
   if (!exists("discretization", p) ) p$discretization = list()
   if (!exists("z", p$discretization) ) p$discretization$z = c(0, 10, 20, 40, 80, 100, 150, 200, 250, 300, 350, 400, 500, 1000, 2000, 5000 )  # depth cut points
   # if (!exists("z", p$discretization) ) p$discretization$z = c(2.5, 5, 10, 20, 40, 80, 160, 320, 640 )

@@ -207,7 +207,7 @@
 
     pB$carstm_model_label = "production"
 
-    BM = carstm_summary ( p=pB, operation="load_carstm_modelled_results" )  # modeled!
+    BM = carstm_summary ( p=pB, operation="load" )  # modeled!
     kk = match( as.character(  sppoly_df$AUID), as.character( BM$AUID ) )
     sppoly_df[, pB$variabletomodel] = BM[[ paste(pB$variabletomodel, "predicted", sep=".") ]] [kk]
 
