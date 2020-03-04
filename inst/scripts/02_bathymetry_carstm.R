@@ -28,7 +28,7 @@
 # loading saved results
   fit = carstm_model( p=p, DS="carstm_modelled_fit", carstm_model_label="production" )  # extract currently saved model fit
 
-  res = carstm_summary( p=p, operation="compute", carstm_model_label="production" ) #
+  res = carstm_summary( p=p, operation="compute", carstm_model_label="production",  M='bathymetry_cartsm( p=p, DS="carstm_inputs", carstm_model_label="production" )' ) #
   res = carstm_summary( p=p, operation="load", carstm_model_label="production" ) # to load currently saved sppoly
 
   plot(fit)
