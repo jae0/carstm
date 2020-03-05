@@ -36,9 +36,7 @@ for ( variabletomodel in p$varstomodel)  {
     # run model and obtain predictions
     fit = carstm_model( p=p, M=M )
     fit =  carstm_model( p=p, DS="carstm_modelled_fit", carstm_model_label="production" )  # extract currently saved model fit
-
-    res = carstm_summary( p=p, operation="compute", carstm_model_label="production", M=M ) #
-    res = carstm_summary( p=p, operation="load", carstm_model_label="production" ) # to load currently saved sppoly
+    res = carstm_summary( p=p, carstm_model_label="production" ) # to load currently saved sppoly
 
     plot(fit)
     plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )

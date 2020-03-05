@@ -1,5 +1,5 @@
 
-carstm_summary = function( p=NULL, M=NA, operation="compute", ... ) {
+carstm_summary = function( p=NULL, M=NA, fit=NA, AUID=NA, operation="load", ... ) {
 
   # require areal_units_fn,
 
@@ -43,19 +43,7 @@ carstm_summary = function( p=NULL, M=NA, operation="compute", ... ) {
     }
   }
 
-
-  # prediction surface
-  sppoly = areal_units( p=p )  # will redo if not found
-
-  # permit passing a function rather than data directly .. less RAM usage in parent call
-  if (class(M)=="character") assign("M", eval(parse(text=M) ) )
-
-  if (exists("data_transformation", p)) M[, p$variabletomodel]  = p$data_transformation$forward( M[, p$variabletomodel] ) # make all positive
-
   # init results list
-  AUID = NULL
-  AUID = sppoly[["AUID"]]
-
   year = NULL
   if ( p$aegis_dimensionality %in% c("space-year", "space-year-dyear") ) {
     year = as.character( p$yrs )
@@ -69,13 +57,11 @@ carstm_summary = function( p=NULL, M=NA, operation="compute", ... ) {
   }
 
 
-  fit = carstm_model( p=p, DS="carstm_modelled_fit", carstm_model_label=p$carstm_model_label ) # to load currently saved res
-
   # initialize results in array format
   res = NULL
   res = carstm_destack( inputdata=M, dimensionality=p$aegis_dimensionality, AUID=AUID, year=year, dyear=dyear )
 
-
+  # to improve hyper param estimates..
   # fit = inla.hyperpar(fit, dz=0.2, diff.logdens=20 )  # get improved estimates for the hyperparameters
 
   if (exists("summary.fitted.values", fit)) {

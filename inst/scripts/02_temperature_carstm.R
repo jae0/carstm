@@ -32,9 +32,7 @@ p = carstm::temperature_carstm(
 
   # extract results
   fit = carstm_model( p=p, DS="carstm_modelled_fit" )  # extract currently saved model fit
-
-  res = carstm_summary( p=p, operation="compute", M=M  ) #
-  res = carstm_summary( p=p, operation="load"  ) # to load currently saved sppoly
+  res = carstm_summary( p=p, operation="load"  ) # to load currently saved results
 
   plot(fit)
   plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )

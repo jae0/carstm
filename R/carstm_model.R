@@ -25,10 +25,6 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     }
   }
 
-
-  # prediction surface
-  sppoly = areal_units( p=p )  # will redo if not found
-
   # permit passing a function rather than data directly .. less RAM usage in parent call
   if (class(M)=="character") assign("M", eval(parse(text=M) ) )
 
@@ -53,7 +49,6 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     # adjust based upon RAM requirements and ncores
     inla.setOption(num.threads= p$inla_num.threads)
     inla.setOption(blas.num.threads=p$inla_blas.num.threads)
-
   }
 
   gc()
@@ -64,6 +59,9 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   if ("try-error" %in% class(fit) ) warning("model fit error")
   save( fit, file=fn_fit, compress=TRUE )
 
-  return(fit)
+  # best to create summary tables here as all vars are still available
+  # can run directly on fit but make sure M and fit are correct ..
+  res = carstm_summary( p=p, operation="compute", carstm_model_label=p$carstm_model_label, M=M, fit=fit, AUID=areal_units( p=p )[["AUID"]] )
 
+  return(fit)
 }
