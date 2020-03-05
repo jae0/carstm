@@ -30,6 +30,9 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
   if (exists("data_transformation", p)) M[, p$variabletomodel]  = p$data_transformation$forward( M[, p$variabletomodel] ) # make all positive
 
+  sppoly = areal_units( p=p )  # will redo if not found
+
+
   if ( grepl("inla", p$carstm_modelengine) ) {
     # hyperparms
     j = which( is.finite(M[,p$variabletomodel]) )
