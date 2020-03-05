@@ -1,5 +1,5 @@
 
-carstm_summary = function( p=NULL, M=NA, operation="compute", extrapolation_limit=NA, extrapolation_replacement=NA, ... ) {
+carstm_summary = function( p=NULL, M=NA, operation="compute", ... ) {
 
   # require areal_units_fn,
 
