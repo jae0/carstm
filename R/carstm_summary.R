@@ -54,7 +54,7 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", im
   if ( p$aegis_dimensionality == "space") {
     AUID = sppoly[["AUID"]]
     res$i_preds = which(
-      M$tag==tag &
+      M$tag=="predictions" &
       M$AUID %in% AUID
     )  # filter by AUID and years in case additional data in other areas and times are used in the input data
     res$AUID = AUID
@@ -76,7 +76,7 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", im
     M$year = as.character(M$year)
 
     res$i_preds = which(
-      M$tag==tag &
+      M$tag=="predictions" &
       M$AUID %in% AUID &
       M$year %in% year
     )  # filter by AUID and years in case additional data in other areas and times are used in the input data
@@ -103,7 +103,7 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", im
     M$dyear = as.character( discretize_data( M$dyear, p$discretization[["dyear"]] ) )
 
     res$i_preds = which(
-      M$tag==tag &
+      M$tag=="predictions" &
       M$AUID %in% AUID &
       M$year %in% year
     )  # filter by AUID and years in case additional data in other areas and times are used in the input data
