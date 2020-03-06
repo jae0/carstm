@@ -35,18 +35,18 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   if ( grepl("inla", p$carstm_modelengine) ) {
     # hyperparms
     j = which( is.finite(M[,p$variabletomodel]) )
+    mrange = range( M[ j, p$variabletomodel ]  )  # on data scale not internal
     if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) {
       m = log( M[ j, p$variabletomodel ])
     } else if ( grepl( "family.*=.*poisson", p$carstm_modelcall)) {
       m = log( M[ j, p$variabletomodel ] / M[ j, "data_offset" ]  )
-      mrange = range( M[ j, p$variabletomodel ]/ M[ j, "data_offset" ] , na.rm=TRUE )  # on data scale not internal
-      mrange = mrange * median(M[ M$tag=="predictions", "data_offset" ], na.rm=TRUE)
+      mrange = range( M[ j, p$variabletomodel ]/ M[ j, "data_offset" ]  )  # on data scale not internal
+      mrange = mrange * median(M[ M$tag=="predictions", "data_offset" ] )
     } else if ( grepl( "family.*=.*binomial", p$carstm_modelcall)) {
       m = M[ j, p$variabletomodel ]
     } else {
       m = M[,p$variabletomodel]
     }
-    mrange = range( M[ j, p$variabletomodel ], na.rm=TRUE )  # on data scale not internal
 
     H = carstm_hyperparameters( sd(m), alpha=0.5, median(m) )
     m = NULL
