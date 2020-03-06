@@ -47,8 +47,10 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mr
   # to improve hyper param estimates..
   if (improve.hyperparam.estimates) fit = inla.hyperpar(fit, dz=0.25, diff.logdens=18 )  # get improved estimates for the hyperparameters
 
+
   # results go here
   res = list( M=M, dimensionality = p$aegis_dimensionality )
+
 
   # row indices for predictions
   if ( p$aegis_dimensionality == "space") {
@@ -97,6 +99,9 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mr
     res$matchfrom = list( AUID=M$AUID[res$i_preds], year=M$year[res$i_preds], dyear=M$dyear[res$i_preds] )
     res$matchto   = list( AUID=res$AUID,   year=res$year, dyear=res$dyear )
   }
+
+
+  nAUID = length(res$AUID)
 
 
   if ( grepl("glm", p$carstm_modelengine) |  grepl("gam", p$carstm_modelengine) ) {
@@ -274,7 +279,6 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mr
 
 
     ## --------- start random effects -------
-    nAUID = length(res$AUID)
 
     # match conditions for random effects .. i_preds are locations of predictions in "fit"
     # random effects results ..
