@@ -1,5 +1,5 @@
 
-carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", improve.hyperparam.estimates=FALSE, ... ) {
+carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mrange=NULL, improve.hyperparam.estimates=FALSE, ... ) {
 
   # require areal_units_fn,
 
@@ -112,6 +112,7 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", im
     res$dyear = dyear
     res$matchfrom = list( AUID=M$AUID[res$i_preds], year=M$year[res$i_preds], dyear=M$dyear[res$i_preds] )
     res$matchto   = list( AUID=res$AUID,   year=res$year, dyear=res$dyear )
+
     if ( grepl("glm", p$carstm_modelengine) |  grepl("gam", p$carstm_modelengine) ) {
       withsolutions = names( which(is.finite(fit$coefficients)) )
       withsolutions = withsolutions[ grep( "AUID.*:year", withsolutions ) ]
@@ -177,7 +178,6 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", im
 
 
   if ( grepl("inla", p$carstm_modelengine) ) {
-
     # row indices for spatial effects (if any)
     if (exists("summary.random", fit)) {
 
@@ -227,30 +227,46 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", im
     }
 
 
+    # predictions
 
     if (exists("summary.fitted.values", fit)) {
 
       vn = paste( p$variabletomodel, "predicted", sep=".")
       input = fit$summary.fitted.values[ res$i_preds, "mean" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
+
+      NA_mask = NULL
+      if ( exists("carstm_predict_force_range", p)) {
+        if (p$carstm_predict_force_range) {
+          if (!is.null(mrange)) {
+            # only an issue for factorial models ... missing locations get predicted to absurd values as there is no information .. filter out
+            NA_mask = which(res[[vn]]  > max(mrange, na.rm=TRUE) )
+          }
+        }
+      }
+      if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
       if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
+
 
       vn = paste( p$variabletomodel, "predicted_lb", sep=".")
       input = fit$summary.fitted.values[ res$i_preds, "0.025quant" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
+      if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
       if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn = paste( p$variabletomodel, "predicted_ub", sep=".")
       input = fit$summary.fitted.values[ res$i_preds, "0.975quant" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
+      if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
       if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn = paste( p$variabletomodel, "predicted_se", sep=".")
       input = fit$summary.fitted.values[ res$i_preds, "sd" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
+      if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
 
     }
 
@@ -270,6 +286,7 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", im
         vn = paste( p$variabletomodel, "random_sample_iid", sep=".")
         input = fit$summary.random$iid_error[res$i_preds, "mean" ]
         res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
+        if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
       }
 
       if (exists("auid", fit$summary.random)) {
@@ -286,6 +303,7 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", im
 
         vn = paste( p$variabletomodel, "random_auid_nonspatial", sep=".")
         res[[vn]] = reformat_to_array( input=input, matchfrom=ns_matchfrom, matchto=ns_matchto )
+        if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
         # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
 
         if (nrow(fit$summary.random$auid) == nAUID*2) {
@@ -300,6 +318,7 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", im
         }
         vn = paste( p$variabletomodel, "random_auid_spatial", sep=".")
         res[[vn]] = reformat_to_array( input=input, matchfrom=sp_matchfrom, matchto=sp_matchto )
+        if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
         # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
 
       }
