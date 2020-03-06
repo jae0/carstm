@@ -31,7 +31,7 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   if (exists("data_transformation", p)) M[, p$variabletomodel]  = p$data_transformation$forward( M[, p$variabletomodel] ) # make all positive
 
 
-
+  # get hyper param scalings
   if ( grepl("inla", p$carstm_modelengine) ) {
     # hyperparms
     j = which( is.finite(M[,p$variabletomodel]) )
@@ -63,9 +63,9 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   if ("try-error" %in% class(fit) ) warning("model fit error")
   save( fit, file=fn_fit, compress=TRUE )
 
-  # best to create summary tables here as all vars are still available
-  # can run directly on fit but make sure M and fit are correct ..
-  res = carstm_summary( p=p, operation="compute", carstm_model_label=p$carstm_model_label, M=M, fit=fit, AUID=areal_units( p=p )[["AUID"]] )
+
+  # fill with stats
+  res = carstm_summary( p=p, operation="compute", carstm_model_label=p$carstm_model_label, fit=fit, M=M, sppoly=sppoly )
 
   return(fit)
 }

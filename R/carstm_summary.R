@@ -1,5 +1,5 @@
 
-carstm_summary = function( p=NULL, M=NA, fit=NA, AUID=NA, operation="load", ... ) {
+carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", improve.hyperparam.estimates=FALSE, ... ) {
 
   # require areal_units_fn,
 
@@ -43,126 +43,266 @@ carstm_summary = function( p=NULL, M=NA, fit=NA, AUID=NA, operation="load", ... 
     }
   }
 
-  # init results list
-  year = NULL
-  if ( p$aegis_dimensionality %in% c("space-year", "space-year-dyear") ) {
-    year = as.character( p$yrs )
-    M$year = as.character(M$year)
-  }
-
-  dyear = NULL
-  if ( p$aegis_dimensionality %in% c("space-year-dyear") ){
-    dyear = as.character( discretize_data( (p$dyears + diff(p$dyears)[1]/2), p$discretization[["dyear"]] ) )
-    M$dyear = as.character( discretize_data( M$dyear, p$discretization[["dyear"]] ) )
-  }
-
-
-  # initialize results in array format
-  res = NULL
-  res = carstm_destack( inputdata=M, dimensionality=p$aegis_dimensionality, AUID=AUID, year=year, dyear=dyear )
 
   # to improve hyper param estimates..
-  # fit = inla.hyperpar(fit, dz=0.2, diff.logdens=20 )  # get improved estimates for the hyperparameters
+  if (improve.hyperparam.estimates) fit = inla.hyperpar(fit, dz=0.25, diff.logdens=18 )  # get improved estimates for the hyperparameters
 
-  if (exists("summary.fitted.values", fit)) {
+  # results go here
+  res = list( M=M, dimensionality = p$aegis_dimensionality )
 
-    vn = paste( p$variabletomodel, "predicted", sep=".")
-    input = fit$summary.fitted.values[ res$ii, "mean" ]
-    res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
-    if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+  # row indices for predictions
+  if ( p$aegis_dimensionality == "space") {
+    AUID = sppoly[["AUID"]]
+    res$i_preds = which(
+      M$tag==tag &
+      M$AUID %in% AUID
+    )  # filter by AUID and years in case additional data in other areas and times are used in the input data
+    res$AUID = AUID
+    res$matchfrom = list( AUID=M$AUID[res$i_preds] )
+    res$matchto   = list( AUID=res$AUID )
+    if ( grepl("glm", p$carstm_modelengine) |  grepl("gam", p$carstm_modelengine) ) {
+      withsolutions = names( which(is.finite(fit$coefficients)) )
+      withsolutions = withsolutions[ grep( "AUID.*:year", withsolutions ) ]
+      withsolutions = gsub("AUID", "", withsolutions )
+      withsolutions = data.frame( matrix( unlist(strsplit( withsolutions, ":", fixed=TRUE)), ncol=1, byrow=TRUE), stringsAsFactors=FALSE )
+      ws_matchfrom = list( AUID=as.character(withsolutions[,1])  )
+      NA_mask = reformat_to_array( input =rep(1, nrow(withsolutions)), matchfrom=ws_matchfrom, matchto=res$matchto )
+    }
+  }
+
+  if ( p$aegis_dimensionality == "space-year") {
+    AUID = sppoly[["AUID"]]
+    year = as.character( p$yrs )
+    M$year = as.character(M$year)
+
+    res$i_preds = which(
+      M$tag==tag &
+      M$AUID %in% AUID &
+      M$year %in% year
+    )  # filter by AUID and years in case additional data in other areas and times are used in the input data
+    res$AUID = AUID
+    res$year = year
+    res$matchfrom = list( AUID=M$AUID[res$i_preds], year=M$year[res$i_preds] )
+    res$matchto   = list( AUID=res$AUID,   year=res$year )
+    if ( grepl("glm", p$carstm_modelengine) |  grepl("gam", p$carstm_modelengine) ) {
+      withsolutions = names( which(is.finite(fit$coefficients)) )
+      withsolutions = withsolutions[ grep( "AUID.*:year", withsolutions ) ]
+      withsolutions = gsub("AUID", "", withsolutions )
+      withsolutions = gsub("year", "", withsolutions )
+      withsolutions = data.frame( matrix( unlist(strsplit( withsolutions, ":", fixed=TRUE)), ncol=2, byrow=TRUE), stringsAsFactors=FALSE )
+      ws_matchfrom = list( AUID=as.character(withsolutions[,1]), year=as.character(withsolutions[,2]) )
+      NA_mask = reformat_to_array( input =rep(1, nrow(withsolutions)), matchfrom=ws_matchfrom, matchto=res$matchto )
+    }
+  }
+
+  if ( p$aegis_dimensionality == "space-year-season") {
+    AUID = sppoly[["AUID"]]
+    year = as.character( p$yrs )
+    dyear = as.character( discretize_data( (p$dyears + diff(p$dyears)[1]/2), p$discretization[["dyear"]] ) )
+    M$year = as.character(M$year)
+    M$dyear = as.character( discretize_data( M$dyear, p$discretization[["dyear"]] ) )
+
+    res$i_preds = which(
+      M$tag==tag &
+      M$AUID %in% AUID &
+      M$year %in% year
+    )  # filter by AUID and years in case additional data in other areas and times are used in the input data
+    res$AUID = AUID
+    res$year = year
+    res$dyear = dyear
+    res$matchfrom = list( AUID=M$AUID[res$i_preds], year=M$year[res$i_preds], dyear=M$dyear[res$i_preds] )
+    res$matchto   = list( AUID=res$AUID,   year=res$year, dyear=res$dyear )
+    if ( grepl("glm", p$carstm_modelengine) |  grepl("gam", p$carstm_modelengine) ) {
+      withsolutions = names( which(is.finite(fit$coefficients)) )
+      withsolutions = withsolutions[ grep( "AUID.*:year", withsolutions ) ]
+      withsolutions = gsub("AUID", "", withsolutions )
+      withsolutions = gsub("dyear", "", withsolutions )
+      withsolutions = gsub("year", "", withsolutions )
+      withsolutions = data.frame( matrix( unlist(strsplit( withsolutions, ":", fixed=TRUE)), ncol=3, byrow=TRUE), stringsAsFactors=FALSE )
+      ws_matchfrom = list( AUID=as.character(withsolutions[,1]), year=as.character(withsolutions[,2]), dyear=as.character(withsolutions[,3])  )
+      NA_mask = reformat_to_array( input =rep(1, nrow(withsolutions)), matchfrom=ws_matchfrom, matchto=res$matchto )
+    }
+  }
+
+
+  if ( grepl("glm", p$carstm_modelengine) ) {
+
+    preds = predict( fit, newdata=M[res$i_preds,], type="response", na.action=na.omit, se.fit=TRUE )  # no/km2
+
+    vn =  paste(p$variabletomodel, "predicted", sep=".")
+    input = preds$fit
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto ) * NA_mask[]
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
-    vn = paste( p$variabletomodel, "predicted_lb", sep=".")
-    input = fit$summary.fitted.values[ res$ii, "0.025quant" ]
-    res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
-    if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+    vn =  paste(p$variabletomodel, "predicted_se", sep=".")
+    input = preds$se.fit
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto ) * NA_mask[]
+
+    vn =  paste(p$variabletomodel, "predicted_lb", sep=".")
+    input = preds$fit - preds$se.fit
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto ) * NA_mask[]
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
-    vn = paste( p$variabletomodel, "predicted_ub", sep=".")
-    input = fit$summary.fitted.values[ res$ii, "0.975quant" ]
-    res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
-    if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+    vn =  paste(p$variabletomodel, "predicted_ub", sep=".")
+    input = preds$fit + preds$se.fit
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto ) * NA_mask[]
     if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
-
-    vn = paste( p$variabletomodel, "predicted_se", sep=".")
-    input = fit$summary.fitted.values[ res$ii, "sd" ]
-    res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
 
   }
 
-  ## --------- predictions complete ------
+
+  if ( grepl("gam", p$carstm_modelengine) ) {
+
+    preds = predict( fit, newdata=M[res$i_preds,], type="response", na.action=na.omit, se.fit=TRUE )  # no/km2
+
+    vn =  paste(p$variabletomodel, "predicted", sep=".")
+    input = preds$fit
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
+
+    vn =  paste(p$variabletomodel, "predicted_se", sep=".")
+    input = preds$se.fit
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+
+    vn =  paste(p$variabletomodel, "predicted_lb", sep=".")
+    input = preds$fit - preds$se.fit
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
+
+    vn =  paste(p$variabletomodel, "predicted_ub", sep=".")
+    input = preds$fit + preds$se.fit
+    res[[vn]] = reformat_to_array( input =input, matchfrom=matchfrom, matchto=matchto )
+    if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
+  }
 
 
+  if ( grepl("inla", p$carstm_modelengine) ) {
 
-  ## --------- start random effects -------
-  nAUID = length(res$AUID)
+    # row indices for spatial effects (if any)
+    if (exists("summary.random", fit)) {
 
-  # match conditions for random effects .. ii are locations of predictions in "fit"
-  # random effects results ..
-  if (exists("summary.random", fit)) {
+      if (exists("auid", fit$summary.random)) {
 
-    if (exists("iid_error", fit$summary.random)) {
-      # IID random effects
-      vn = paste( p$variabletomodel, "random_sample_iid", sep=".")
-      input = fit$summary.random$iid_error[res$ii, "mean" ]
-      res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
+        if (nrow(fit$summary.random$auid) == nAUID*2) {
+          # a single nonspatial effect (no grouping across time)
+          resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial") )
+          res$i_nonspatial = which(resout$type=="nonspatial")
+          ns_matchfrom = list( AUID=resout$AUID[res$i_nonspatial]  )
+          ns_matchto   = list( AUID=res$AUID  )
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$ny ) {
+          #  nonspatial effects grouped by year
+          resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs )
+          res$i_nonspatial = which(resout$type=="nonspatial")
+          ns_matchfrom = list( AUID=resout$AUID[res$i_nonspatial], year=resout$year[res$i_nonspatial] )
+          ns_matchto   = list( AUID=res$AUID, year=as.character(p$yrs) )
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$nt ) {
+          # nonspatial at all time slices
+          resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
+          res$i_nonspatial = which(resout$type=="nonspatial")
+          ns_matchfrom = list( AUID=resout$AUID[res$i_nonspatial], year=as.character(resout$year[res$i_nonspatial]), dyear=as.character( discretize_data( resout$dyear[res$i_nonspatial], p$discretization[["dyear"]] ) ) )
+          ns_matchto   = list( AUID=res$AUID,   year=as.character(p$yrs),      dyear=as.character( discretize_data( (p$dyears + diff(p$dyears)[1]/2), p$discretization[["dyear"]] ) ) )
+        }
+
+        if (nrow(fit$summary.random$auid) == nAUID*2) {
+          # a single spatial effect (no grouping across time)
+          resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial") )
+          res$i_spatial = which(resout$type=="spatial")
+          sp_matchfrom = list( AUID=resout$AUID[res$i_spatial]  )
+          sp_matchto   = list( AUID=res$AUID  )
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$ny ) {
+          # spatial effects grouped by year
+          resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs )
+          res$i_spatial = which(resout$type=="spatial")
+          sp_matchfrom = list( AUID=resout$AUID[res$i_spatial], year=resout$year[res$i_spatial] )
+          sp_matchto   = list( AUID=res$AUID, year=p$yrs )
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$nt ) {
+          # at every time slice
+          resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
+          res$i_spatial = which(resout$type=="spatial")
+          sp_matchfrom = list( AUID=resout$AUID[res$i_spatial], year=as.character(resout$year[res$i_spatial]), dyear=as.character( discretize_data( resout$dyear[res$i_spatial], p$discretization[["dyear"]] ) ) )
+          sp_matchto   = list( AUID=res$AUID,   year=as.character(p$yrs),      dyear=as.character( discretize_data( (p$dyears + diff(p$dyears)[1]/2), p$discretization[["dyear"]] ) ) )
+        }
+
+      }
     }
 
-    if (exists("auid", fit$summary.random)) {
 
-      if (nrow(fit$summary.random$auid) == nAUID*2) {
-        # a single nonspatial effect (no grouping across time)
-        resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial") )
-        kk = which(resout$type=="nonspatial")
-        ns_matchfrom = list( AUID=resout$AUID[kk]  )
-        ns_matchto   = list( AUID=res$AUID  )
-        input = fit$summary.random$auid[ kk, "mean" ]
-      } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$ny ) {
-        #  nonspatial effects grouped by year
-        resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs )
-        kk = which(resout$type=="nonspatial")
-        ns_matchfrom = list( AUID=resout$AUID[kk], year=resout$year[kk] )
-        ns_matchto   = list( AUID=res$AUID, year=as.character(p$yrs) )
-        input = fit$summary.random$auid[ kk, "mean" ]
-      } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$nt ) {
-        # nonspatial at all time slices
-        resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
-        kk = which(resout$type=="nonspatial")
-        ns_matchfrom = list( AUID=resout$AUID[kk], year=as.character(resout$year[kk]), dyear=as.character( discretize_data( resout$dyear[kk], p$discretization[["dyear"]] ) ) )
-        ns_matchto   = list( AUID=res$AUID,   year=as.character(p$yrs),      dyear=as.character( discretize_data( (p$dyears + diff(p$dyears)[1]/2), p$discretization[["dyear"]] ) ) )
-        input = fit$summary.random$auid[ kk, "mean" ]
+
+    if (exists("summary.fitted.values", fit)) {
+
+      vn = paste( p$variabletomodel, "predicted", sep=".")
+      input = fit$summary.fitted.values[ res$i_preds, "mean" ]
+      res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
+      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
+
+      vn = paste( p$variabletomodel, "predicted_lb", sep=".")
+      input = fit$summary.fitted.values[ res$i_preds, "0.025quant" ]
+      res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
+      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
+
+      vn = paste( p$variabletomodel, "predicted_ub", sep=".")
+      input = fit$summary.fitted.values[ res$i_preds, "0.975quant" ]
+      res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
+      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
+
+      vn = paste( p$variabletomodel, "predicted_se", sep=".")
+      input = fit$summary.fitted.values[ res$i_preds, "sd" ]
+      res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
+
+    }
+
+    ## --------- predictions complete ------
+
+
+
+    ## --------- start random effects -------
+    nAUID = length(res$AUID)
+
+    # match conditions for random effects .. i_preds are locations of predictions in "fit"
+    # random effects results ..
+    if (exists("summary.random", fit)) {
+
+      if (exists("iid_error", fit$summary.random)) {
+        # IID random effects
+        vn = paste( p$variabletomodel, "random_sample_iid", sep=".")
+        input = fit$summary.random$iid_error[res$i_preds, "mean" ]
+        res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
       }
 
-      vn = paste( p$variabletomodel, "random_auid_nonspatial", sep=".")
-      res[[vn]] = reformat_to_array( input=input, matchfrom=ns_matchfrom, matchto=ns_matchto )
-      # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
+      if (exists("auid", fit$summary.random)) {
 
-      if (nrow(fit$summary.random$auid) == nAUID*2) {
-        # a single spatial effect (no grouping across time)
-        resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial") )
-        kk = which(resout$type=="spatial")
-        sp_matchfrom = list( AUID=resout$AUID[kk]  )
-        sp_matchto   = list( AUID=res$AUID  )
-        input = fit$summary.random$auid[ kk, "mean" ]  # offset structure due to bym2
-      } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$ny ) {
-        # spatial effects grouped by year
-        resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs )
-        kk = which(resout$type=="spatial")
-        sp_matchfrom = list( AUID=resout$AUID[kk], year=resout$year[kk] )
-        sp_matchto   = list( AUID=res$AUID, year=p$yrs )
-        input = fit$summary.random$auid[ kk, "mean" ]  # offset structure due to bym2
-      } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$nt ) {
-        # at every time slice
-        resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
-        kk = which(resout$type=="spatial")
-        sp_matchfrom = list( AUID=resout$AUID[kk], year=as.character(resout$year[kk]), dyear=as.character( discretize_data( resout$dyear[kk], p$discretization[["dyear"]] ) ) )
-        sp_matchto   = list( AUID=res$AUID,   year=as.character(p$yrs),      dyear=as.character( discretize_data( (p$dyears + diff(p$dyears)[1]/2), p$discretization[["dyear"]] ) ) )
-        input = fit$summary.random$auid[ kk, "mean" ]  # offset structure due to bym2
+        if (nrow(fit$summary.random$auid) == nAUID*2) {
+          input = fit$summary.random$auid[ res$i_nonspatial, "mean" ]
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$ny ) {
+          #  nonspatial effects grouped by year
+          input = fit$summary.random$auid[ res$i_nonspatial, "mean" ]
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$nt ) {
+          # nonspatial at all time slices
+          input = fit$summary.random$auid[ res$i_nonspatial, "mean" ]
+        }
+
+        vn = paste( p$variabletomodel, "random_auid_nonspatial", sep=".")
+        res[[vn]] = reformat_to_array( input=input, matchfrom=ns_matchfrom, matchto=ns_matchto )
+        # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
+
+        if (nrow(fit$summary.random$auid) == nAUID*2) {
+          # a single spatial effect (no grouping across time)
+          input = fit$summary.random$auid[ res$i_spatial, "mean" ]  # offset structure due to bym2
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$ny ) {
+          # spatial effects grouped by year
+          input = fit$summary.random$auid[ res$i_spatial, "mean" ]  # offset structure due to bym2
+        } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$nt ) {
+          # at every time slice
+          input = fit$summary.random$auid[ res$i_spatial, "mean" ]  # offset structure due to bym2
+        }
+        vn = paste( p$variabletomodel, "random_auid_spatial", sep=".")
+        res[[vn]] = reformat_to_array( input=input, matchfrom=sp_matchfrom, matchto=sp_matchto )
+        # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
+
       }
-      vn = paste( p$variabletomodel, "random_auid_spatial", sep=".")
-      res[[vn]] = reformat_to_array( input=input, matchfrom=sp_matchfrom, matchto=sp_matchto )
-      # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
-
     }
   }
 
