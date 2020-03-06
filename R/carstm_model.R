@@ -30,7 +30,6 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
   if (exists("data_transformation", p)) M[, p$variabletomodel]  = p$data_transformation$forward( M[, p$variabletomodel] ) # make all positive
 
-  sppoly = areal_units( p=p )  # will redo if not found
 
 
   if ( grepl("inla", p$carstm_modelengine) ) {
@@ -55,6 +54,8 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   }
 
   gc()
+
+  sppoly = areal_units( p=p )  # required by car fit
 
   fit  = NULL
   assign("fit", eval(parse(text=paste( "try(", p$carstm_modelcall, ")" ) ) ))
