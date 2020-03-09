@@ -198,16 +198,20 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mr
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial") )
           res$i_nonspatial = which(resout$type=="nonspatial")
           res$ns_matchfrom = list( AUID=resout$AUID[res$i_nonspatial]  )
+          res$ns_matchto   = list( AUID=res$AUID  )
+
         } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$ny ) {
           #  nonspatial effects grouped by year
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs )
           res$i_nonspatial = which(resout$type=="nonspatial")
           res$ns_matchfrom = list( AUID=resout$AUID[res$i_nonspatial], year=resout$year[res$i_nonspatial] )
+          res$ns_matchto   = list( AUID=res$AUID,   year=res$year  )
         } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$nt ) {
           # nonspatial at all time slices
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
           res$i_nonspatial = which(resout$type=="nonspatial")
           res$ns_matchfrom = list( AUID=resout$AUID[res$i_nonspatial], year=as.character(resout$year[res$i_nonspatial]), dyear=as.character( discretize_data( resout$dyear[res$i_nonspatial], p$discretization[["dyear"]] ) ) )
+          res$ns_matchto   = list( AUID=res$AUID,   year=res$year, dyear=res$dyear )
         }
 
         if (nrow(fit$summary.random$auid) == nAUID*2) {
@@ -215,16 +219,20 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mr
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial") )
           res$i_spatial = which(resout$type=="spatial")
           res$sp_matchfrom = list( AUID=resout$AUID[res$i_spatial]  )
+          res$sp_matchto   = list( AUID=res$AUID  )
+
         } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$ny ) {
           # spatial effects grouped by year
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs )
           res$i_spatial = which(resout$type=="spatial")
           res$sp_matchfrom = list( AUID=resout$AUID[res$i_spatial], year=resout$year[res$i_spatial] )
+          res$sp_matchto   = list( AUID=res$AUID,   year=res$year  )
         } else if (nrow(fit$summary.random$auid) == nAUID*2 * p$nt ) {
           # at every time slice
           resout = expand.grid( AUID=res$AUID, type = c("nonspatial", "spatial"), year=p$yrs, dyear=p$dyears )
           res$i_spatial = which(resout$type=="spatial")
           res$sp_matchfrom = list( AUID=resout$AUID[res$i_spatial], year=as.character(resout$year[res$i_spatial]), dyear=as.character( discretize_data( resout$dyear[res$i_spatial], p$discretization[["dyear"]] ) ) )
+          res$sp_matchto   = list( AUID=res$AUID,   year=res$year, dyear=res$dyear )
         }
 
       }
@@ -296,13 +304,13 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mr
 
         input = fit$summary.random$auid[ res$i_nonspatial, "mean" ]
         vn = paste( p$variabletomodel, "random_auid_nonspatial", sep=".")
-        res[[vn]] = reformat_to_array( input=input, matchfrom=res$ns_matchfrom, matchto=res$matchto )
+        res[[vn]] = reformat_to_array( input=input, matchfrom=res$ns_matchfrom, matchto=res$ns_matchto )
         if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
         # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
 
         input = fit$summary.random$auid[ res$i_spatial, "mean" ]  # offset structure due to bym2
         vn = paste( p$variabletomodel, "random_auid_spatial", sep=".")
-        res[[vn]] = reformat_to_array( input=input, matchfrom=res$sp_matchfrom, matchto=res$matchto )
+        res[[vn]] = reformat_to_array( input=input, matchfrom=res$sp_matchfrom, matchto=res$sp_matchto )
         if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
         # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
 
