@@ -110,7 +110,7 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mr
       withsolutions = names( which(is.finite(fit$coefficients)) )
       withsolutions = withsolutions[ grep( "AUID.*:year", withsolutions ) ]
       withsolutions = gsub("AUID", "", withsolutions )
-      MM = paste( M$AUID, M$year, sep=":")
+      MM = paste( M$AUID, M$year, sep=":")[res$i_preds]
       res$i_preds = match(withsolutions, MM)
       res$matchfrom = list( AUID=M$AUID[res$i_preds] )
     }
@@ -120,8 +120,8 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mr
       withsolutions = withsolutions[ grep( "AUID.*:year", withsolutions ) ]
       withsolutions = gsub("AUID", "", withsolutions )
       withsolutions = gsub("year", "", withsolutions )
-      MM = paste( M$AUID, M$year, sep=":")
-      res$i_preds = match(withsolutions, MM)
+      MM = paste( M$AUID, M$year, sep=":")[res$i_preds]
+      res$i_preds = res$i_preds[ match(withsolutions, MM) ]
       res$matchfrom = list( AUID=M$AUID[res$i_preds], year=M$year[res$i_preds]  )
     }
 
@@ -131,7 +131,7 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mr
       withsolutions = gsub("AUID", "", withsolutions )
       withsolutions = gsub("dyear", "", withsolutions )
       withsolutions = gsub("year", "", withsolutions )
-      MM = paste( M$AUID, M$year, M$dyear, sep=":")
+      MM = paste( M$AUID, M$year, M$dyear, sep=":")[res$i_preds]
       res$i_preds = match(withsolutions, MM)
       res$matchfrom = list( AUID=M$AUID[res$i_preds], year=M$year[res$i_preds], dyear=M$dyear[res$i_preds] )
     }
