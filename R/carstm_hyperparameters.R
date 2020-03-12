@@ -23,7 +23,7 @@ carstm_hyperparameters = function( reference_sd, alpha=0.5, reference_mean=0 ) {
 
 
     # param=c(u, alpha); u=sigma; alpha=prob;
-    # see inla.doc("pc.rw2") inla.doc("pc.prec")  ..prior sd attributable to rw2
+    # see inla.doc("pc.prec")  ..prior sd attributable to rw2
     rw2 = list(
       prec = list(
         prior = "pc.prec",  # exponential decay
