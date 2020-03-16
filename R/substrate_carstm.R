@@ -195,7 +195,7 @@
       M[kk, pB$variabletomodel] = oo[jj ]
     }
 
-    if( exists("spatial_domain", p)) M = geo_subset( spatial_domain=p$spatial_domain, Z=M ) # need to be careful with extrapolation ...  filter depths
+    if ( exists("spatial_domain", p)) M = geo_subset( spatial_domain=p$spatial_domain, Z=M ) # need to be careful with extrapolation ...  filter depths
 
     M$lon = NULL
     M$lat = NULL
@@ -206,6 +206,8 @@
     sppoly_df = as.data.frame(sppoly)
 
     pB$carstm_model_label = "production"
+    pB$modeldir = file.path( p$data_root, "modelled" )  # override separate project results
+
 
     BM = carstm_summary ( p=pB, operation="load" )  # modeled!
     kk = match( as.character(  sppoly_df$AUID), as.character( BM$AUID ) )
