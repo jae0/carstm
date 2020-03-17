@@ -17,31 +17,6 @@
   # ------------------
 
 
-    if (DS=="parameters_override") {
-      # translate param values from one project to a unified representation
-      # must be first to relevent components of p
-
-      pc = bathymetry_carstm(
-        DS = "parameters",
-        project_name = "bathymetry",
-        variabletomodel = "z",
-        spatial_domain = p$spatial_domain,  # defines spatial area, currenty: "snowcrab" or "SSE"
-        areal_units_overlay = p$areal_units_overlay, # currently: "snowcrab_managementareas",  "groundfish_strata" .. additional polygon layers for subsequent analysis for now ..
-        areal_units_resolution_km = p$areal_units_resolution_km, # km dim of lattice ~ 1 hr
-        areal_units_proj4string_planar_km = p$areal_units_proj4string_planar_km,  # coord system to use for areal estimation and gridding for carstm
-        inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
-        modeldir = p$modeldir,  # outputs all go the the main project's model output directory
-        areal_units_fn = p$areal_units_fn,
-        inla_num.threads= p$inla_num.threads,
-        inla_blas.num.threads= p$inla_blas.num.threads
-      )
-
-      return(pc)  #override
-    }
-
-
-  # ------------------
-
   if (DS=="parameters") {
     p$libs = unique( c( p$libs, project.library ( "carstm", "aegis.bathymetry" ) ) )
 
