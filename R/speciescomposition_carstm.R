@@ -57,7 +57,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
             + f( auid, model="bym2", graph=sppoly@nb, group=year_factor, scale.model=TRUE, constr=TRUE, hyper=H$bym2, control.group=list(model="ar1", hyper=H$ar1_group)),
             family = "normal",
             data= M,
-            control.compute = list(dic=TRUE, waaic=TRUE, cpo=TRUE, config=TRUE),
+            control.compute = list(dic=TRUE, waic=TRUE, cpo=TRUE, config=TRUE),
             control.results = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
             control.predictor = list(compute=FALSE, link=1 ),
             # control.fixed = list(prec.intercept = 0.1),
