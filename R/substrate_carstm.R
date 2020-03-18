@@ -198,7 +198,7 @@
     pB$modeldir = file.path( pB$data_root, "modelled" )  # override separate project results
 
 
-    BM = carstm_summary ( p=pB, operation="load" )  # modeled!
+    BM = carstm_summary ( p=pB, carstm_model_label="production" )  # modeled!
     kk = match( as.character(  sppoly_df$AUID), as.character( BM$AUID ) )
     sppoly_df[, pB$variabletomodel] = BM[[ paste(pB$variabletomodel, "predicted", sep=".") ]] [kk]
 
