@@ -1,5 +1,5 @@
 
-speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, variabletomodel=NULL, ... ) {
+speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
   require( carstm)
 
@@ -112,7 +112,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, varia
       project_name = "speciescomposition",
       yrs = p$yrs,
       modeldir = p$modeldir,  # outputs all go the the main project's model output directory
-      variabletomodel = variabletomodel,
+      variabletomodel = p$variabletomodel,
       spatial_domain = p$spatial_domain,  # defines spatial area, currenty: "snowcrab" or "SSE"
       inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
       inputdata_temporal_discretization_yr = p$inputdata_temporal_discretization_yr,  # ie., weekly .. controls resolution of data prior to modelling to reduce data set and speed up modelling
