@@ -187,7 +187,6 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       areal_units_resolution_km = p$areal_units_resolution_km, # km dim of lattice ~ 1 hr
       areal_units_proj4string_planar_km = p$areal_units_proj4string_planar_km,  # coord system to use for areal estimation and gridding for carstm
       inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
-      modeldir = p$modeldir,  # outputs all go the the main project's model output directory
       areal_units_fn = p$areal_units_fn,
       inla_num.threads= p$inla_num.threads,
       inla_blas.num.threads= p$inla_blas.num.threads
@@ -223,8 +222,8 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     APS$tag ="predictions"
     APS[, p$variabletomodel] = NA
 
-    pB$carstm_model_label = "production"
-    BM = carstm_summary( p=pB, operation="load" )
+    BM = carstm_summary( p=pB, carstm_model_label="production" ) # to load currently saved sppoly
+
     jj = match( as.character( APS$AUID), as.character( BM$AUID) )
     APS[, pB$variabletomodel] = BM[[ paste(pB$variabletomodel, "predicted", sep=".") ]] [jj]
     jj =NULL
