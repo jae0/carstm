@@ -6,7 +6,7 @@
 p = carstm::temperature_carstm(
   DS = "parameters",
   project_name = "temperature",
-  variabletomodel = "temperature",
+  variabletomodel = "t",
   inputdata_spatial_discretization_planar_km = 1,  # km controls resolution of data prior to modelling to reduce data set and speed up modelling
   inputdata_temporal_discretization_yr = 24/365,  # ie., every 2 weeks .. controls resolution of data prior to modelling to reduce data set and speed up modelling
   yrs = 1999:2010,
@@ -24,11 +24,6 @@ p = carstm::temperature_carstm(
   spplot( sppoly, "AUID", main="AUID", sp.layout=p$coastLayout )
 
 
-  M = temperature.db( p=p, DS="aggregated_data", redo=TRUE )  # will redo if not found .. not used here but used for data matching/lookup in other aegis projects that use bathymetry
-  M = temperature_carstm( p=p, DS="carstm_inputs", redo=TRUE )  # will redo if not found
-  # to extract fits and predictions
-
-  fit = carstm_model( p=p, M=M )
 
   # extract results
   fit = carstm_model( p=p, DS="carstm_modelled_fit" )  # extract currently saved model fit
