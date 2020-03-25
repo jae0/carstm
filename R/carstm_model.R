@@ -1,12 +1,8 @@
 
 carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
-  # deal with additional passed parameters
-  p_add = list(...)
-  if ( is.null(p) ) p=list()
-  if (length(p_add) > 0 ) p = c(p, p_add)
-  i = which(duplicated(names(p), fromLast = TRUE ) )
-  if ( length(i) > 0 ) p = p[-i] # give any passed parameters a higher priority, overwriting pre-existing variable
+  p = parameters_control(p, list(...), control="add") # add passed args to parameter list, priority to args
+
 
   areal_units_fns = p$areal_units_fn
   if (exists( "inputdata_spatial_discretization_planar_km", p )) areal_units_fns = paste( areal_units_fns, round(p$inputdata_spatial_discretization_planar_km, 6),   sep="_" )
