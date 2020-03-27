@@ -49,7 +49,7 @@
       if ( grepl("inla", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "INLA" ) ) )
 
-        p$carstm_model_label = "production"
+        if ( !exists("carstm_model_label", p)) p$carstm_model_label = "production"
 
         p$carstm_modelcall = paste(
           'inla(
@@ -74,12 +74,12 @@
       }
 
       if ( grepl("glm", p$carstm_modelengine) ) {
-        p$carstm_model_label = "default_glm"
+        if ( !exists("carstm_model_label", p))  p$carstm_model_label = "default_glm"
         p$carstm_modelcall = paste( 'glm( formula = ', p$variabletomodel, '  ~ 1 + AUID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="log")  ) ' ) # for modelengine='glm'
       }
       if ( grepl("gam", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "mgcv" ) ) )
-        p$carstm_model_label = "default_gam"
+        if ( !exists("carstm_model_label", p)) p$carstm_model_label = "default_gam"
         p$carstm_modelcall = paste( 'gam( formula = ', p$variabletomodel, '  ~ 1 + AUID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="log")  ) ' )  # for modelengine='gam'
       }
 

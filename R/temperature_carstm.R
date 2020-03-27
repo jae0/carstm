@@ -49,8 +49,8 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       if ( grepl("inla", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "INLA" ) ) )
 
-        p$carstm_model_label = "production"
-        p$carstm_modelcall = paste('
+        if ( !exists("carstm_model_label", p))  p$carstm_model_label = "production"
+         p$carstm_modelcall = paste('
           inla(
             formula = ', p$variabletomodel, ' ~ 1
               + f( dyri, model="ar1", hyper=H$ar1 )
@@ -78,10 +78,12 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
         #  + f(seasonal, model="seasonal", season.length=', pT$n.season, ', scale.model=TRUE )  # using seasonal effect is not recommended as it is not smoothed well .. rw2 is better
 
       if ( grepl("glm", p$carstm_modelengine) ) {
+        if ( !exists("carstm_model_label", p))  p$carstm_model_label = "default_glm"
         p$carstm_modelcall = paste( 'glm( formula = ', p$variabletomodel, ' ~ 1 + AUID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="identity")  ) ' )  # for modelengine='glm'
       }
       if ( grepl("gam", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "mgcv"  ) ) )
+        if ( !exists("carstm_model_label", p))  p$carstm_model_label = "default_gam"
         p$carstm_modelcall = paste( 'gam( formula = ', p$variabletomodel, ' ~ 1 + AUID,  family = gaussian(link="log"), data= M[ which(M$tag=="observations"), ], family=gaussian(link="identity")  ) ' ) # for modelengine='gam'
       }
     }
@@ -187,6 +189,8 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       areal_units_resolution_km = p$areal_units_resolution_km, # km dim of lattice ~ 1 hr
       areal_units_proj4string_planar_km = p$areal_units_proj4string_planar_km,  # coord system to use for areal estimation and gridding for carstm
       inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
+      carstm_model_label = "production",
+      # modeldir = p$modeldir,  # outputs all go the the main project's model output directory  when null
       areal_units_fn = p$areal_units_fn,
       inla_num.threads= p$inla_num.threads,
       inla_blas.num.threads= p$inla_blas.num.threads
@@ -222,7 +226,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     APS$tag ="predictions"
     APS[, p$variabletomodel] = NA
 
-    BM = carstm_summary( p=pB, carstm_model_label="production" ) # to load currently saved sppoly
+    BM = carstm_summary( p=pB ) # to load currently saved sppoly
 
     jj = match( as.character( APS$AUID), as.character( BM$AUID) )
     APS[, pB$variabletomodel] = BM[[ paste(pB$variabletomodel, "predicted", sep=".") ]] [jj]

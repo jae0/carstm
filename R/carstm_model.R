@@ -63,7 +63,7 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
 
   # fill with stats
-  res = carstm_summary( p=p, operation="compute", carstm_model_label=p$carstm_model_label, fit=fit, M=M, sppoly=sppoly, mrange=mrange )
+  res = carstm_summary( p=p, operation="compute", fit=fit, M=M, sppoly=sppoly, mrange=mrange )
 
   return(fit)
 }

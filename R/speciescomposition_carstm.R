@@ -46,7 +46,8 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
       if ( grepl("inla", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "INLA" ) ) )
 
-        p$carstm_model_label = "production"
+        if ( !exists("carstm_model_label", p)) p$carstm_model_label = "production"
+
         p$carstm_modelcall = paste(
           'inla( formula = ', p$variabletomodel,
           ' ~ 1
@@ -76,7 +77,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
         # + f(year,  model="ar1", hyper=H$ar1 )
 
       if ( grepl("glm", p$carstm_modelengine) ) {
-        p$carstm_model_label = "default_glm"
+        if ( !exists("carstm_model_label", p)) p$carstm_model_label = "default_glm"
         p$carstm_modelcall = paste(
           'glm( formula =',  p$variabletomodel,
           ' ~ 1 + AUID + t + z + substrate.grainsize +tiyr,
@@ -88,8 +89,8 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
 
       if ( grepl("gam", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "mgcv" ) ) )
-        p$carstm_model_label = "default_gam"
-        p$carstm_modelcall = paste(
+        if ( !exists("carstm_model_label", p)) p$carstm_model_label = "default_gam"
+         p$carstm_modelcall = paste(
           'gam( formula =',  p$variabletomodel,
           ' ~ 1 + AUID + s(t) + s(z) + s(substrate.grainsize) + s(year) + s(dyear),
             data= M[ which(M$tag=="observations"), ],
@@ -166,6 +167,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
       areal_units_resolution_km = p$areal_units_resolution_km, # km dim of lattice ~ 1 hr
       areal_units_proj4string_planar_km = p$areal_units_proj4string_planar_km,  # coord system to use for areal estimation and gridding for carstm
       inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
+      carstm_model_label = "production",
       areal_units_fn = p$areal_units_fn,
       inla_num.threads= p$inla_num.threads,
       inla_blas.num.threads= p$inla_blas.num.threads
@@ -180,6 +182,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
       areal_units_overlay = p$areal_units_overlay, # currently: "snowcrab_managementareas",  "groundfish_strata" .. additional polygon layers for subsequent analysis for now ..
       areal_units_resolution_km = p$areal_units_resolution_km, # km dim of lattice ~ 1 hr
       areal_units_proj4string_planar_km = p$areal_units_proj4string_planar_km,  # coord system to use for areal estimation and gridding for carstm
+      carstm_model_label = "production",
       areal_units_fn = p$areal_units_fn,
       inla_num.threads= p$inla_num.threads,
       inla_blas.num.threads= p$inla_blas.num.threads
@@ -245,7 +248,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
     # substrate coverage poor .. add from modelled results
     kk =  which( !is.finite(M[, pS$variabletomodel]))
     if (length(kk) > 0) {
-      SI = carstm_summary( p=pS, carstm_model_label="production" )
+      SI = carstm_summary( p=pS )
       jj = match( as.character( M$AUID[kk]), as.character( SI$AUID) )
       M[kk, pS$variabletomodel] = SI[[ paste(pS$variabletomodel,"predicted",sep="." )]] [jj]
     }
@@ -291,13 +294,13 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
     APS$tag ="predictions"
     APS[,p$variabletomodel] = NA
 
-    BI = carstm_summary( p=pB, carstm_model_label="production",  )
+    BI = carstm_summary( p=pB )
     jj = match( as.character( APS$AUID), as.character( BI$AUID) )
     APS[, pB$variabletomodel] = BI[[ paste(pB$variabletomodel,"predicted",sep="." ) ]] [jj]
     jj =NULL
     BI = NULL
 
-    SI = carstm_summary( p=pS, carstm_model_label="production" )
+    SI = carstm_summary( p=pS )
     jj = match( as.character( APS$AUID), as.character( SI$AUID) )
     APS[, pS$variabletomodel] = SI[[ paste(pS$variabletomodel,"predicted",sep="." )]] [jj]
     jj =NULL
@@ -317,7 +320,7 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
     APS$dyear = APS$tiyr - APS$year
 
 
-    TI = carstm_summary( p=pT, carstm_model_label="production" )
+    TI = carstm_summary( p=pT )
     TI = TI[[ paste(pT$variabletomodel,"predicted",sep="." )]]
 
     auid_map = match( APS$AUID, dimnames(TI)$AUID )

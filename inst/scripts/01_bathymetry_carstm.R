@@ -8,6 +8,7 @@
     project_name = "bathymetry",
     spatial_domain = "SSE",  # defines spatial area, currenty: "snowcrab" or "SSE"
     variabletomodel ="z",
+    carstm_model_label = "production",
     inputdata_spatial_discretization_planar_km = 1,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
     areal_units_fn = "default",  # identifyer for areal units polygon filename
     areal_units_resolution_km = 25, # km dim of lattice ~ 1 hr
@@ -23,11 +24,11 @@
   str(M)
 
 # run the model ... about 24 hrs
-  fit = carstm_model( p=p, M='bathymetry_carstm( p=p, DS="carstm_inputs", carstm_model_label="production" )' ) # run model and obtain predictions
+  fit = carstm_model( p=p, M='bathymetry_carstm( p=p, DS="carstm_inputs" )' ) # run model and obtain predictions
 
 # loading saved results
-  fit = carstm_model( p=p, DS="carstm_modelled_fit", carstm_model_label="production" )  # extract currently saved model fit
-  res = carstm_summary( p=p, carstm_model_label="production" ) # to load currently saved sppoly
+  fit = carstm_model( p=p, DS="carstm_modelled_fit" )  # extract currently saved model fit
+  res = carstm_summary( p=p ) # to load currently saved sppoly
 
   plot(fit)
   plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )

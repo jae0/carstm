@@ -18,6 +18,7 @@ for ( variabletomodel in p$varstomodel)  {
       DS="parameters",
       data_root = project.datadirectory( "aegis", "speciescomposition" ),
       variabletomodel = variabletomodel,
+      carstm_model_label = "production",
       inputdata_spatial_discretization_planar_km = 1,  # km controls resolution of data prior to modelling to reduce data set and speed up modelling
       inputdata_temporal_discretization_yr = 24/365,  # ie., every 2 weeks .. controls resolution of data prior to modelling to reduce data set and speed up modelling
       yrs = 1999:2019,
@@ -32,13 +33,13 @@ for ( variabletomodel in p$varstomodel)  {
 
     # to recreate the underlying data
     sppoly = areal_units( p=p, redo=TRUE )  # this has already been done in aegis.polygons::01 polygons.R .. should nto have to redo
-    M = speciescomposition_carstm( p=p, DS="carstm_inputs", redo=TRUE, carstm_model_label="production" )  # will redo if not found
+    M = speciescomposition_carstm( p=p, DS="carstm_inputs", redo=TRUE  )  # will redo if not found
     # to extract fits and predictions
 
     # run model and obtain predictions
     fit = carstm_model( p=p, M=M )
-    fit =  carstm_model( p=p, DS="carstm_modelled_fit", carstm_model_label="production" )  # extract currently saved model fit
-    res = carstm_summary( p=p, carstm_model_label="production" ) # to load currently saved sppoly
+    fit =  carstm_model( p=p, DS="carstm_modelled_fit" )  # extract currently saved model fit
+    res = carstm_summary( p=p ) # to load currently saved sppoly
 
     plot(fit)
     plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
