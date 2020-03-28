@@ -123,12 +123,15 @@
     crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
 
     # reduce size
+    pB = bathymetry_parameters( spatial_domain = p$spatial_domain )
+
     if (p$carstm_inputs_aggregated) {
-      M = bathymetry.db ( p=p, DS="aggregated_data"  )  # 16 GB in RAM just to store!
+      M = bathymetry.db ( p=pB, DS="aggregated_data"  )  # 16 GB in RAM just to store!
       names(M)[which(names(M)==paste(p$variabletomodel, "mean", sep=".") )] = p$variabletomodel
 
     } else {
-      M = bathymetry.db ( p=p, DS="z.lonlat.rawdata" )  # 16 GB in RAM just to store!
+
+      M = bathymetry.db ( p=pB, DS="z.lonlat.rawdata" )  # 16 GB in RAM just to store!
       names(M)[which(names(M)=="z") ] = p$variabletomodel
       attr( M, "proj4string_planar" ) =  p$aegis_proj4string_planar_km
       attr( M, "proj4string_lonlat" ) =  projection_proj4string("lonlat_wgs84")
