@@ -13,6 +13,7 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
 
   if ( !exists("data_root", p) ) p$data_root = project.datadirectory( "aegis", p$project_name )
   if ( !exists("datadir", p) )   p$datadir  = file.path( p$data_root, "data" )
+
   if ( !exists("modeldir", p) )  p$modeldir = file.path( p$data_root, "modelled" )
 
   if (!exists("areal_units_source", p )) p$areal_units_source = "lattice" #
