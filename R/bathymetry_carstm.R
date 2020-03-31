@@ -98,13 +98,16 @@
 
   if ( DS=="carstm_inputs") {
 
+    # prediction surface
+    crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
+    sppoly = areal_units( p=p )  # will redo if not found
+    areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
+
+
     if (p$carstm_inputs_aggregated) {
-      # just testing mode ... not used for production
-      fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", p$areal_units_fn,
-        p$inputdata_spatial_discretization_planar_km,
-        "rdata", sep=".") )
+      fn = carstm_filenames( p=p, projectname="bathymetry", projecttype="carstm_inputs", areal_units_fn=areal_units_fn )
     } else {
-      fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", p$areal_units_fn,
+      fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", areal_units_fn,
         "rawdata",
         "rdata", sep=".") )
     }
@@ -115,12 +118,6 @@
         return( M )
       }
     }
-
-    message( "Generating carstm_inputs ... ")
-
-    # prediction surface
-    sppoly = areal_units( p=p )  # will redo if not found
-    crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
 
     # reduce size
     if (p$carstm_inputs_aggregated) {

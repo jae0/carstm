@@ -3,17 +3,16 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
   p = parameters_control(p, list(...), control="add") # add passed args to parameter list, priority to args
 
+  sppoly = areal_units( p=p )  # required by car fit
+  areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
 
-  areal_units_fns = p$areal_units_fn
-  if (exists( "inputdata_spatial_discretization_planar_km", p )) areal_units_fns = paste( areal_units_fns, round(p$inputdata_spatial_discretization_planar_km, 6),   sep="_" )
-  if (exists( "inputdata_temporal_discretization_yr", p )) areal_units_fns = paste( areal_units_fns, round(p$inputdata_temporal_discretization_yr, 6),   sep="_" )
+  aufns = carstm_filenames( p=p, projecttype="carstm_outputs", areal_units_fn=areal_units_fn )
 
-  areal_units_fns_suffix = paste( areal_units_fns, p$variabletomodel, p$carstm_modelengine,  "rdata", sep="." )
   outputdir = file.path(p$modeldir, p$carstm_model_label)
 
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
 
-  fn_fit = file.path( outputdir, paste( "carstm_modelled_fit", areal_units_fns_suffix, sep=".") )
+  fn_fit = file.path( outputdir, paste( "carstm_modelled_fit", aufns, sep=".") )
   if (DS=="carstm_modelled_fit") {
     if (file.exists(fn_fit)) {
       load( fn_fit )
@@ -52,8 +51,6 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   }
 
   gc()
-
-  sppoly = areal_units( p=p )  # required by car fit
 
   fit  = NULL
   assign("fit", eval(parse(text=paste( "try(", p$carstm_modelcall, ")" ) ) ))

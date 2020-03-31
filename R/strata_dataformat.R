@@ -42,8 +42,8 @@ strata_dataformat = function( p ) {
     set$totno[is.na(set$totno)] = 0
     set$totwgt[is.na(set$totwgt)] = 0
 
-    polygon_source = "pre2014"  # "pre2014" for older
-    sppoly = maritimes_groundfish_strata( timeperiod=polygon_source, returntype="polygons" )
+    areal_units_timeperiod = "pre2014"  # "pre2014" for older
+    sppoly = maritimes_groundfish_strata( areal_units_timeperiod=areal_units_timeperiod, returntype="polygons" )
 
     set = maritimes_groundfish_strata_identify( Y=set, sppoly=sppoly, xyvars=c("lon", "lat"), planar_crs_km=p$areal_units_proj4string_planar_km, plotdata=TRUE )
 

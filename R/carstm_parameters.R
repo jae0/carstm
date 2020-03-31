@@ -17,23 +17,13 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
   if ( !exists("modeldir", p) )  p$modeldir = file.path( p$data_root, "modelled" )
 
   if (!exists("areal_units_source", p )) p$areal_units_source = "lattice" #
-  if (!exists("areal_units_constraint", p )) p$areal_units_constraint = "none" #
   if (!exists("areal_units_overlay", p )) p$areal_units_overlay = "none" #
   if (!exists("areal_units_resolution_km", p )) stop( "areal_units_resolution_km should be defined ... " ) # km
   if (!exists("areal_units_proj4string_planar_km", p )) stop( "areal_units_proj4string_planar_km should be defined ... " ) # km
-  if (!exists("timeperiod", p) )  p$timeperiod="default"
+  if (!exists("areal_units_timeperiod", p) )  p$areal_units_timeperiod="default"
 
   if ( !exists("carstm_model_label", p) ) p$carstm_model_label = "production"  # default is to choose production results
 
-  if (!exists("areal_units_fn", p) ) p$areal_units_fn = paste(
-    p$spatial_domain,
-    paste0(p$areal_units_overlay, collapse="_"),
-    p$areal_units_resolution_km,
-    p$areal_units_source,
-    p$areal_units_constraint,
-    p$timeperiod,
-    sep="_"
-  )
 
   if (!exists("nsims", p) ) p$nsims = 5000
 

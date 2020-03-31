@@ -91,17 +91,18 @@
 
 
 
-
   if ( DS=="carstm_inputs") {
 
+    # prediction surface
+    crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
+    sppoly = areal_units( p=p )  # will redo if not found
+    areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
+
     if (p$carstm_inputs_aggregated) {
-      fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", p$areal_units_fn,
-        p$inputdata_spatial_discretization_planar_km,
-        "rdata", sep=".") )
+      fn = carstm_filenames( p=p, projectname="substrate", projecttype="carstm_inputs", areal_units_fn=areal_units_fn )
     } else {
-      fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", p$areal_units_fn,
-        "rawdata",
-        "rdata", sep=".") )
+      fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", areal_units_fn,
+        "rawdata", "rdata", sep=".") )
     }
 
 
@@ -111,11 +112,6 @@
         return( M )
       }
     }
-    message( "Generating carstm_inputs ... ")
-
-    # prediction surface
-    sppoly = areal_units( p=p )  # will redo if not found
-    crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
 
 
     # do this immediately to reduce storage for sppoly (before adding other variables)
@@ -164,7 +160,6 @@
       inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
       carstm_model_label = "production",
 #      modeldir = p$modeldir,  # outputs all go the the main project's model output directory ... when null
-      areal_units_fn = p$areal_units_fn,
       inla_num.threads= p$inla_num.threads,
       inla_blas.num.threads= p$inla_blas.num.threads
     )

@@ -3,31 +3,17 @@ carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mr
 
   p = parameters_control(p, list(...), control="add") # add passed args to parameter list, priority to args
 
+  if (is.na(sppoly))  sppoly = areal_units( p=p )  # will redo if not found
+  areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
 
-  required.vars = c("areal_units_fn", "inputdata_spatial_discretization_planar_km", "variabletomodel",
-    "carstm_modelengine", "modeldir", "carstm_model_label", "variabletomodel" )
-
-  if (any(grepl("year", p$aegis_dimensionality)))  required.vars = c(required.vars, "inputdata_temporal_discretization_yr", "yrs")
-
-  for (i in required.vars) {
-    if (!exists(i, p)) {
-      message( "Missing parameter" )
-      message( i )
-    }
-  }
+  aufns = carstm_filenames( p=p, projecttype="carstm_outputs", areal_units_fn=areal_units_fn )
 
   # same file naming as in carstm ..
   outputdir = file.path(p$modeldir, p$carstm_model_label)
-  areal_units_fns = p$areal_units_fn
-
-  if (exists( "inputdata_spatial_discretization_planar_km", p )) areal_units_fns = paste( areal_units_fns, round(p$inputdata_spatial_discretization_planar_km, 6),   sep="_" )
-  if (exists( "inputdata_temporal_discretization_yr", p )) areal_units_fns = paste( areal_units_fns, round(p$inputdata_temporal_discretization_yr, 6),   sep="_" )
 
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
 
-  areal_units_fns_suffix = paste( areal_units_fns, p$variabletomodel, p$carstm_modelengine,  "rdata", sep="." )
-
-  fn_res = file.path( outputdir, paste("carstm_modelled_results", areal_units_fns_suffix, sep="." ) )
+  fn_res = file.path( outputdir, paste("carstm_modelled_results", aufns, sep="." ) )
 
   if (operation=="load") {  # carstm_model.*carstm_modelled
     if (file.exists(fn_res)) {
