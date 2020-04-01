@@ -22,6 +22,9 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
     }
 
     p$project_name = "speciescomposition" # force
+    p$data_root = project.datadirectory( "aegis", p$project_name )
+    p$datadir  = file.path( p$data_root, "data" )
+    # p$modeldir = file.path( p$data_root, "modelled" )
 
     p = carstm_parameters( p=p )  #generics
 

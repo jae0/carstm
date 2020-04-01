@@ -21,6 +21,9 @@
     p$libs = unique( c( p$libs, project.library ( "carstm", "aegis.bathymetry" ) ) )
 
     p$project_name = "bathymetry"
+    p$data_root = project.datadirectory( "aegis", p$project_name )
+    p$datadir  = file.path( p$data_root, "data" )
+    # p$modeldir = file.path( p$data_root, "modelled" )
 
     if ( !exists("data_transformation", p)) p$data_transformation=list( forward=function(x){ x+2500 }, backward=function(x) {x-2500} )
 
