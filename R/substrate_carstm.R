@@ -19,10 +19,21 @@
 
     p$libs = unique( c( p$libs, project.library ( "carstm" ) ) )
 
-    p$project_name = "substrate"
-    p$data_root = project.datadirectory( "aegis", p$project_name )
-    p$datadir  = file.path( p$data_root, "data" )
-    # p$modeldir = file.path( p$data_root, "modelled" )
+    if ( p$project_name != "substrate" ) {
+      # if true then this is a secondary call ... overwrite nonrelevent params to find data
+      p$project_name = "substrate"
+      p$data_root = project.datadirectory( "aegis", p$project_name )
+      p$datadir  = file.path( p$data_root, "data" )
+      p$aegis_dimensionality = "space"
+      p$data_transformation = NULL
+      if ( exists("carstm_modelcall", p )) {
+        # overwrite where this is called as a secondary function and the model is for the primary
+        if ( p$variabletomodel != gsub(" ", "", strsplit(strsplit(p$carstm_modelcall, "~")[[1]][1], "=")[[1]][2]) ) {
+          p$carstm_modelcall = NULL  # defaults to generic
+        }
+      }
+    }
+
 
     if ( !exists("areal_units_source", p)) p$areal_units_source = "lattice" # "stmv_lattice" to use ageis fields instead of carstm fields ... note variables are not the same
 
@@ -42,13 +53,6 @@
     }
 
     if ( !exists("carstm_modelengine", p)) p$carstm_modelengine = "inla"  # {model engine}.{label to use to store}
-
-    if ( exists("carstm_modelcall", p )) {
-      # overwrite where this is called as a secondary function
-      if ( p$variabletomodel != gsub(" ", "", strsplit(strsplit(p$carstm_modelcall, "~")[[1]][1], "=")[[1]][2]) ) {
-        p$carstm_modelcall = NULL
-      }
-    }
 
     if ( !exists("carstm_modelcall", p)) {
       if ( grepl("inla", p$carstm_modelengine) ) {

@@ -21,10 +21,20 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
       p$carstm_modelcall = NULL
     }
 
-    p$project_name = "speciescomposition" # force
-    p$data_root = project.datadirectory( "aegis", p$project_name )
-    p$datadir  = file.path( p$data_root, "data" )
-    # p$modeldir = file.path( p$data_root, "modelled" )
+    if ( p$project_name != "speciescomposition" ) {
+      # if true then this is a secondary call ... overwrite nonrelevent params to find data
+      p$project_name = "speciescomposition"
+      p$data_root = project.datadirectory( "aegis", p$project_name )
+      p$datadir  = file.path( p$data_root, "data" )
+      p$aegis_dimensionality = "space-year"
+      p$data_transformation=NULL
+      if ( exists("carstm_modelcall", p )) {
+        # overwrite where this is called as a secondary function and the model is for the primary
+        if ( p$variabletomodel != gsub(" ", "", strsplit(strsplit(p$carstm_modelcall, "~")[[1]][1], "=")[[1]][2]) ) {
+          p$carstm_modelcall = NULL  # defaults to generic
+        }
+      }
+    }
 
     p = carstm_parameters( p=p )  #generics
 
@@ -48,14 +58,6 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
     }
 
     if ( !exists("carstm_modelengine", p)) p$carstm_modelengine = "inla"  # {model engine}.{label to use to store}
-
-    if ( exists("carstm_modelcall", p )) {
-      # overwrite where this is called as a secondary function
-      if ( p$variabletomodel != gsub(" ", "", strsplit(strsplit(p$carstm_modelcall, "~")[[1]][1], "=")[[1]][2]) ) {
-        p$carstm_modelcall = NULL
-      }
-    }
-
 
     if ( !exists("carstm_modelcall", p)) {
       if ( grepl("inla", p$carstm_modelengine) ) {

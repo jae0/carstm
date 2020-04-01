@@ -1,9 +1,9 @@
 
-carstm_summary = function( p=NULL, fit=NA, M=NA, sppoly=NA, operation="load", mrange=NULL, improve.hyperparam.estimates=FALSE, ... ) {
+carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="load", mrange=NULL, improve.hyperparam.estimates=FALSE, ... ) {
 
   p = parameters_control(p, list(...), control="add") # add passed args to parameter list, priority to args
 
-  if (is.na(sppoly))  sppoly = areal_units( p=p )  # will redo if not found
+  if (is.null(sppoly))  sppoly = areal_units( p=p )  # will redo if not found
   areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
 
   aufns = carstm_filenames( p=p, projecttype="carstm_outputs", areal_units_fn=areal_units_fn )
