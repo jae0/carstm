@@ -1,5 +1,5 @@
 
-  bathymetry_carstm = function( p=NULL, DS="parameters", redo=FALSE, secondary_call=FALSE, ... ) {
+  bathymetry_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     #\\ Note inverted convention: depths are positive valued
     #\\ i.e., negative valued for above sea level and positive valued for below sea level
@@ -14,13 +14,11 @@
 
     } else {
 
-      if ( secondary_call ) {
-        # if true then this is a secondary call ... overwrite nonrelevent params to force use of project defaults
-        p$data_root = NULL
-        p$datadir  = NULL
-        p$data_transformation=NULL
-        p$carstm_modelcall = NULL  # defaults to generic
-      }
+      # if p is passed, assume it is a secondary call ... overwrite nonrelevent params to force use of project defaults
+      p$data_root = NULL
+      p$datadir  = NULL
+      p$data_transformation=list( forward=function(x){ x+2500 }, backward=function(x) {x-2500} )
+      p$carstm_modelcall = NULL  # defaults to generic
 
       p = aegis.bathymetry::bathymetry_parameters(p=p, ...)
     }
