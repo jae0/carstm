@@ -20,11 +20,12 @@
   if (DS=="parameters") {
     p$libs = unique( c( p$libs, project.library ( "carstm", "aegis.bathymetry" ) ) )
 
-    if ( !exists("project_name", p)) p$project_name = "bathymetry"
+    p$project_name = "bathymetry"
 
     if ( !exists("data_transformation", p)) p$data_transformation=list( forward=function(x){ x+2500 }, backward=function(x) {x-2500} )
 
     if ( !exists("areal_units_source", p)) p$areal_units_source = "lattice" # "stmv_lattice" to use ageis fields instead of carstm fields ... note variables are not the same
+
 
     if ( p$spatial_domain == "SSE" ) {
       if ( !exists("areal_units_overlay", p)) p$areal_units_overlay = "groundfish_strata" #.. additional polygon layers for subsequent analysis for now ..
@@ -43,9 +44,16 @@
 
 
 
-    if ( !exists("carstm_modelengine", p)) p$carstm_modelengine = "inla.default"  # {model engine}.{label to use to store}
+    if ( !exists("carstm_modelengine", p)) p$carstm_modelengine = "inla"  # {model engine}.{label to use to store}
 
-    if ( !exists("carstm_modelcall", p)) {
+    if ( exists("carstm_modelcall", p )) {
+      # overwrite where this is called as a secondary function
+      if ( p$variabletomodel != gsub(" ", "", strsplit(strsplit(p$carstm_modelcall, "~")[[1]][1], "=")[[1]][2]) ) {
+        p$carstm_modelcall = NULL
+      }
+    }
+
+    if ( !exists("carstm_modelcall", p)  ) {
       if ( grepl("inla", p$carstm_modelengine) ) {
         p$libs = unique( c( p$libs, project.library ( "INLA" ) ) )
 

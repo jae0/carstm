@@ -22,7 +22,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
 
     p$libs = unique( c( p$libs, project.library ( "carstm" ) ) )
 
-    if ( !exists("project_name", p)) p$project_name = "temperature"
+    p$project_name = "temperature"
 
     if ( !exists("areal_units_source", p)) p$areal_units_source = "lattice" # "stmv_lattice" to use ageis fields instead of carstm fields ... note variables are not the same
 
@@ -43,7 +43,14 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
       p$inputdata_temporal_discretization_yr = 1/52  # ie., every 1 weeks .. controls resolution of data prior to modelling to reduce data set and speed up modelling }
     }
 
-    if ( !exists("carstm_modelengine", p)) p$carstm_modelengine = "inla.default"  # {model engine}.{label to use to store}
+    if ( !exists("carstm_modelengine", p)) p$carstm_modelengine = "inla"  # {model engine}.{label to use to store}
+
+    if ( exists("carstm_modelcall", p )) {
+      # overwrite where this is called as a secondary function
+      if ( p$variabletomodel != gsub(" ", "", strsplit(strsplit(p$carstm_modelcall, "~")[[1]][1], "=")[[1]][2]) ) {
+        p$carstm_modelcall = NULL
+      }
+    }
 
     if ( !exists("carstm_modelcall", p)) {
       if ( grepl("inla", p$carstm_modelengine) ) {
@@ -177,20 +184,7 @@ temperature_carstm = function ( p=NULL, DS="parameters", redo=FALSE, ... ) {
     M$tag = "observations"
 
     # already has depth .. but in case some are missing data
-    pB = bathymetry_carstm(
-      DS = "parameters",
-      project_name = "bathymetry",
-      variabletomodel = "z",
-      spatial_domain = p$spatial_domain,  # defines spatial area, currenty: "snowcrab" or "SSE"
-      areal_units_overlay = p$areal_units_overlay, # currently: "snowcrab_managementareas",  "groundfish_strata" .. additional polygon layers for subsequent analysis for now ..
-      areal_units_resolution_km = p$areal_units_resolution_km, # km dim of lattice ~ 1 hr
-      areal_units_proj4string_planar_km = p$areal_units_proj4string_planar_km,  # coord system to use for areal estimation and gridding for carstm
-      inputdata_spatial_discretization_planar_km = p$inputdata_spatial_discretization_planar_km,  # 1 km .. some thinning .. requires 32 GB RAM and limit of speed -- controls resolution of data prior to modelling to reduce data set and speed up modelling
-      carstm_model_label = "production",
-      # modeldir = p$modeldir,  # outputs all go the the main project's model output directory  when null
-      inla_num.threads= p$inla_num.threads,
-      inla_blas.num.threads= p$inla_blas.num.threads
-    )
+    pB = bathymetry_carstm( p=p, DS="parameters", variabletomodel="z" )
 
 
     if (!(exists(pB$variabletomodel, M ))) M[,pB$variabletomodel] = NA
