@@ -1,39 +1,32 @@
 
-  bathymetry_carstm = function( p=NULL, DS="parameters", redo=FALSE,  ... ) {
+  bathymetry_carstm = function( p=NULL, DS="parameters", redo=FALSE, secondary_call=FALSE, ... ) {
 
     #\\ Note inverted convention: depths are positive valued
     #\\ i.e., negative valued for above sea level and positive valued for below sea level
 
+  # ------------------
+
+  if (DS=="parameters") {
+
     if ( is.null(p)) {
+
       p = aegis.bathymetry::bathymetry_parameters(...)
+
     } else {
+
+      if ( secondary_call ) {
+        # if true then this is a secondary call ... overwrite nonrelevent params to force use of project defaults
+        p$data_root = NULL
+        p$datadir  = NULL
+        p$data_transformation=NULL
+        p$carstm_modelcall = NULL  # defaults to generic
+      }
+
       p = aegis.bathymetry::bathymetry_parameters(p=p, ...)
     }
 
-
     p$libs = c( p$libs, project.library ( "aegis", "aegis.bathymetry", "carstm"  ) )
 
-
-  # ------------------
-
-
-  if (DS=="parameters") {
-    p$libs = unique( c( p$libs, project.library ( "carstm", "aegis.bathymetry" ) ) )
-
-    if ( p$project_name != "bathymetry" ) {
-      # if true then this is a secondary call ... overwrite nonrelevent params to find data
-      p$project_name = "bathymetry"
-      p$data_root = project.datadirectory( "aegis", p$project_name )
-      p$datadir  = file.path( p$data_root, "data" )
-      p$aegis_dimensionality = "space"
-      p$data_transformation=list( forward=function(x){ x+2500 }, backward=function(x) {x-2500} )
-      if ( exists("carstm_modelcall", p )) {
-        # overwrite where this is called as a secondary function and the model is for the primary
-        if ( p$variabletomodel != gsub(" ", "", strsplit(strsplit(p$carstm_modelcall, "~")[[1]][1], "=")[[1]][2]) ) {
-          p$carstm_modelcall = NULL  # defaults to generic
-        }
-      }
-    }
 
     if ( !exists("areal_units_source", p)) p$areal_units_source = "lattice" # "stmv_lattice" to use ageis fields instead of carstm fields ... note variables are not the same
 
@@ -113,7 +106,6 @@
     crs_lonlat = sp::CRS(projection_proj4string("lonlat_wgs84"))
     sppoly = areal_units( p=p )  # will redo if not found
     areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
-
 
     if (p$carstm_inputs_aggregated) {
       fn = carstm_filenames( p=p, projectname="bathymetry", projecttype="carstm_inputs", areal_units_fn=areal_units_fn )
