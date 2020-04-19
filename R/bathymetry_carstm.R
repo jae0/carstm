@@ -108,10 +108,10 @@
     if (p$carstm_inputs_aggregated) {
       fn = carstm_filenames( p=p, projectname="bathymetry", projecttype="carstm_inputs", areal_units_fn=areal_units_fn )
     } else {
-      fn = file.path( p$modeldir, paste( "bathymetry", "carstm_inputs", areal_units_fn,
-        "rawdata",
-        "rdata", sep=".") )
+      fn = paste( "bathymetry", "carstm_inputs", areal_units_fn, "rawdata", "rdata", sep=".")
     }
+
+    fn = file.path( p$modeldir, fn)
 
     if (!redo)  {
       if (file.exists(fn)) {

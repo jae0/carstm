@@ -104,10 +104,10 @@ substrate_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... ) {
     if (p$carstm_inputs_aggregated) {
       fn = carstm_filenames( p=p, projectname="substrate", projecttype="carstm_inputs", areal_units_fn=areal_units_fn )
     } else {
-      fn = file.path( p$modeldir, paste( "substrate", "carstm_inputs", areal_units_fn,
-        "rawdata", "rdata", sep=".") )
+      fn = paste( "substrate", "carstm_inputs", areal_units_fn, "rawdata", "rdata", sep=".")
     }
 
+    fn = file.path( p$modeldir, fn)
 
     if (!redo)  {
       if (file.exists(fn)) {

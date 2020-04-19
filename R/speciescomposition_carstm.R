@@ -117,6 +117,8 @@ speciescomposition_carstm = function( p=NULL, DS="parameters", redo=FALSE, ... )
 
     fn = carstm_filenames( p=p, projectname="speciescomposition", projecttype="carstm_inputs", areal_units_fn=areal_units_fn )
 
+    fn = file.path( p$modeldir, fn)
+
     if (!redo)  {
       if (file.exists(fn)) {
         load( fn)
