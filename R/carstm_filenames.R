@@ -1,4 +1,4 @@
-carstm_filenames = function( p,  projecttype="carstm_inputs", projectname=NULL,areal_units_fn=NULL ) {
+carstm_filenames = function( p,  projecttype="carstm_inputs", projectname=NULL, areal_units_fn=NULL, dropextension=FALSE ) {
 
   if (is.null(areal_units_fn)) {
     sppoly = areal_units( p=p )  # required by car fit
@@ -22,6 +22,8 @@ carstm_filenames = function( p,  projecttype="carstm_inputs", projectname=NULL,a
         sep="."
       )
     }
+
+    if (dropextension) return (fnroot)
     fn = paste( fnroot, "rdata", sep="." )
     return(fn)
   }
@@ -45,15 +47,16 @@ carstm_filenames = function( p,  projecttype="carstm_inputs", projectname=NULL,a
       )
     }
 
-    fn = paste(
+    fnroot = paste(
       areal_units_fn,
       p$variabletomodel,
       p$carstm_modelengine,
-      "rdata",
       sep="."
     )
 
+    if (dropextension) return (fnroot)
+    fn = paste( fnroot, "rdata", sep="." )
+    return(fn)
   }
 
-  return(fn)
 }
