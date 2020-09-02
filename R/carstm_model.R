@@ -58,9 +58,9 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   if ("try-error" %in% class(fit) ) warning("model fit error")
   save( fit, file=fn_fit, compress=TRUE )
 
-
-  # fill with stats
   res = carstm_summary( p=p, operation="compute", fit=fit, M=M, sppoly=sppoly, mrange=mrange )
+
+  if (DS!="carstm_modelled_fit") fit = fn_fit
 
   return(fit)
 }

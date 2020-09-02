@@ -310,6 +310,8 @@ carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="loa
 
   save( res, file=fn_res, compress=TRUE)
 
+  if (operation!="load") res=fn_res  # if computing as file was not found in load step, then return data, else, file name
+
   return (res)
 
 }
