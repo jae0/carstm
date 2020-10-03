@@ -1,5 +1,5 @@
 
-map_area_unit_problem = function( inp = NULL, logz=TRUE, just_return_results=FALSE ) {
+map_area_unit_problem = function( inp = NULL, logz=FALSE, just_return_results=FALSE ) {
 
   require(aegis)
   require(aegis.bathymetry)
@@ -10,9 +10,10 @@ map_area_unit_problem = function( inp = NULL, logz=TRUE, just_return_results=FAL
     p$datadir = file.path( p$data_root, "data" )
     fn = file.path(p$datadir, "maup.rdata")
     fn_res = file.path(p$datadir, "maup_summary.rdata")
+    if (logz) fn_res = file.path(p$datadir, "maup_log_summary.rdata")
     if (just_return_results) {
       load(fn_res)
-      return(u)
+      return(maup)
     }
     if (file.exists(fn) ) load( fn )
     if (is.null(inp)) {
@@ -45,10 +46,12 @@ map_area_unit_problem = function( inp = NULL, logz=TRUE, just_return_results=FAL
     min = min(zvalues, na.rm=TRUE),
     max = max(zvalues, na.rm=TRUE),
     median = median(zvalues, na.rm=TRUE),
-    resolution = sqrt( min( diff( sort(unique(xvalues))))^2 + min(diff(sort(unique(yvalues)) ))^2)
+    resolution = sqrt(mean( diff( sort(unique(xvalues))))^2 + mean(diff(sort(unique(yvalues)) ))^2)
   )
 
-  for (discretized_n in c(2, 3, 5, 7, 10, 15, 20, 40, 60, 80, 100, 200, 400, 800, 1000, 2000, 5000) ) {
+  for (discretized_n in c(2, 3, 4, 5, 7, 10, 15, 20, 40, 60, 80, 100, 150, 200, 300, 400, 800, 1000, 1100, 1500, 2000, 5000, 8000, 10000) ) {
+    message( discretized_n
+    )
 
     minresolution = rep( dmin / discretized_n, 2)
 
@@ -79,24 +82,33 @@ map_area_unit_problem = function( inp = NULL, logz=TRUE, just_return_results=FAL
 
   }
 
-  u = do.call(rbind.data.frame, results)  # list to data frame
-  u = u[ order(u$resolution), ]
+  maup = do.call(rbind.data.frame, results)  # list to data frame
+  maup = maup[ order(maup$resolution), ]
 
-  save(u, file=fn_res, compress=TRUE)
+  require(stmv)
+  gr = stmv_variogram( cbind(xvalues, yvalues), zvalues, methods="fft", plotdata=FALSE )
+
+  attr( maup, "variogram" ) = gr
+
+  save(maup, file=fn_res, compress=TRUE)
 
   if (0) {
-    x = log(u$resolution )
-    x = log(  u$n / u$resolution^2  )  # data density
-    yrange = range( u$min, u$max )
-    plot(mean ~ x, u, pch=20, ylim=yrange)
-    points(median ~ x, u, col="green", pch=20)
-    lines(min ~ x, u, col="red", lwd=4)
-    lines(max ~ x, u, col="blue", lwd=4)
-    lines( I(mean+sd) ~ x, u, col="gray", lwd=2)
-    lines( I(mean-sd) ~ x, u, col="gray", lwd=2)
 
-    plot( sd~ x, u)
+    x = maup$resolution
+    # x = log(  maup$n / maup$resolution^2  )  # data density
+    yrange = range( maup$min, maup$max )
+    plot(mean ~ x, maup, pch=20, ylim=yrange)
+    lines( median ~ x, maup, col="green", lwd=1)
+    lines(min ~ x, maup, col="red", lwd=4)
+    lines(max ~ x, maup, col="blue", lwd=4)
+    lines( I(mean+sd) ~ x, maup, col="gray", lwd=2)
+    lines( I(mean-sd) ~ x, maup, col="gray", lwd=2)
+    abline( v=attr(maup, "variogram")$fft$localrange ) # 378 km
+
+    plot( sd~ x, maup)
+    abline( v=attr(maup, "variogram")$fft$localrange ) # 380 km
+
   }
 
-  return(u)
+  return(maup)
 }
