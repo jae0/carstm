@@ -59,8 +59,8 @@ map_area_unit_problem = function( inp = NULL, logz=FALSE, just_return_results=FA
     res = tapply(
       X=zvalues,
       INDEX=list(
-        floor( xvalues / minresolution[1] + 1) * minresolution[1],
-        floor( yvalues / minresolution[2] + 1) * minresolution[2]),
+        aegis_floor( xvalues / minresolution[1] + 1) * minresolution[1],
+        aegis_floor( yvalues / minresolution[2] + 1) * minresolution[2]),
         FUN = function(w) {mean(w, na.rm=TRUE)},
         simplify=TRUE
     )
