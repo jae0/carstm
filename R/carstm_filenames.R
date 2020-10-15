@@ -55,10 +55,6 @@ carstm_filenames = function( p,  projecttype="carstm_inputs", projectname=NULL, 
       sep="."
     )
 
-    if (exists("carstm_model_tag", p)) {
-      fnroot = paste(fnroot, p$carstm_model_tag, sep="." )
-    }
-
     if (dropextension) return (fnroot)
     fn = paste( fnroot, "rdata", sep="." )
     return(fn)
