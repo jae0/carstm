@@ -31,13 +31,13 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     # hyperparms
     j = which( is.finite(M[,p$variabletomodel]) )
     mrange = range( M[ j, p$variabletomodel ]  )  # on data scale not internal
-    if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) {
+    if ( grepl( "family.*=.*lognormal", p$carstm_model_call)) {
       m = log( M[ j, p$variabletomodel ])
-    } else if ( grepl( "family.*=.*poisson", p$carstm_modelcall)) {
+    } else if ( grepl( "family.*=.*poisson", p$carstm_model_call)) {
       m = log( M[ j, p$variabletomodel ] / M[ j, "data_offset" ]  )
       mrange = range( M[ j, p$variabletomodel ]/ M[ j, "data_offset" ]  )  # on data scale not internal
       mrange = mrange * median(M[ M$tag=="predictions", "data_offset" ] )
-    } else if ( grepl( "family.*=.*binomial", p$carstm_modelcall)) {
+    } else if ( grepl( "family.*=.*binomial", p$carstm_model_call)) {
       m = M[ j, p$variabletomodel ]
     } else {
       m = M[,p$variabletomodel]
@@ -53,7 +53,7 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   gc()
 
   fit  = NULL
-  assign("fit", eval(parse(text=paste( "try(", p$carstm_modelcall, ")" ) ) ))
+  assign("fit", eval(parse(text=paste( "try(", p$carstm_model_call, ")" ) ) ))
   if (is.null(fit)) warning("model fit error")
   if ("try-error" %in% class(fit) ) warning("model fit error")
   save( fit, file=fn_fit, compress=TRUE )

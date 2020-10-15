@@ -122,8 +122,8 @@ carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="loa
       vn =  paste(p$variabletomodel, "predicted", sep=".")
       input = preds$fit
       res[[vn]] = reformat_to_array( input =input, matchfrom=res$matchfrom, matchto=res$matchto )
-      if ( grepl( "family.*=.*poisson", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
-      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*poisson", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*lognormal", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn =  paste(p$variabletomodel, "predicted_se", sep=".")
@@ -133,15 +133,15 @@ carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="loa
       vn =  paste(p$variabletomodel, "predicted_lb", sep=".")
       input = preds$fit - 1.96*preds$se.fit
       res[[vn]] = reformat_to_array( input =input, matchfrom=res$matchfrom, matchto=res$matchto )
-      if ( grepl( "family.*=.*poisson", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
-      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*poisson", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*lognormal", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn =  paste(p$variabletomodel, "predicted_ub", sep=".")
       input = preds$fit + 1.96*preds$se.fit
       res[[vn]] = reformat_to_array( input =input, matchfrom=res$matchfrom, matchto=res$matchto )
-      if ( grepl( "family.*=.*poisson", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
-      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*poisson", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*lognormal", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
     }
 
@@ -152,8 +152,8 @@ carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="loa
       vn =  paste(p$variabletomodel, "predicted", sep=".")
       input = preds$fit
       res[[vn]] = reformat_to_array( input =input, matchfrom=res$matchfrom, matchto=res$matchto )
-      if ( grepl( "family.*=.*poisson", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
-      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*poisson", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*lognormal", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn =  paste(p$variabletomodel, "predicted_se", sep=".")
@@ -163,15 +163,15 @@ carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="loa
       vn =  paste(p$variabletomodel, "predicted_lb", sep=".")
       input = preds$fit - 1.96*preds$se.fit
       res[[vn]] = reformat_to_array( input =input, matchfrom=res$matchfrom, matchto=res$matchto )
-      if ( grepl( "family.*=.*poisson", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
-      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*poisson", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*lognormal", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn =  paste(p$variabletomodel, "predicted_ub", sep=".")
       input = preds$fit + 1.96*preds$se.fit
       res[[vn]] = reformat_to_array( input =input, matchfrom=res$matchfrom, matchto=res$matchto )
-      if ( grepl( "family.*=.*poisson", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
-      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*poisson", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*lognormal", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
     }
   }
@@ -247,7 +247,7 @@ carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="loa
         }
       }
       if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
-      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*lognormal", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
 
@@ -255,14 +255,14 @@ carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="loa
       input = fit$summary.fitted.values[ res$i_preds, "0.025quant" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
       if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
-      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*lognormal", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn = paste( p$variabletomodel, "predicted_ub", sep=".")
       input = fit$summary.fitted.values[ res$i_preds, "0.975quant" ]
       res[[vn]] = reformat_to_array( input=input, matchfrom=res$matchfrom, matchto=res$matchto )
       if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
-      if ( grepl( "family.*=.*lognormal", p$carstm_modelcall)) res[[vn]] = exp(res[[vn]])
+      if ( grepl( "family.*=.*lognormal", p$carstm_model_call)) res[[vn]] = exp(res[[vn]])
       if (exists("data_transformation", p) ) res[[vn]] = p$data_transformation$backward( res[[vn]] ) # make all positive
 
       vn = paste( p$variabletomodel, "predicted_se", sep=".")

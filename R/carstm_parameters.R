@@ -36,9 +36,9 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
 
   p = parameters_add_without_overwriting( p, discretization=list() )
   p$discretization = parameters_add_without_overwriting( p$discretization,
-    z = c(0, 10, 20, 40, 80, 100, 150, 200, 250, 300, 350, 400, 500, 1000, 2000, 5000 ),  # depth cut points
-    dz = c(0.01, 0.1,  1, 2, 4, 6, 8, 10, 12 ),  # slope cut points
-    ddz = c(0.01, 0.1, 0.2, 0.4, 0.8, 1, 2, 4  ),  # slope cut points
+    z = c(0, 10, 20, 40, 80, 100, 150, 200, 250, 300, 350, 400, 500, 1000, 2000, 5000 ),
+    dz = c(0.01, 0.1,  1, 2, 4, 6, 8, 10, 12 ),
+    ddz = c(0.01, 0.1, 0.2, 0.4, 0.8, 1, 2, 4  ),
     substrate.grainsize = c( 0, 1, 2, 4, 8, 12, 16, 20, 32 ),
     pca1 = seq( -1, 1, by=0.1  ),
     pca2 = seq( -1, 1, by=0.1  ),
@@ -47,7 +47,7 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
     tmin = seq( -4, 25, by=1  ),
     tmax = seq( -4, 25, by=1  ),
     degreedays = c(10, 100, 200, 400, 800, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000),
-    dyear = seq( 0, 1, by=0.1  ),
+    dyear = seq( 0, 1, by=0.1  )
   )
   p$discretization = parameters_add_without_overwriting( p$discretization,
     n.season = length(p$discretization[["dyear"]]) - 1   # used by seasonal error in inla ... not really useful
