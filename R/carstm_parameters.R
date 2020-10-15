@@ -12,13 +12,6 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
   if (!exists("areal_units_resolution_km", p )) stop( "areal_units_resolution_km should be defined ... " ) # km
   if (!exists("areal_units_proj4string_planar_km", p )) stop( "areal_units_proj4string_planar_km should be defined ... " ) # km
 
-  p = parameters_add_without_overwriting( p, project_name = project_name )
-  p = parameters_add_without_overwriting( p, data_root = project.datadirectory( "aegis", p$project_name ) )
-  p = parameters_add_without_overwriting( p, datadir  = file.path( p$data_root, "data" ) )
-  p = parameters_add_without_overwriting( p, modeldir = file.path( p$data_root, "modelled" ) )
-
-  if ( !file.exists(p$datadir) ) dir.create( p$datadir, showWarnings=FALSE, recursive=TRUE )
-  if ( !file.exists(p$modeldir) ) dir.create( p$modeldir, showWarnings=FALSE, recursive=TRUE )
 
   if ( p$spatial_domain == "SSE" ) {
     p = parameters_add_without_overwriting( p, areal_units_overlay = "groundfish_strata" ) #.. additional polygon layers for subsequent analysis for now ..
@@ -43,7 +36,7 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
 
   p = parameters_add_without_overwriting( p, discretization=list() )
   p$discretization = parameters_add_without_overwriting( p$discretization,
-    z = c(0, 10, 20, 40, 80, 100, 150, 200, 250, 300, 350, 400, 500, 1000, 2000, 5000 )  # depth cut points
+    z = c(0, 10, 20, 40, 80, 100, 150, 200, 250, 300, 350, 400, 500, 1000, 2000, 5000 ),  # depth cut points
     dz = c(0.01, 0.1,  1, 2, 4, 6, 8, 10, 12 ),  # slope cut points
     ddz = c(0.01, 0.1, 0.2, 0.4, 0.8, 1, 2, 4  ),  # slope cut points
     substrate.grainsize = c( 0, 1, 2, 4, 8, 12, 16, 20, 32 ),
