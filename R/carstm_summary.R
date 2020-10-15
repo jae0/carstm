@@ -1,7 +1,7 @@
 
 carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="load", mrange=NULL, improve.hyperparam.estimates=FALSE, ... ) {
 
-  p = parameters_control(p, list(...), control="add") # add passed args to parameter list, priority to args
+  p = parameters_add(p, list(...)) # add passed args to parameter list, priority to args
 
   if (is.null(sppoly))  sppoly = areal_units( p=p )  # will redo if not found
   areal_units_fn = attributes(sppoly)[["areal_units_fn"]]

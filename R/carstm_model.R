@@ -1,7 +1,7 @@
 
 carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
-  p = parameters_control(p, list(...), control="add") # add passed args to parameter list, priority to args
+  p = parameters_add(p, list(...)) # add passed args to parameter list, priority to args
 
   sppoly = areal_units( p=p )  # required by car fit
   areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
