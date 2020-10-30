@@ -23,11 +23,12 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   # permit passing a function rather than data directly .. less RAM usage in parent call
   if (class(M)=="character") assign("M", eval(parse(text=M) ) )
 
-  if (exists("data_transformation", p)) M[, p$variabletomodel]  = p$data_transformation$forward( M[, p$variabletomodel] ) # make all positive
-
   # INLA does not like duplicates ... causes optimizer to crash frequently
   eps = exp( log( .Machine$double.eps ) / 2)  # ~ 1.5e-8
   M[, p$variabletomodel]  = M[, p$variabletomodel]  + runif( nrow(M), -eps, eps )
+
+  if (exists("data_transformation", p)) M[, p$variabletomodel]  = p$data_transformation$forward( M[, p$variabletomodel] ) # make all positive
+
 
   mrange = NULL
   # get hyper param scalings
@@ -54,6 +55,7 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     inla.setOption(blas.num.threads=p$inla_blas.num.threads)
   }
 
+  gc()
   gc()
 
   fit  = NULL
