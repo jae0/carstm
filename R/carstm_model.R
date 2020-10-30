@@ -25,6 +25,10 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
   if (exists("data_transformation", p)) M[, p$variabletomodel]  = p$data_transformation$forward( M[, p$variabletomodel] ) # make all positive
 
+  # INLA does not like duplicates ... causes optimizer to crash frequently
+  eps = exp( log( .Machine$double.eps ) / 2)  # ~ 1.5e-8
+  M[, p$variabletomodel]  = M[, p$variabletomodel]  + runif( nrow(M), -eps, eps )
+
   mrange = NULL
   # get hyper param scalings
   if ( grepl("inla", p$carstm_modelengine) ) {
