@@ -53,14 +53,6 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
     n.season = length(p$discretization[["dyear"]]) - 1   # used by seasonal error in inla ... not really useful
   )
 
-  # set up default map projection
-  oo = aegis.coastline::coastline_layout( p=p )
-  p = parameters_add_without_overwriting( p,
-    coastLayout = oo[["coastLayout"]],
-    bounding_domain = oo[["bounding_domain"]]
-  )
-  oo = NULL
-
   return(p)
 
 }

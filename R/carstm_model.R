@@ -56,7 +56,6 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   }
 
   gc()
-  gc()
 
   fit  = NULL
   assign("fit", eval(parse(text=paste( "try(", p$carstm_model_call, ")" ) ) ))
