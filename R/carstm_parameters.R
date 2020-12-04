@@ -25,7 +25,7 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
     areal_units_source = "lattice", #
     areal_units_overlay = "none", #
     areal_units_timeperiod="default",
-    carstm_model_label = "default",  # default is to choose production results
+    carstm_model_label = "default",
     nsims = 5000,
     boundingbox = list( xlim = c(-70.5, -56.5), ylim=c(39.5, 47.5)), # bounding box for plots using spplot
     inla_num.threads= 1,
@@ -49,6 +49,7 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
     degreedays = c(10, 100, 200, 400, 800, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 5000),
     dyear = seq( 0, 1, by=0.1  )
   )
+
   p$discretization = parameters_add_without_overwriting( p$discretization,
     n.season = length(p$discretization[["dyear"]]) - 1   # used by seasonal error in inla ... not really useful
   )
