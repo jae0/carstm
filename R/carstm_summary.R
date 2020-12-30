@@ -15,13 +15,12 @@ carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="loa
 
   fn_res = file.path( outputdir, paste("carstm_modelled_results", aufns, sep="." ) )
 
+  res = NULL
   if (operation=="load") {  # carstm_model.*carstm_modelled
-    if (file.exists(fn_res)) {
-      load( fn_res)
-      return( res )
-    }
+    if (file.exists(fn_res)) load( fn_res)
+    if (is.null(res)) message("carstm_summary: Modelled surface not found, this needs to be created or alternate sppoly specified.")
+    return( res )
   }
-
 
   # to improve hyper param estimates..
   if (improve.hyperparam.estimates) fit = inla.hyperpar(fit, dz=0.25, diff.logdens=18 )  # get improved estimates for the hyperparameters
@@ -29,7 +28,6 @@ carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="loa
 
   # results go here
   res = list( M=M, dimensionality = p$aegis_dimensionality )
-
 
   # row indices for predictions
   if ( p$aegis_dimensionality == "space") {
