@@ -22,9 +22,8 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
   }
 
   p = parameters_add_without_overwriting( p,
-    areal_units_source = "lattice", #
+    areal_units_type = "lattice", #
     areal_units_overlay = "none", #
-    areal_units_timeperiod="default",
     carstm_model_label = "default",
     nsims = 5000,
     boundingbox = list( xlim = c(-70.5, -56.5), ylim=c(39.5, 47.5)), # bounding box for plots using spplot
