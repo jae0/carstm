@@ -12,15 +12,6 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
   if (!exists("areal_units_resolution_km", p )) stop( "areal_units_resolution_km should be defined ... " ) # km
   if (!exists("areal_units_proj4string_planar_km", p )) stop( "areal_units_proj4string_planar_km should be defined ... " ) # km
 
-
-  # if ( p$spatial_domain == "SSE" ) {
-  #   p = parameters_add_without_overwriting( p, areal_units_overlay = "groundfish_strata" ) #.. additional polygon layers for subsequent analysis for now ..
-  # }
-
-  # if ( p$spatial_domain == "snowcrab" ) {
-  #   p = parameters_add_without_overwriting( p, areal_units_overlay = "snowcrab_managementareas" ) # currently: "snowcrab_managementareas",  "groundfish_strata" .. additional polygon layers for subsequent analysis for now ..
-  # }
-
   p = parameters_add_without_overwriting( p,
     areal_units_type = "lattice", #
     areal_units_overlay = "none", #
