@@ -2,6 +2,7 @@
   carstm_plot = function( p, res, vn, poly_match=NULL, time_match=NULL, sppoly=areal_units(p=p), breaksat=NULL, ...) {
     # carstm/aegis wrapper around spplot
     require(sp)
+    sppoly = as(sppoly, "Spatial")
     slot(sppoly, "data")[,vn] = NA
 
     # first index is spatial strata

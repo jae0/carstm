@@ -6,14 +6,9 @@ carstm_summary = function( p=NULL, fit=NULL, M=NULL, sppoly=NULL, operation="loa
   if (is.null(sppoly))  sppoly = areal_units( p=p )  # will redo if not found
   areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
 
-  aufns = carstm_filenames( p=p, projecttype="carstm_outputs", areal_units_fn=areal_units_fn )
-
-  # same file naming as in carstm ..
-  outputdir = file.path(p$modeldir, p$carstm_model_label)
-
+  fn_res = carstm_filenames( p=p, returntype="carstm_modelled_results", areal_units_fn=areal_units_fn )
+  outputdir = dirname(fn_res)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
-
-  fn_res = file.path( outputdir, paste("carstm_modelled_results", aufns, sep="." ) )
 
   res = NULL
   if (operation=="load") {  # carstm_model.*carstm_modelled

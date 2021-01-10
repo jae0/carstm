@@ -6,13 +6,10 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   sppoly = areal_units( p=p )  # required by car fit
   areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
 
-  aufns = carstm_filenames( p=p, projecttype="carstm_outputs", areal_units_fn=areal_units_fn )
-
-  outputdir = file.path(p$modeldir, p$carstm_model_label)
-
+  fn_fit = carstm_filenames( p=p, returntype="carstm_modelled_fit", areal_units_fn=areal_units_fn )
+  outputdir = dirname(fn_fit)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
 
-  fn_fit = file.path( outputdir, paste( "carstm_modelled_fit", aufns, sep=".") )
   if (DS=="carstm_modelled_fit") {
     if (file.exists(fn_fit)) {
       load( fn_fit )

@@ -16,12 +16,19 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
     areal_units_type = "lattice", #
     areal_units_overlay = "none", #
     carstm_model_label = "default",
+    carstm_modelengine ="inla", # glm and gam also possible ... though not very useful
     nsims = 5000,
     boundingbox = list( xlim = c(-70.5, -56.5), ylim=c(39.5, 47.5)), # bounding box for plots using spplot
-    inla_num.threads= 1,
-    inla_blas.num.threads=1,
+    inla_num.threads = 1,
+    inla_blas.num.threads = 1,
     mypalette=RColorBrewer::brewer.pal(9, "YlOrRd")
   )
+
+  if ( !exists("carstm_inputadata_model_source", p))  p$carstm_inputadata_model_source = list()
+  if ( !exists("bathymetry", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$bathymetry = "stmv",  # "stmv", "hybrid", "carstm"
+  if ( !exists("substrate", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$substrate = "stmv",  # "stmv", "hybrid", "carstm"
+  if ( !exists("temperature", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$temperature = "carstm",  # "stmv", "hybrid", "carstm"
+  if ( !exists("speciescomposition", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$speciescomposition = "carstm",  # "stmv", "hybrid", "carstm"
 
 
   p = parameters_add_without_overwriting( p, discretization=list() )
