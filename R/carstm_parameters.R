@@ -25,10 +25,10 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
   )
 
   if ( !exists("carstm_inputadata_model_source", p))  p$carstm_inputadata_model_source = list()
-  if ( !exists("bathymetry", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$bathymetry = "stmv",  # "stmv", "hybrid", "carstm"
-  if ( !exists("substrate", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$substrate = "stmv",  # "stmv", "hybrid", "carstm"
-  if ( !exists("temperature", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$temperature = "carstm",  # "stmv", "hybrid", "carstm"
-  if ( !exists("speciescomposition", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$speciescomposition = "carstm",  # "stmv", "hybrid", "carstm"
+  if ( !exists("bathymetry", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$bathymetry = "stmv"  # "stmv", "hybrid", "carstm"
+  if ( !exists("substrate", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$substrate = "stmv"  # "stmv", "hybrid", "carstm"
+  if ( !exists("temperature", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$temperature = "carstm"  # "stmv", "hybrid", "carstm"
+  if ( !exists("speciescomposition", p$carstm_inputadata_model_source ))  p$carstm_inputadata_model_source$speciescomposition = "carstm"  # "stmv", "hybrid", "carstm"
 
 
   p = parameters_add_without_overwriting( p, discretization=list() )
