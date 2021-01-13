@@ -33,7 +33,7 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
 
   p = parameters_add_without_overwriting( p, discretization=list() )
   p$discretization = parameters_add_without_overwriting( p$discretization,
-    z = c(0, 10, 20, 40, 80, 100, 150, 200, 250, 300, 350, 400, 500, 1000, 2000, 5000 ),
+    z = c(0, 10, 20, 40, 80, 100, 150, 200, 250, 300, 350, 400, 500, 1000, 2000, 5000, 8000 ),
     dz = c(0.01, 0.1,  1, 2, 4, 6, 8, 10, 12 ),
     ddz = c(0.01, 0.1, 0.2, 0.4, 0.8, 1, 2, 4  ),
     substrate.grainsize = c( 0, 1, 2, 4, 8, 12, 16, 20, 32 ),

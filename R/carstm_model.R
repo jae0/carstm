@@ -30,16 +30,20 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
   mrange = NULL
   # get hyper param scalings
   if ( grepl("inla", p$carstm_modelengine) ) {
+
     # hyperparms
     j = which( is.finite(M[,p$variabletomodel]) )
     mrange = range( M[ j, p$variabletomodel ]  )  # on data scale not internal
-    if ( grepl( "family.*=.*lognormal", p$carstm_model_call)) {
+    
+    if (!exists("p$carstm_model_family", p )) p$p$carstm_model_family = "normal"
+
+    if ( grepl( ".*lognormal", p$carstm_model_family)) {
       m = log( M[ j, p$variabletomodel ])
-    } else if ( grepl( "family.*=.*poisson", p$carstm_model_call)) {
+    } else if ( grepl( ".*poisson", p$carstm_model_family)) {
       m = log( M[ j, p$variabletomodel ] / M[ j, "data_offset" ]  )
       mrange = range( M[ j, p$variabletomodel ]/ M[ j, "data_offset" ]  )  # on data scale not internal
       mrange = mrange * median(M[ M$tag=="predictions", "data_offset" ] )
-    } else if ( grepl( "family.*=.*binomial", p$carstm_model_call)) {
+    } else if ( grepl( "*.binomial", p$carstm_model_family)) {
       m = M[ j, p$variabletomodel ]
     } else {
       m = M[,p$variabletomodel]
@@ -47,17 +51,53 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
 
     H = carstm_hyperparameters( sd(m), alpha=0.5, median(m) )
     m = NULL
+
     # adjust based upon RAM requirements and ncores
     inla.setOption(num.threads= p$inla_num.threads)
     inla.setOption(blas.num.threads=p$inla_blas.num.threads)
+  
+
+    gc()
+
+    fit  = NULL
+
+      if (!exists("options.control.inla", p )) p$options.control.inla = list(
+        list( optimise.strategy="smart", stupid.search=FALSE, strategy="adaptive"), # default h=0.02
+        list( optimise.strategy="smart", stupid.search=FALSE, strategy="adaptive", h=0.05, cmin=0, tolerance=1e-9),
+        list( optimise.strategy="smart", stupid.search=FALSE, strategy="adaptive", h=0.1, cmin=0, tolerance=1e-9),
+        list( optimise.strategy="smart", h=0.1 ),
+        list( optimise.strategy="smart", h=0.2 ),
+        list( optimise.strategy="smart", h=0.4 ),
+        list( optimise.strategy="smart", stupid.search=TRUE, strategy="adaptive", h=0.001, cmin=0), # default h=0.02 ?or 0.01
+        list( optimise.strategy="smart", stupid.search=TRUE, strategy="adaptive", h=0.0001, cmin=0), # default h=0.02
+        list( optimise.strategy="smart", stupid.search=FALSE, strategy="laplace", fast=FALSE, step.factor=0.1),
+        list( stupid.search=TRUE, h=0.001, cmin=0)
+      )
+
+      for ( civ in 1:length(p$options.control.inla)) {
+        res = try( inla( p$carstm_model_formula , data=M, family=p$carstm_model_family,
+          control.compute=list(dic=TRUE, waic=TRUE, cpo=TRUE, config=TRUE),
+          control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
+          control.predictor=list(compute=FALSE, link=1 ),
+          control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
+          control.inla = p$options.control.inla[[civ]],
+          verbose=TRUE
+        ))
+        if (!inherits(res, "try-error" )) break()
+      }
+      if (inherits(res, "try-error" )) {
+        message("If you are using MSWindows and you get a popup complaining about inla stopped working,")
+        message("you can prevent this by setting the flag in the following link to 1, using regedit. Be careful.")
+        message("e.g., see: https://monitormyweb.com/guides/how-to-disable-stopped-working-message-in-windows")
+        stop( "solution did not converge")
+      }
+  
   }
 
-  gc()
 
-  fit  = NULL
-  assign("fit", eval(parse(text=paste( "try(", p$carstm_model_call, ")" ) ) ))
   if (is.null(fit)) warning("model fit error")
   if ("try-error" %in% class(fit) ) warning("model fit error")
+
   save( fit, file=fn_fit, compress=TRUE )
 
   res = carstm_summary( p=p, operation="compute", fit=fit, M=M, sppoly=sppoly, mrange=mrange )
