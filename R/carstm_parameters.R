@@ -27,7 +27,7 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
      bathymetry = "stmv",  # "stmv", "hybrid", "carstm"
      substrate = "stmv",  # "stmv", "hybrid", "carstm"
      temperature = "carstm",  # "stmv", "hybrid", "carstm"
-     speciescomposition = "carstm",  # "stmv", "hybrid", "carstm"
+     speciescomposition = "carstm" # "stmv", "hybrid", "carstm"
   )
 
   p = parameters_add_without_overwriting( p, discretization=list() )
