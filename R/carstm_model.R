@@ -71,12 +71,18 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
         list( stupid.search=TRUE, h=0.001, cmin=0)
       )
 
+      control.family = ifelse( exists("carstm_model_inla_control_familiy",p),
+        p$carstm_model_inla_control_familiy, 
+        inla.set.control.family.default() 
+      )
+
       for ( civ in 1:length(p$options.control.inla)) {
         res = try( inla( p$carstm_model_formula , data=M, family=p$carstm_model_family,
           control.compute=list(dic=TRUE, waic=TRUE, cpo=TRUE, config=TRUE),
           control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
           control.predictor=list(compute=FALSE, link=1 ),
           control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
+          control.family=control.family,
           control.inla = p$options.control.inla[[civ]],
           verbose=TRUE
         ))
@@ -90,7 +96,13 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
       }
   
   }
+  if ( grepl("glm", p$carstm_modelengine) ) {
+    res = try( glm( p$carstm_model_formula , data=M, family=p$carstm_model_family ) )
+  }
 
+  if ( grepl("gam", p$carstm_modelengine) ) {
+    res = try( gam( p$carstm_model_formula , data=M, family=p$carstm_model_family ) )
+  }
 
   if (is.null(fit)) warning("model fit error")
   if ("try-error" %in% class(fit) ) warning("model fit error")

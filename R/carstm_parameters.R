@@ -19,8 +19,6 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
     carstm_modelengine ="inla", # glm and gam also possible ... though not very useful
     nsims = 5000,
     boundingbox = list( xlim = c(-70.5, -56.5), ylim=c(39.5, 47.5)), # bounding box for plots using spplot
-    inla_num.threads = 1,
-    inla_blas.num.threads = 1,
     mypalette=RColorBrewer::brewer.pal(9, "YlOrRd")
   )
 
