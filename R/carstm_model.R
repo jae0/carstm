@@ -53,6 +53,11 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     m = NULL
 
   
+    p = parameters_add_without_overwriting( p,
+      options.control.family = inla.set.control.family.default()
+    )
+
+
 
     gc()
 
@@ -71,10 +76,6 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
         list( stupid.search=TRUE, h=0.001, cmin=0)
       )
 
-      control.family = ifelse( exists("carstm_model_inla_control_familiy",p),
-        p$carstm_model_inla_control_familiy, 
-        inla.set.control.family.default() 
-      )
 
       for ( civ in 1:length(p$options.control.inla)) {
         res = try( inla( p$carstm_model_formula , data=M, family=p$carstm_model_family,
@@ -82,8 +83,8 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
           control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
           control.predictor=list(compute=FALSE, link=1 ),
           control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
-          control.family=control.family,
-          control.inla = p$options.control.inla[[civ]],
+          control.family = p$options.control.family,
+          control.inla   = p$options.control.inla[[civ]],
           verbose=TRUE
         ))
         if (!inherits(res, "try-error" )) break()
