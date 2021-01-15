@@ -64,14 +64,14 @@ carstm_model = function( p, M=NULL, DS="redo", ... ) {
     fit  = NULL
 
       if (!exists("options.control.inla", p )) p$options.control.inla = list(
-        list( optimise.strategy="smart", stupid.search=FALSE, strategy="adaptive"), # default h=0.02
+        list( optimise.strategy="smart", stupid.search=TRUE, strategy="adaptive", h=0.0001, cmin=0), # default h=0.02
+        list( optimise.strategy="smart", stupid.search=TRUE, strategy="adaptive", h=0.001, cmin=0), # default h=0.02 ?or 0.01
         list( optimise.strategy="smart", stupid.search=FALSE, strategy="adaptive", h=0.05, cmin=0, tolerance=1e-9),
         list( optimise.strategy="smart", stupid.search=FALSE, strategy="adaptive", h=0.1, cmin=0, tolerance=1e-9),
+        list( optimise.strategy="smart", stupid.search=FALSE, strategy="adaptive"), # default h=0.02
         list( optimise.strategy="smart", h=0.1 ),
         list( optimise.strategy="smart", h=0.2 ),
         list( optimise.strategy="smart", h=0.4 ),
-        list( optimise.strategy="smart", stupid.search=TRUE, strategy="adaptive", h=0.001, cmin=0), # default h=0.02 ?or 0.01
-        list( optimise.strategy="smart", stupid.search=TRUE, strategy="adaptive", h=0.0001, cmin=0), # default h=0.02
         list( optimise.strategy="smart", stupid.search=FALSE, strategy="laplace", fast=FALSE, step.factor=0.1),
         list( stupid.search=TRUE, h=0.001, cmin=0)
       )
