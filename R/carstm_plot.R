@@ -15,13 +15,13 @@
     }
 
     if (!is.null(time_match)) {
-      n_indexes = length( time_match )
       if (data_dimensionality==2) {
-        if (n_indexes==1) slot(sppoly, "data")[, vn] = res[[vn]] [ poly_match, time_match[[1]] ]  # year only
+        # 2 dims , 1 is space so , ...
+        slot(sppoly, "data")[, vn] = res[[vn]] [ poly_match, time_match[[1]] ]  # year only
       }
       if (data_dimensionality==3) {
-        if (n_indexes==1) slot(sppoly, "data")[, vn] = res[[vn]] [ poly_match, time_match[[1]] , ]  # year only
-        if (n_indexes==2) slot(sppoly, "data")[, vn] = res[[vn]] [ poly_match, time_match[[1]], time_match[[2]] ] # year/subyear
+        n_indexes = length( time_match )  # time indexes
+        slot(sppoly, "data")[, vn] = res[[vn]] [ poly_match, time_match[[1]], time_match[[2]] ] # year/subyear
       }
     }
 
