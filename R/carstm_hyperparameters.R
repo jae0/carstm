@@ -3,7 +3,7 @@ carstm_hyperparameters = function( reference_sd, alpha=0.5, reference_mean=0 ) {
   # some generic PC priors, scaled by sd of data
   # pc.prior to median .. minimally info. scale
 
-  if (!is.finte(reference_sd)) stop("SD is not finite")
+  if (!is.finite(reference_sd)) stop("SD is not finite")
   
   hyper = list(
 

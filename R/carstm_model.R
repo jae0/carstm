@@ -1,5 +1,5 @@
 
-carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALSE, file_compress_method="xz", ... ) {
+carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALSE, file_compress_method=FALSE, ... ) {
 
   p = parameters_add(p, list(...)) # add passed args to parameter list, priority to args
 
@@ -89,7 +89,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
       for ( civ in 1:length(p$options.control.inla)) {
         fit = try( inla( p$carstm_model_formula , data=M, family=p$carstm_model_family,
           control.compute=list(dic=TRUE, waic=FALSE, cpo=FALSE, config=FALSE),
-          control.fitults=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
+          control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
           control.predictor=list(compute=FALSE, link=1 ),
           control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
           control.family = p$options.control.family,
@@ -134,7 +134,9 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
 
 
   # results go here
-  res = list( M=M, dimensionality = p$aegis_dimensionality, summary=summary(fit)  )
+  res = list( M=M, dimensionality=p$aegis_dimensionality, summary=summary(fit), 
+    sppoly=sppoly, fn_res=fn_res 
+  )
   
   # row indices for predictions
   if ( p$aegis_dimensionality == "space") {
@@ -401,13 +403,13 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
         vn = paste( p$variabletomodel, "random_auid_nonspatial", sep=".")
         res[[vn]] = reformat_to_array( input=input, matchfrom=res$ns_matchfrom, matchto=res$ns_matchto )
         if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
-        # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
+        # carstm_map( res=res, vn=vn, time_match=list(year="2000", dyear="0.85" ) )
 
         input = fit$summary.random$auid[ res$i_spatial, "mean" ]  # offset structure due to bym2
         vn = paste( p$variabletomodel, "random_auid_spatial", sep=".")
         res[[vn]] = reformat_to_array( input=input, matchfrom=res$sp_matchfrom, matchto=res$sp_matchto )
         if (!is.null(NA_mask)) res[[vn]][NA_mask] = NA
-        # carstm_plot( p=p, res=res, vn=vn, time_match=list(year="2000", dyear="0.8" ) )
+        # carstm_map( res=res, vn=vn, time_match=list(year="2000", dyear="0.85" ) )
 
       }
     }
