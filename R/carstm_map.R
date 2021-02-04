@@ -1,12 +1,11 @@
 
-  carstm_map = function( res, vn, poly_match=NULL, time_match=NULL, ...) {
+  carstm_map = function( res, vn, poly_match=NULL, time_match=NULL, coastline=NULL, isobaths=NULL,  ...) {
 
     # carstm/aegis wrapper around spplot, will forward any additional spplot args 
     # TODO move to an sf-based plot
 
     require(sp)
-    sppoly = as( res$sppoly, "Spatial")
-    slot(sppoly, "data")[,vn] = NA
+    sppoly = res$sppoly
 
     # first index is spatial strata
     data_dimensionality = length( dim(res[[vn]]) )
@@ -27,18 +26,15 @@
 
     }
 
-    slot(sppoly, "data")[, vn] = toplot
-
-    maintitle = list(label="my plot title", cex=2)
+    sppoly[,vn] = toplot
+    
+    ellp = list(...)
 
     if (length(poly_match) > 1 ) {
       dev.new();
-      ellp = list(...)
-      if ( !exists("main", ellp ) )  ellp[["main"]]=maintitle
-      ellp$obj = sppoly
-      ellp$zcol=vn
-      ellp$col="transparent"
-      do.call(spplot, ellp )
+      plot( sppoly[vn], reset = FALSE, border = "lightslateblue", lwd = 0.8, ...  )
+      if (!is.null(coastline) ) do.call(plot, list(x=coastline, col="whitesmoke", lwd=1.0, add=TRUE) )
+      if (!is.null(isobaths) ) do.call(plot, list(x=isobaths, col="whitesmoke", lwd=0.4, add=TRUE) )
     }
   }
 
