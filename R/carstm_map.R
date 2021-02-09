@@ -32,7 +32,6 @@
     ellp = list(...)
 
     if (length(poly_match) > 1 ) {
-      dev.new();
       if (!is.null(plot_crs)) sppoly = st_transform( sppoly, crs=st_crs(plot_crs) )
       plot( sppoly[vn], reset = FALSE, border = "lightslateblue", lwd = 0.8, ...  )
 
@@ -43,7 +42,7 @@
       
       if (!is.null(isobaths) ) {
         if (!is.null(plot_crs)) isobaths = st_transform( isobaths, crs=st_crs(plot_crs) )
-        do.call(plot, list(x=isobaths, col="whitesmoke", lwd=0.4, add=TRUE) )
+        do.call(plot, list(x=isobaths, col="lightgray", lwd=0.25, add=TRUE) )
       }
     }
   }
