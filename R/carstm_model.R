@@ -87,11 +87,14 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
 
 
       for ( civ in 1:length(p$options.control.inla)) {
-        fit = try( inla( p$carstm_model_formula , data=M, family=p$carstm_model_family,
-          control.compute=list(dic=TRUE, waic=FALSE, cpo=FALSE, config=FALSE),
+        fit = try( inla( 
+          p$carstm_model_formula , 
+          data=M, 
+          family = p$carstm_model_family,
+          control.compute=list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE),
           control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
           control.predictor=list(compute=FALSE, link=1 ),
-          control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
+          # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
           control.family = p$options.control.family,
           control.inla   = p$options.control.inla[[civ]],
           verbose=TRUE
