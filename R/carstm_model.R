@@ -421,15 +421,15 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
 
   print( res$summary )
 
-  if ( grepl("inla", p$carstm_modelengine) ) {
+  # if ( grepl("inla", p$carstm_modelengine) ) {
 
-    # a few plots
-    # copied from INLA::plot.inla and streamlined to reduce access to the fit object which can be huge
-    print( plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=TRUE ) )
+  #   # a few plots
+  #   # copied from INLA::plot.inla and streamlined to reduce access to the fit object which can be huge
+  #   print( plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=TRUE ) )
 
-  } else {
-    print( plot(fit) )
-  }
+  # } else {
+  #   print( plot(fit) )
+  # }
 
   return( fit )
 }
