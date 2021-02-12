@@ -32,10 +32,8 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
   eps = exp( log( .Machine$double.eps ) / 2)  # ~ 1.5e-8
 
   vn = p$variabletomodel
-  M[, vn]  = M[, vn]  + runif( nrow(M), -eps, eps )
 
   if (exists("data_transformation", p)) M[, vn]  = p$data_transformation$forward( M[, vn] ) # make all positive
-
 
   mrange = NULL
   # get hyper param scalings
