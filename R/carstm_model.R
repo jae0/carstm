@@ -45,7 +45,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
     j = which( is.finite(M[,vn]) )
     mrange = range( M[ j, vn ]  )  # on data scale not internal
 
-    if (!exists("p$carstm_model_family", p )) p$carstm_model_family = "normal"
+    if (!exists("carstm_model_family", p )) p$carstm_model_family = "normal"
 
     if ( p$carstm_model_family == "lognormal" ) {
       m = log( M[ j, vn ])
@@ -59,7 +59,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
       m = M[ j, vn ]
     }
 
-    H = carstm_hyperparameters( sd(m), alpha=0.5, median(m) )
+    H = carstm_hyperparameters( sd(m, na.rm=TRUE), alpha=0.5, median(m, na.rm=TRUE) )
     m = NULL
 
 
@@ -93,7 +93,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
           family = p$carstm_model_family,
           control.compute=list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE),
           control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
-          control.predictor=list(compute=FALSE, link=1 ),
+          control.predictor=list(compute=TRUE, link=1 ),
           # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
           control.family = p$options.control.family,
           control.inla   = p$options.control.inla[[civ]],
