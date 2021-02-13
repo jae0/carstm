@@ -28,8 +28,6 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
   # permit passing a function rather than data directly .. less RAM usage in parent call
   if (class(M)=="character") assign("M", eval(parse(text=M) ) )
 
-  # INLA does not like duplicates ... causes optimizer to crash frequently
-  eps = exp( log( .Machine$double.eps ) / 2)  # ~ 1.5e-8
 
   vn = p$variabletomodel
 
