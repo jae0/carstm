@@ -55,7 +55,8 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
       m = M[ j, vn ]
     }
 
-    H = carstm_hyperparameters( sd(m, na.rm=TRUE), alpha=0.5, median(m, na.rm=TRUE) )
+    ii = which(is.finite(m))
+    H = carstm_hyperparameters( sd(m[ii], na.rm=TRUE), alpha=0.5, median(m[ii], na.rm=TRUE) )
     m = NULL
 
 
