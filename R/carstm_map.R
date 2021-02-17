@@ -78,15 +78,15 @@
     o = tm_shape( sppoly, projection=plot_crs ) +
       tm_polygons(
         vn,
-        style = ifelse ( exists("style"), style,"cont" ) ,
+        style = ifelse ( missing(style), style, "cont" ) ,
         breaks = datarange,
-        title= ifelse ( exists("main"), main, vn ) ,
+        title= ifelse ( missing(main), main, vn ) ,
         border.col = NULL,
         colorNA = NULL,
         # constrast=c(0,0.6),
         showNA=FALSE,
         lwd = 0.5, 
-        palette = ifelse ( exists("palette"), palette, "YlOrRd"),
+        palette = ifelse ( missing(palette), palette, "YlOrRd"),
         border.alpha = 0.5,
         legend.is.portrait = FALSE ) +
     tm_shape( coastline, projection=plot_crs ) +
