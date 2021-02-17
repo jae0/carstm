@@ -1,6 +1,6 @@
 
   carstm_map = function( 
-    res, 
+    res=NULL, 
     vn, 
     xyz=NULL,
     sppoly=NULL,
@@ -43,29 +43,31 @@
 
     } else {
 
-      if (is.null(sppoly)) sppoly = res$sppoly
+      if (!is.null(res)) {
+        if (is.null(sppoly)) sppoly = res$sppoly
 
-      # first index is spatial strata
-      data_dimensionality = length( dim(res[[vn]]) )
+        # first index is spatial strata
+        data_dimensionality = length( dim(res[[vn]]) )
 
-      if (is.null(poly_match)) poly_match = match( res$AUID, sppoly[["AUID"]] )  # should match exactly but in case a subset is sent as sppoly
+        if (is.null(poly_match)) poly_match = match( res$AUID, sppoly[["AUID"]] )  # should match exactly but in case a subset is sent as sppoly
 
-      if (data_dimensionality==1) {
-      
-        toplot = res[[vn]] [ poly_match ]  # year only
-      
-      } else if (data_dimensionality==2) {
+        if (data_dimensionality==1) {
+        
+          toplot = res[[vn]] [ poly_match ]  # year only
+        
+        } else if (data_dimensionality==2) {
 
-          toplot = res[[vn]] [ poly_match, time_match[[1]] ]  # year only
+            toplot = res[[vn]] [ poly_match, time_match[[1]] ]  # year only
 
-      } else if (data_dimensionality==3) {
+        } else if (data_dimensionality==3) {
 
-          toplot = res[[vn]] [ poly_match, time_match[[1]], time_match[[2]] ] # year/subyear
+            toplot = res[[vn]] [ poly_match, time_match[[1]], time_match[[2]] ] # year/subyear
 
-      }
-      sppoly[,vn] = toplot
+        }
+        sppoly[,vn] = toplot
+      }  # else assume sppoly already has vn in it
+
       sppoly = st_transform( sppoly, crs=st_crs(plot_crs) )
-
     }
 
 
@@ -106,11 +108,11 @@
       tm_polygons( col="grey80" ) +
     tm_shape( isobaths, projection=plot_crs ) +
       tm_lines( col="lightgray", alpha=0.6) +
-    ifelse( !is.null(managementlines), { tm_shape( managementlines, projection=plot_crs ) +
-        tm_lines( col="grey40", alpha=0.6, lwd=2) }, 0) +
+    tm_shape( managementlines, projection=plot_crs ) +
+        tm_lines( col="grey40", alpha=0.6, lwd=2)  +
 
     tm_compass( position=c( "right", "top")) + 
-    tm_scale_bar( position=c("right", "bottom" ), width=0.3, text.size=0.65) +
+    tm_scale_bar( position=c("left", "bottom" ), width=0.2, text.size=0.7) +
     tm_legend( position=c("left", "top") ,  frame=TRUE, scale = 1 , title.size=2, text.size=1.0) +
     tm_layout( frame=FALSE )
     #, legend.width=1.0, legend.height=0.4
