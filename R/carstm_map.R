@@ -68,25 +68,36 @@
 
     }
 
-    er = quantile( sppoly[[vn]], probs=probs, na.rm=TRUE )
-    datarange = signif( seq( er[1], er[2], length.out=7), 2) 
+
+    ellps = list(...)
+
+    
+    if  ( exists("breaks", ellps)) {
+      datarange = ellps[["breaks"]] 
+      er = range(datarange)
+    } else{ 
+      er = quantile( sppoly[[vn]], probs=probs, na.rm=TRUE )
+      datarange = signif( seq( er[1], er[2], length.out=7), 2) 
+    }
+    
     sppoly[[vn]][ which(sppoly[[vn]] < er[1]) ] = er[1] # set levels higher than max datarange to max datarange
     sppoly[[vn]][ which(sppoly[[vn]] > er[2]) ] = er[2] # set levels higher than max datarange to max datarange
 
     tmap_mode("plot")
   
+
     o = tm_shape( sppoly, projection=plot_crs ) +
       tm_polygons(
         vn,
-        style = ifelse ( missing(style), style, "cont" ) ,
-        breaks = datarange,
-        title= ifelse ( missing(main), main, vn ) ,
+        style = ifelse ( exists("style", ellps), ellps[["style"]], "cont" ) ,
+        breaks = datarange ,
+        title= ifelse ( exists("main", ellps), ellps[["main"]], vn ) ,
         border.col = NULL,
         colorNA = NULL,
         # constrast=c(0,0.6),
         showNA=FALSE,
         lwd = 0.5, 
-        palette = ifelse ( missing(palette), palette, "YlOrRd"),
+        palette = ifelse ( exists("palette", ellps), ellps[["palette"]], "YlOrRd"),
         border.alpha = 0.5,
         legend.is.portrait = FALSE ) +
     tm_shape( coastline, projection=plot_crs ) +
