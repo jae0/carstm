@@ -70,39 +70,37 @@
 
 
     er = quantile( sppoly[[vn]], probs=probs, na.rm=TRUE )
-    datarange = seq( er[1], er[2], length.out=7) 
+    datarange = signif( seq( er[1], er[2], length.out=7), 2) 
     sppoly[[vn]][ which(sppoly[[vn]] < er[1]) ] = er[1] # set levels higher than max datarange to max datarange
     sppoly[[vn]][ which(sppoly[[vn]] > er[2]) ] = er[2] # set levels higher than max datarange to max datarange
 
     tmap_mode("plot")
-    
-    maintitle = ifelse ( exists("main"), main, vn ) 
-    
-    
+  
     o = tm_shape( sppoly, projection=plot_crs ) +
       tm_polygons(
         vn,
-        style = "cont",
+        style = ifelse ( exists("style"), style,"cont" ) ,
         breaks = datarange,
-        title= maintitle,
+        title= ifelse ( exists("main"), main, vn ) ,
         border.col = NULL,
         colorNA = NULL,
-        constrast=c(0,0.6),
+        # constrast=c(0,0.6),
         showNA=FALSE,
         lwd = 0.5, 
-        palette = "YlOrRd",
+        palette = ifelse ( exists("palette"), palette, "YlOrRd"),
         border.alpha = 0.5,
         legend.is.portrait = FALSE ) +
     tm_shape( coastline, projection=plot_crs ) +
       tm_polygons( col="grey80" ) +
     tm_shape( isobaths, projection=plot_crs ) +
-      tm_lines( col="lightgray", alpha=0.5) +
+      tm_lines( col="lightgray", alpha=0.6) +
     tm_shape( managementlines, projection=plot_crs ) +
-      tm_lines( col="grey20", alpha=0.75, lwd=2) +
+      tm_lines( col="grey40", alpha=0.6, lwd=2) +
 
-    tm_compass( position=c( "right", "top")) + 
-    tm_scale_bar( position=c("left", "bottom" ) ) +
-    tm_layout( frame=FALSE, legend.text.size= 0.7 )
+    tm_compass( position=c( "center", "top")) + 
+    tm_scale_bar( position=c("right", "bottom" ), width=0.25, text.size=0.6) +
+    tm_legend( position=c("left", "top") , bg.color="whitesmoke", frame=TRUE ) +
+    tm_layout( frame=FALSE, legend.text.size= 0.75, legend.width=0.75, legend.height=0.4 )
     
     print(o)
   
