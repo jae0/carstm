@@ -112,8 +112,8 @@
         tm_lines( col="grey40", alpha=0.6, lwd=2)  +
 
     tm_compass( position=c( "right", "top")) + 
-    tm_scale_bar( position=c("left", "bottom" ), width=0.2, text.size=0.7) +
-    tm_legend( position=c("left", "top") ,  frame=TRUE, scale = 1 , title.size=2, text.size=1.0) +
+    tm_scale_bar( position=c("right", "bottom" ), width=0.2, text.size=0.7) +
+    tm_legend( position=c("left", "top") ,  frame=TRUE, scale = 1 , title.size=1.5, text.size=0.80, legend.width=0.75) +
     tm_layout( frame=FALSE )
     #, legend.width=1.0, legend.height=0.4
     print(o)
