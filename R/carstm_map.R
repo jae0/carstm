@@ -13,7 +13,7 @@
     managementlines = aegis.polygons::area_lines.db( DS="cfa.regions", returntype="sf", project_to=plot_crs ),
     aggregate_function=mean,
     probs=c(0,0.975), 
-    outformat="pdf",
+    outformat="svg",
     outfilename="",
     ...) {
 
