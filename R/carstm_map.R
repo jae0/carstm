@@ -68,7 +68,6 @@
 
     }
 
-
     er = quantile( sppoly[[vn]], probs=probs, na.rm=TRUE )
     datarange = signif( seq( er[1], er[2], length.out=7), 2) 
     sppoly[[vn]][ which(sppoly[[vn]] < er[1]) ] = er[1] # set levels higher than max datarange to max datarange
@@ -97,7 +96,7 @@
     tm_shape( managementlines, projection=plot_crs ) +
       tm_lines( col="grey40", alpha=0.6, lwd=2) +
 
-    tm_compass( position=c( "center", "top")) + 
+    tm_compass( position=c( "right", "top")) + 
     tm_scale_bar( position=c("right", "bottom" ), width=0.25, text.size=0.6) +
     tm_legend( position=c("left", "top") , bg.color="whitesmoke", frame=TRUE ) +
     tm_layout( frame=FALSE, legend.text.size= 0.75, legend.width=0.75, legend.height=0.4 )
