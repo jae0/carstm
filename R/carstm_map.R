@@ -8,9 +8,9 @@
     time_match=NULL, 
     spatial_domain=NULL,
     plot_crs=st_crs( projection_proj4string("lonlat_wgs84") ),
-    coastline=aegis.coastline::coastline_db( DS="eastcoast_gadm", project_to=plot_crs ), 
-    isobaths=aegis.bathymetry::isobath_db( depths=c(50, 100, 200, 400, 800), project_to=plot_crs  ), 
-    managementlines = aegis.polygons::area_lines.db( DS="cfa.regions", returntype="sf", project_to=plot_crs ),
+    coastline=NULL, 
+    isobaths=NULL, 
+    managementlines = NULL,
     aggregate_function=mean,
     probs=c(0,0.975), 
     outformat="svg",
@@ -71,7 +71,9 @@
 
     ellps = list(...)
 
-    
+    if (is.null(coastline)) coastline = aegis.coastline::coastline_db( DS="eastcoast_gadm", project_to=plot_crs ) 
+    if (is.null(isobaths)) isobaths = aegis.bathymetry::isobath_db( depths=c(50, 100, 200, 400, 800), project_to=plot_crs  )
+
     if  ( exists("breaks", ellps)) {
       datarange = ellps[["breaks"]] 
       er = range(datarange)
@@ -104,16 +106,16 @@
       tm_polygons( col="grey80" ) +
     tm_shape( isobaths, projection=plot_crs ) +
       tm_lines( col="lightgray", alpha=0.6) +
-    tm_shape( managementlines, projection=plot_crs ) +
-      tm_lines( col="grey40", alpha=0.6, lwd=2) +
+    ifelse( !is.null(managementlines), { tm_shape( managementlines, projection=plot_crs ) +
+        tm_lines( col="grey40", alpha=0.6, lwd=2) }, 0) +
 
     tm_compass( position=c( "right", "top")) + 
-    tm_scale_bar( position=c("right", "bottom" ), width=0.25, text.size=0.6) +
-    tm_legend( position=c("left", "top") , bg.color="whitesmoke", frame=TRUE ) +
-    tm_layout( frame=FALSE, legend.text.size= 0.75, legend.width=0.75, legend.height=0.4 )
-    
+    tm_scale_bar( position=c("right", "bottom" ), width=0.3, text.size=0.65) +
+    tm_legend( position=c("left", "top") ,  frame=TRUE, scale = 1 , title.size=2, text.size=1.0) +
+    tm_layout( frame=FALSE )
+    #, legend.width=1.0, legend.height=0.4
     print(o)
-  
+
     if ( outfilename !="" ) {
       if (outformat=="pdf") pdf( file=outfilename, width=9, height=7, bg='white', pointsize=12 )
       if (outformat=="svg") svg( filename=outfilename, width=9, height=7, bg='white', pointsize=12   )
