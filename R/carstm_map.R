@@ -13,7 +13,7 @@
     managementlines = NULL,
     aggregate_function=mean,
     probs=c(0,0.975), 
-    outformat="svg",
+    outformat="png",
     outfilename="",
     ...) {
 
@@ -88,40 +88,65 @@
     sppoly[[vn]][ which(sppoly[[vn]] > er[2]) ] = er[2] # set levels higher than max datarange to max datarange
 
     tmap_mode("plot")
-  
 
-    o = tm_shape( sppoly, projection=plot_crs ) +
-      tm_polygons(
-        vn,
-        style = ifelse ( exists("style", ellps), ellps[["style"]], "cont" ) ,
-        breaks = datarange ,
-        title= ifelse ( exists("main", ellps), ellps[["main"]], vn ) ,
-        border.col = NULL,
-        colorNA = NULL,
-        # constrast=c(0,0.6),
-        showNA=FALSE,
-        lwd = 0.5, 
-        palette = ifelse ( exists("palette", ellps), ellps[["palette"]], "YlOrRd"),
-        border.alpha = 0.5,
-        legend.is.portrait = FALSE ) +
-    tm_shape( coastline, projection=plot_crs ) +
-      tm_polygons( col="grey80" ) +
-    tm_shape( isobaths, projection=plot_crs ) +
-      tm_lines( col="lightgray", alpha=0.6) +
-    tm_shape( managementlines, projection=plot_crs ) +
-        tm_lines( col="grey40", alpha=0.6, lwd=2)  +
+    if ( !is.null(managementlines) ) {  
+      o = tm_shape( sppoly, projection=plot_crs ) +
+        tm_polygons(
+          vn,
+          style = ifelse ( exists("style", ellps), ellps[["style"]], "cont" ) ,
+          breaks = datarange ,
+          title= ifelse ( exists("main", ellps), ellps[["main"]], vn ) ,
+          border.col = NULL,
+          colorNA = NULL,
+          showNA=FALSE,
+          lwd = 0.5, 
+          palette = ifelse ( exists("palette", ellps), ellps[["palette"]], "YlOrRd"),
+          border.alpha = 0.5,
+          legend.is.portrait = FALSE ) +
+      tm_shape( coastline, projection=plot_crs ) +
+        tm_polygons( col="grey80" ) +
+      tm_shape( isobaths, projection=plot_crs ) +
+        tm_lines( col="lightgray", alpha=0.6) +
 
-    tm_compass( position=c( "right", "top")) + 
-    tm_scale_bar( position=c("right", "bottom" ), width=0.2, text.size=0.7) +
-    tm_legend( position=c("left", "top") ,  frame=TRUE, scale = 1 , title.size=1.5, text.size=0.80, legend.width=0.75) +
-    tm_layout( frame=FALSE )
-    #, legend.width=1.0, legend.height=0.4
+      tm_shape( managementlines, projection=plot_crs ) +
+          tm_lines( col="grey40", alpha=0.6, lwd=2)  +
+
+      tm_compass( position=c( "right", "top")) + 
+      tm_scale_bar( position=c("right", "bottom" ), width=0.2, text.size=0.7) +
+      tm_legend( position=c("left", "top") ,  frame=TRUE, scale = 1 , title.size=1.5, text.size=0.80, legend.width=0.75) +
+      tm_layout( frame=FALSE )
+    
+    } else {
+
+      o = tm_shape( sppoly, projection=plot_crs ) +
+        tm_polygons(
+          vn,
+          style = ifelse ( exists("style", ellps), ellps[["style"]], "cont" ) ,
+          breaks = datarange ,
+          title= ifelse ( exists("main", ellps), ellps[["main"]], vn ) ,
+          border.col = NULL,
+          colorNA = NULL,
+          showNA=FALSE,
+          lwd = 0.5, 
+          palette = ifelse ( exists("palette", ellps), ellps[["palette"]], "YlOrRd"),
+          border.alpha = 0.5,
+          legend.is.portrait = FALSE ) +
+      tm_shape( coastline, projection=plot_crs ) +
+        tm_polygons( col="grey80" ) +
+      tm_shape( isobaths, projection=plot_crs ) +
+        tm_lines( col="lightgray", alpha=0.6) +
+      tm_compass( position=c( "right", "top")) + 
+      tm_scale_bar( position=c("right", "bottom" ), width=0.2, text.size=0.7) +
+      tm_legend( position=c("left", "top") ,  frame=TRUE, scale = 1 , title.size=1.5, text.size=0.80, legend.width=0.75) +
+      tm_layout( frame=FALSE )
+    }
+
     print(o)
 
     if ( outfilename !="" ) {
       if (outformat=="pdf") pdf( file=outfilename, width=9, height=7, bg='white', pointsize=12 )
       if (outformat=="svg") svg( filename=outfilename, width=9, height=7, bg='white', pointsize=12   )
-      if (outformat=="png") png( filename=outfilename, width=3072, height=2304, pointsize=40, res=300 )
+      if (outformat=="png") png( filename=outfilename, width=3072, height=2304, pointsize=12, res=300 )
       print(o)
 
       dev.off()
