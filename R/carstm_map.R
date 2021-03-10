@@ -74,7 +74,7 @@
     ellps = list(...)
 
     if (is.null(coastline)) coastline = aegis.coastline::coastline_db( DS="eastcoast_gadm", project_to=plot_crs ) 
-    if (is.null(isobaths)) isobaths = aegis.bathymetry::isobath_db( depths=c(50, 100, 200, 400, 800), project_to=plot_crs  )
+    if (is.null(isobaths)) isobaths = aegis.bathymetry::isobath_db( depths=c(50, 100, 200, 400), project_to=plot_crs  )
 
     if  ( exists("breaks", ellps)) {
       datarange = ellps[["breaks"]] 
@@ -134,7 +134,7 @@
       tm_shape( coastline, projection=plot_crs ) +
         tm_polygons( col="grey80" ) +
       tm_shape( isobaths, projection=plot_crs ) +
-        tm_lines( col="lightgray", alpha=0.6) +
+        tm_lines( col="lightgray", alpha=0.75) +
       tm_compass( position=c( "right", "top")) + 
       tm_scale_bar( position=c("right", "bottom" ), width=0.2, text.size=0.7) +
       tm_legend( position=c("left", "top") ,  frame=TRUE, scale = 1 , title.size=1.5, text.size=0.80, legend.width=0.75) +
