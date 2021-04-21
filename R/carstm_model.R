@@ -122,7 +122,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
   if (is.null(fit)) warning("model fit error")
   if ("try-error" %in% class(fit) ) warning("model fit error")
 
-  message( "Saving carstm fit (this can be slow): ", fn_fit )
+  message( "Saving INLA/carstm fit (this can be slow): ", fn_fit )
 
   save( fit, file=fn_fit, compress=file_compress_method )
 
