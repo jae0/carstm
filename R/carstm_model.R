@@ -41,7 +41,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
     j = which( is.finite(M[,vn]) )
     mrange = range( M[ j, vn ]  )  # on data scale not internal
 
-    if (!exists("carstm_model_family", p )) p$carstm_model_family = "normal"
+    if (!exists("carstm_model_family", p )) p$carstm_model_family = "gaussian"
 
     if ( p$carstm_model_family == "lognormal" ) {
       m = log( M[ j, vn ])
