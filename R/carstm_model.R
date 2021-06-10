@@ -1,8 +1,8 @@
 
 carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALSE, file_compress_method=FALSE, 
-  toget = c("summary", "random_other", "random_spatial", "random_spatiotemporal" , "predictions", "predictions_adjusted"), quantile_limit=0.975, ... ) {
+  toget = c("summary", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), quantile_limit=0.975, ... ) {
 
-  # compute and extract in one go fow inla as data files are too large, otherwise
+  # compute and extract in one go esp as inla data files are too large, otherwise
 
   p = parameters_add(p, list(...)) # add passed args to parameter list, priority to args
 
@@ -31,36 +31,23 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
  
    
   if ( grepl("glm", p$carstm_modelengine) ) {
-    O = carstm_extract_glm( p=p, M=M, fn_fit=fn_fit, file_compress_method=file_compress_method ) 
+    # not a CAR but for comparison with no spatial random effect model
+    O = carstm_model_glm( p=p, M=M, fn_fit=fn_fit, file_compress_method=file_compress_method ) 
   }
 
   if ( grepl("gam", p$carstm_modelengine) ) {
-    O = carstm_extract_gam( p=p, M=M, fn_fit=fn_fit, file_compress_method=file_compress_method ) 
+    # not a CAR but for comparison with no spatial random effect model
+    O = carstm_model_gam( p=p, M=M, fn_fit=fn_fit, file_compress_method=file_compress_method ) 
+  }
+
+  if (grepl("bayesx", p$carstm_modelengine) ) {
+
   }
 
 
   if ( grepl("inla", p$carstm_modelengine) ) {
 
-      # usual variable names used in aegis .. INLA requires these to be numeric
-      p$vnS = "auid_main"  # "space"
-      p$vnT = "yr"
-      p$vnU = "dyri"  # sub annual time 
-      
-      # alt character descrptions of vars
-      p$vnSn = "AUID"  # as character 
-      p$vnTn = "year"  # as character 
-      p$vnUn = "dyear"
-      
-      p$vnST = "auid"  # vnST = "space_time" (copy of vnS)
-      p$vnTS = "year_factor"  # vnTS = "time_space" (copy of vnT)
-      
-      p$vnSf = "AUID"  # "space" as a factor
-      p$vnTf = "year_factor"  # "time" as a factor
-      p$vnUf = "season_factor"  # "time" as a factor
-
-      # AUID is character; auid is factor -> numeric 
-
-    O = carstm_extract_inla( p=p, M=M, fn_fit=fn_fit, toget=toget, file_compress_method=file_compress_method, 
+    O = carstm_model_inla( p=p, M=M, fn_fit=fn_fit, toget=toget, file_compress_method=file_compress_method, 
       improve.hyperparam.estimates=improve.hyperparam.estimates, quantile_limit=quantile_limit ) 
   }
  

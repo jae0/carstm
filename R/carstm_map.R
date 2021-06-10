@@ -35,8 +35,7 @@
       xyz$AUID = st_points_in_polygons( pts=xyz, polys=sppoly[, "AUID"], varname="AUID" )
 
       toplot = xyz[[vn]]   
-      auid = xyz[["AUID"]] 
-      oo = tapply( toplot, auid, aggregate_function, na.rm=TRUE )
+      oo = tapply( toplot, xyz[["AUID"]], aggregate_function, na.rm=TRUE )
       sppoly[[vn]] = NA
       sppoly[[vn]][ match( names(oo) , sppoly$AUID ) ] = oo
 
