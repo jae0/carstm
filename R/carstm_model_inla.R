@@ -58,6 +58,12 @@ carstm_model_inla = function(p, M, fn_fit, toget="summary", file_compress_method
     O[[vnT]] = as.character( p$yrs )
     M[,vnT0] = as.character( M[,vnT] ) # copy
     M[,vnT] = match( M[,vnT0], O[[vnT]] )
+
+      # internal vars, for inla
+    vnST = ifelse( exists("vnST", p), p$vnST, "space_time" )
+    vnTS = ifelse( exists("vnTS", p), p$vnTS, "time_space" )
+    M[,vnST] = M[,vnS]   
+    M[,vnTS] = M[,vnT] 
   }
 
   if (grepl("season", p$aegis_dimensionality)) {
@@ -68,14 +74,7 @@ carstm_model_inla = function(p, M, fn_fit, toget="summary", file_compress_method
     M[,vnU0] = as.character( M[,vnU] )
     M[,vnU] = match( M[,vnU0], O[[vnU]] )
   }
-
-  # these are numeric codes representing each 
-
-  # internal vars, for inla
-  vnST = ifelse( exists("vnST", p), p$vnST, "space_time" )
-  vnTS = ifelse( exists("vnTS", p), p$vnTS, "time_space" )
-  M[,vnST] = M[,vnS]   
-  M[,vnTS] = M[,vnT] 
+ 
 
   if (is.null(nposteriors))  nposteriors = ifelse( exists("nposteriors", p), p$nposteriors, 1000 )
 
@@ -511,8 +510,8 @@ carstm_model_inla = function(p, M, fn_fit, toget="summary", file_compress_method
         } 
         O[["predictions"]] = W[,, tokeep, drop =FALSE]
       }
- 
-  
+
+
       if (exists("data_transformation", p) ) O[["predictions"]] = p$data_transformation$backward( O[["predictions"]] ) # make all positive
 
 
