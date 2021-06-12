@@ -130,6 +130,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
       M$time = as.character( M$yr )  # copy for INLA
       M$season = as.character( M$dyri )  # copy for INLA
+      M$yr_factor = factor(M$yr)
     }
 
     #required for carstm formulae
