@@ -3,7 +3,9 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     varstoretain = c("data_offset"),
     APS_data_offset=1
 ) {
-
+ 
+  crs_lonlat = st_crs(projection_proj4string("lonlat_wgs84"))
+ 
     # observations
     M$AUID = st_points_in_polygons(
       pts = st_as_sf( M, coords=c("lon","lat"), crs=crs_lonlat ),
