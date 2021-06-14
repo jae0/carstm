@@ -47,7 +47,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
 
   if ( grepl("inla", p$carstm_modelengine) ) {
 
-    O = carstm_model_inla( p=p, M=M, fn_fit=fn_fit, toget=toget, file_compress_method=file_compress_method, 
+    O = carstm_model_inla( p=p, M=M, fn_fit=fn_fit, fn_res=fn_res, toget=toget, file_compress_method=file_compress_method, 
       improve.hyperparam.estimates=improve.hyperparam.estimates, quantile_limit=quantile_limit ) 
   }
  
@@ -55,7 +55,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
 
   message( "carstm summary saved as: ", fn_res )
 
-  print(O[["summary"]])
+  # print(O[["summary"]])
 
   return( O )
 }

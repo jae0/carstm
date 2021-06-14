@@ -1,5 +1,5 @@
 
-  carstm_model_gam = function( p, M, fn_fit, file_compress_method=FALSE ) {
+  carstm_model_gam = function( p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), fn_res=tempfile(pattern="res_", fileext=".Rdata"), file_compress_method=FALSE ) {
     
     # permit passing a function rather than data directly .. less RAM usage in parent call
     if (class(M)=="character") assign("M", eval(parse(text=M) ) )
@@ -95,6 +95,10 @@
     if ( grepl( ".*poisson", p$carstm_model_family)) O[[vn]] = exp(O[[vn]])
     if ( grepl( ".*lognormal", p$carstm_model_family)) O[[vn]] = exp(O[[vn]])
     if (exists("data_transformation", p) ) O[[vn]] = p$data_transformation$backward( O[[vn]] ) # make all positive
+
+    save( O, file=fn_res, compress=file_compress_method )
+
+    message( "carstm summary saved as: ", fn_res )
 
     return(O)
 

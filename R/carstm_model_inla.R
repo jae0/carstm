@@ -1,6 +1,6 @@
 
 
-carstm_model_inla = function(p, M, fn_fit, toget="summary", file_compress_method=FALSE, exceedance_threshold=NULL, deceedance_threshold=NULL, nposteriors=NULL, improve.hyperparam.estimates=NULL, quantile_limit=NULL ) {
+carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), fn_res=tempfile(pattern="res_", fileext=".Rdata"), toget="summary", file_compress_method=FALSE, exceedance_threshold=NULL, deceedance_threshold=NULL, nposteriors=NULL, improve.hyperparam.estimates=NULL, quantile_limit=NULL ) {
 
   # outputs
   O = list()
@@ -165,9 +165,7 @@ carstm_model_inla = function(p, M, fn_fit, toget="summary", file_compress_method
 
 
   # do the computations here as fit can be massive ... best not to copy, etc ..
-  message( "Computing summaries ..." )
-
-
+  message( "\nComputing summaries (also very slow) ..." )
 
 
   invlink = function(x) lnk_function( x,  inverse=TRUE )
@@ -559,6 +557,10 @@ carstm_model_inla = function(p, M, fn_fit, toget="summary", file_compress_method
   # copy data in case needed for plotting ..
   O[["M"]] = M
   O[["sppoly"]] = sppoly
-  O[["fn_res"]] = fn_res
+
+  save( O, file=fn_res, compress=file_compress_method )
+
+  message( "carstm summary saved as: ", fn_res )
+
   return(O)
 }
