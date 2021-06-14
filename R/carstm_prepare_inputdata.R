@@ -47,6 +47,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
 
     if ( "bathymetry" %in% lookup ) {
+      require(aegis.bathymetry)
       pB = bathymetry_parameters( p=parameters_reset(p), project_class="carstm"  )
       APS[, pB$variabletomodel] = bathymetry_lookup(  LOCS=sppoly,
         lookup_from = p$carstm_inputdata_model_source$bathymetry,
@@ -57,6 +58,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     }
 
     if ( "substrate" %in% lookup ) {
+      require(aegis.substrate)
       pS = substrate_parameters( p=parameters_reset(p), project_class="carstm"  )
       APS[, pS$variabletomodel] = substrate_lookup(  LOCS=sppoly,
         lookup_from = p$carstm_inputdata_model_source$substrate,
@@ -82,6 +84,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       APS$timestamp = lubridate::date_decimal( APS$tiyr, tz=p$timezone )
 
       if ( "temperature" %in% lookup ) {
+         require("aegis.temperature")
         pT = temperature_parameters( p=parameters_reset(p), project_class="carstm", year.assessment=p$year.assessment  )
         APS[, pT$variabletomodel] = temperature_lookup(  LOCS=APS[ , c("AUID", "timestamp")], AU_target=sppoly,
           lookup_from = p$carstm_inputdata_model_source$temperature,
@@ -94,6 +97,8 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
 
       if ( "speciescomposition" %in% lookup ) {
+        require("aegis.speciescomposition")
+
         pPC1 = speciescomposition_parameters( p=parameters_reset(p), project_class="carstm", variabletomodel="pca1" , year.assessment=p$year.assessment)
 
         APS[, pPC1$variabletomodel] = speciescomposition_lookup(  LOCS=APS[ , c("AUID", "timestamp")], AU_target=sppoly,
