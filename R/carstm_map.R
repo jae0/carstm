@@ -2,6 +2,7 @@
   carstm_map = function( 
     res=NULL, 
     vn, 
+    vn_parent=NULL,
     xyz=NULL,
     sppoly=NULL,
     poly_match=NULL, 
@@ -34,7 +35,11 @@
       xyz = st_transform(xyz, plot_crs )
       xyz$AUID = st_points_in_polygons( pts=xyz, polys=sppoly[, "AUID"], varname="AUID" )
 
-      toplot = xyz[[vn]]   
+      if !is.null(vn_parent)) {
+        toplot = xyz[[vn_parent]][[vn]]
+      } else {
+        toplot = xyz[[vn]]   
+      }
       oo = tapply( toplot, xyz[["AUID"]], aggregate_function, na.rm=TRUE )
       sppoly[[vn]] = NA
       sppoly[[vn]][ match( names(oo) , sppoly$AUID ) ] = oo
@@ -46,21 +51,27 @@
         if (is.null(sppoly)) sppoly = res$sppoly
 
         # first index is spatial strata
-        data_dimensionality = length( dim(res[[vn]]) )
+        if !is.null(vn_parent)) {
+          toplot = res[[vn_parent]][[vn]]
+        } else {
+          toplot = res[[vn]]   
+        }
+
+        data_dimensionality = length( dim(toplot) )
 
         if (is.null(poly_match)) poly_match = match( res$AUID, sppoly[["AUID"]] )  # should match exactly but in case a subset is sent as sppoly
 
         if (data_dimensionality==1) {
         
-          toplot = res[[vn]] [ poly_match ]  # year only
+          toplot = toplot[ poly_match ]  # year only
         
         } else if (data_dimensionality==2) {
 
-            toplot = res[[vn]] [ poly_match, time_match[[1]] ]  # year only
+            toplot = toplot[ poly_match, time_match[[1]] ]  # year only
 
         } else if (data_dimensionality==3) {
 
-            toplot = res[[vn]] [ poly_match, time_match[[1]], time_match[[2]] ] # year/subyear
+            toplot = toplot[ poly_match, time_match[[1]], time_match[[2]] ] # year/subyear
 
         }
         sppoly[,vn] = toplot

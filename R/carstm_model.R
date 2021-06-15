@@ -1,6 +1,6 @@
 
-carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALSE, file_compress_method=FALSE, 
-  toget = c("summary", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), quantile_limit=0.975, ... ) {
+carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compression_level=1, 
+   ... ) {
 
   # compute and extract in one go esp as inla data files are too large, otherwise
 
@@ -32,30 +32,23 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
    
   if ( grepl("glm", p$carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
-    O = carstm_model_glm( p=p, M=M, fn_fit=fn_fit, file_compress_method=file_compress_method ) 
+    O = carstm_model_glm( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compression_level=compression_level, ... ) 
   }
 
   if ( grepl("gam", p$carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
-    O = carstm_model_gam( p=p, M=M, fn_fit=fn_fit, file_compress_method=file_compress_method ) 
+    O = carstm_model_gam( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compression_level=compression_level, ... ) 
   }
 
   if (grepl("bayesx", p$carstm_modelengine) ) {
-
+    # might be useful..
   }
 
 
   if ( grepl("inla", p$carstm_modelengine) ) {
-
-    O = carstm_model_inla( p=p, M=M, fn_fit=fn_fit, fn_res=fn_res, toget=toget, file_compress_method=file_compress_method, 
-      improve.hyperparam.estimates=improve.hyperparam.estimates, quantile_limit=quantile_limit ) 
+    O = carstm_model_inla( p=p, M=M, fn_fit=fn_fit, fn_res=fn_res, compression_level=compression_level, ... ) 
+      #  print(O[["summary"]])
   }
- 
-  save( O, file=fn_res, compress=file_compress_method )
-
-  message( "carstm summary saved as: ", fn_res )
-
-  # print(O[["summary"]])
-
+   
   return( O )
 }

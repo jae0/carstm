@@ -1,6 +1,13 @@
 
 
-carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), fn_res=tempfile(pattern="res_", fileext=".Rdata"), toget="summary", file_compress_method=FALSE, exceedance_threshold=NULL, deceedance_threshold=NULL, nposteriors=NULL, improve.hyperparam.estimates=NULL, quantile_limit=NULL ) {
+carstm_model_inla = function(p, M, 
+  fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), 
+  fn_res=tempfile(pattern="res_", fileext=".Rdata"), 
+  compression_level=1,
+  toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), 
+  toinvert=c("fixed_effects", "random_effects", "predictions"), 
+  exceedance_threshold=NULL, deceedance_threshold=NULL, nposteriors=NULL, 
+  improve.hyperparam.estimates=NULL, quantile_limit=NULL, ... ) {
 
   # outputs
   O = list()
@@ -24,7 +31,6 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
       # copies of main effects for inla in formulae
       p$vnST = "space_time"  # vnST = "space_time" (copy of vnS)
       p$vnTS = "time_space"  # vnTS = "time_space" (copy of vnT)
-
   }
 
 
@@ -35,6 +41,9 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
   nAUID = nrow(sppoly)
 
   vnST = vnTS = NULL  # this is also used as a flag for random st effects extraction
+
+  vnI = ifelse( exists("vnI", p), p$vnI, "uid" )  # iid of observations
+  if (!exists(vnI, M)) M[,vnI] = 1:nrow(M)
 
   if (grepl("space", p$aegis_dimensionality)) {
     # labels
@@ -79,15 +88,37 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
 
   if (!exists("carstm_model_family", p )) p$carstm_model_family = "gaussian"
 
+  # gaussian by default
+  lnk_function = inla.link.identity
+  invlink_fixed = inla.link.identity
+  invlink_random = inla.link.identity
+  invlink_predictions = inla.link.identity ## preds are on user scale
+
   if ( p$carstm_model_family == "lognormal" ) {
     lnk_function = inla.link.log
+    if ("fixed_effects" %in% toinvert) invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
+    if ("random_effects" %in% toinvert) invlink_random = function(x) lnk_function( x,  inverse=TRUE )
+    if ("predictions" %in% toinvert) invlink_predictions = function(x) lnk_function( x,  inverse=TRUE ) ## preds are on log scale
   } else if ( grepl( ".*poisson", p$carstm_model_family)) {
     lnk_function = inla.link.log
-  } else if ( p$carstm_model_family =="binomial" )  {
+    if ("fixed_effects" %in% toinvert) invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
+    if ("random_effects" %in% toinvert) invlink_random = function(x) lnk_function( x,  inverse=TRUE )
+    if ("predictions" %in% toinvert) {
+      invlink_predictions = inla.link.identity ## preds are on user scale
+    } else {
+      invlink_predictions = lnk_function  
+    }
+  } else if ( grepl( ".*binomial", p$carstm_model_family)) {
     lnk_function = inla.link.logit
-  } else {
-    lnk_function = inla.link.identity
-  }
+    if ("fixed_effects" %in% toinvert) invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
+    if ("random_effects" %in% toinvert) invlink_random = function(x) lnk_function( x,  inverse=TRUE )
+    if ("predictions" %in% toinvert) {
+      invlink_predictions = inla.link.identity ## preds are on user scale
+    } else{
+      invlink_predictions = lnk_function
+    }
+  } 
+  
 
 
   # get hyper param scalings
@@ -137,7 +168,7 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
       family = p$carstm_model_family,
       control.compute=list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE),
       control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
-      control.predictor=list(compute=TRUE, link=1 ),
+      control.predictor=list(compute=TRUE ),
       # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
       control.family = p$options.control.family,
       control.inla   = p$options.control.inla[[civ]],
@@ -161,41 +192,26 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
 
   message( "Saving carstm fit (this can be slow): ", fn_fit )
 
-  save( fit, file=fn_fit, compress=file_compress_method )
+  save( fit, file=fn_fit, compression_level=compression_level )
 
 
   # do the computations here as fit can be massive ... best not to copy, etc ..
   message( "\nComputing summaries (also very slow) ..." )
 
-
-  invlink = function(x) lnk_function( x,  inverse=TRUE )
-
-  summary_inv = function(x) inla.zmarginal( inla.tmarginal( invlink, x) , silent=TRUE  )
-
-  summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(pmax(y,1e-12)), x) , silent=TRUE  )
-  # summary_inv_prec_1024 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x, n=1024L) , silent=TRUE  )
-  # summary_inv_prec_512 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x, n=512L) , silent=TRUE  )
-
+  
   list_simplify = function(x) as.data.frame( t( as.data.frame( x )))
-
   exceedance_prob = function(x, threshold)  {1 - inla.pmarginal(q = threshold, x)}
-
   deceedance_prob = function(x, threshold)  { inla.pmarginal(q = threshold, x)}
 
-  truncate_upperbound = function( b, upper_limit, eps=1e-12 ) {
-    k = which( b[,1] > upper_limit )
-    if (length(k) > 0) b[k,2] = 0
-    return( b )
-  }
 
   tokeep =  c("mean", "sd", "quant0.025", "quant0.5", "quant0.975")
 
   # exceedance_threshold=1
   # deceedance_threshold=1
 
-  if (exists("deceedance_threshold", p)) deceedance_threshold=p[["deceedance_threshold"]]
-  if (exists("exceedance_threshold", p)) exceedance_threshold=p[["exceedance_threshold"]]
-
+  if (exists("deceedance_threshold", p)) deceedance_threshold = p[["deceedance_threshold"]]
+  if (exists("exceedance_threshold", p)) exceedance_threshold = p[["exceedance_threshold"]]
+ 
 
   if ( "summary" %in% toget) {
 
@@ -203,13 +219,23 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
 
       # parameters
       # back-transform from marginals
-      W = cbind ( t (sapply( fit$marginals.fixed, FUN=summary_inv ) ) )
 
-      O[["summary"]][["fixed_effects"]] = W [, tokeep, drop =FALSE]
+      if (exists( "marginals.fixed", fit)) {
+        summary_inv_fixed = function(x) inla.zmarginal( inla.tmarginal( invlink_fixed, x) , silent=TRUE  )
+        W = NULL
+        W = cbind ( t (sapply( fit$marginals.fixed, FUN=summary_inv_fixed ) ) )  # 
+        O[["summary"]][["fixed_effects"]] = W [, tokeep, drop =FALSE]
+        W = NULL
+      }
 
       # hyperpar (variance components)
       j = grep( "^Precision.*", rownames(fit$summary.hyperpar), value=TRUE )
       if (length(j) > 0) {
+
+        summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(pmax(y,1e-12)), x) , silent=TRUE  )
+        # summary_inv_prec_1024 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x, n=1024L) , silent=TRUE  )
+        # summary_inv_prec_512 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x, n=512L) , silent=TRUE  )
+
         precs = try( list_simplify( sapply( fit$marginals.hyperpar[j], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
         if (inherits(precs, "try-error")) precs = try( list_simplify( sapply( fit$marginals.hyperpar[j], FUN=summary_inv_prec_1024 ) ), silent=TRUE )
         if (inherits(precs, "try-error")) {
@@ -228,12 +254,14 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
           O[["summary"]][["random_effects"]] = precs[, tokeep, drop =FALSE]
         }
       }
+      precs = NULL
 
       j = grep( ".*Rho.*", rownames(fit$summary.hyperpar), value=TRUE )
       if (length(j) > 0) {
         rhos = list_simplify( sapply( fit$marginals.hyperpar[j], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) )
         #  rhos[,"mode"] = sapply( fit$marginals.hyperpar[j], FUN=function(x) inla.mmarginal( x ))
         O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], rhos[, tokeep, drop =FALSE] )
+        rhos = NULL
       }
 
       # update phi's
@@ -242,26 +270,32 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
         phis = fit$summary.hyperpar[j, ,drop=FALSE]
         colnames(phis) = c( tokeep, "mode")
         O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], phis[, tokeep, drop =FALSE] )
+        phis = NULL
       }
 
+    j = NULL
+    gc()
   }
 
   if ("random_other" %in% toget) {
-
+    summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
     if (exists("marginals.random", fit)) {
       raneff = names( fit$marginals.random )
-      raneff = setdiff( raneff, c(vnS, vnST) )
+      raneff = setdiff( raneff, c(vnS, vnST, vnI) )
       for (re in raneff) {
         g = fit$marginals.random[[re]]
-        O[["random"]] [[re]] = list_simplify ( sapply( g, summary_inv ) )  [, tokeep, drop =FALSE]
+        O[["random"]] [[re]] = list_simplify ( sapply( g, summary_inv_random ) )  [, tokeep, drop =FALSE]
         O[["random"]] [[re]]$ID = fit$summary.random[[re]]$ID
       }
+      g = raneff = NULL
     }
-
+    gc()
   }
+
 
   if ("random_spatial" %in% toget) {
     # space only
+    summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
 
     if (exists("marginals.random", fit)) {
 
@@ -285,9 +319,8 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
           iid = which(Z$type=="iid")
         }
 
-        g = fit$marginals.random[[vnS]]
-        # m = list_simplify ( sapply( g, inla.zmarginal, silent=TRUE ) )
-        m = list_simplify ( sapply( g, summary_inv ) )
+        # m = list_simplify ( sapply( fit$marginals.random[[vnS]], inla.zmarginal, silent=TRUE ) )
+        m = list_simplify ( sapply( fit$marginals.random[[vnS]], summary_inv_random ) )
 
         if (!is.null(iid)) {
           #  iid main effects
@@ -297,6 +330,8 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
             W[,k] = reformat_to_array( input = unlist(m[iid,k]), matchfrom = list( space=Z[["space"]][iid] ), matchto = list( space=O[[vnS]] ) )
           }
           O[["random"]] [[vnS]] [["iid"]] = W [, tokeep, drop =FALSE]
+          W = NULL
+          
         }
 
         if (!is.null(bym)) {
@@ -307,20 +342,27 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
             W[,k] = reformat_to_array(  input = unlist(m[bym,k]), matchfrom = list( space=Z[["space"]][bym]  ), matchto = list( space=O[[vnS]] ) )
           }
           O[["random"]] [[vnS]] [["bym"]] = W [, tokeep, drop =FALSE]
+          W = NULL
         }
+        m = NULL
 
         if (!is.null(iid)  & !is.null(bym) ) {
           # space == iid + bym combined:
           selection=list()
           selection[vnS] = 0  # 0 means everything matching space
           aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
-          g = sapply( aa, function(x) invlink(x$latent[iid] + x$latent[bym]) )
+          g = sapply( aa, function(x) invlink_random(x$latent[iid] + x$latent[bym]) )
+          aa = NULL
+
           mq = t( apply( g, 1, quantile, probs =c(0.025, 0.5, 0.975), na.rm =TRUE) )
           mm = apply( g, 1, mean, na.rm =TRUE)
           ms = apply( g, 1, sd, na.rm =TRUE)
           W = cbind(mm, ms, mq)
+          mq = mm = ms = NULL
+
           attr(W, "dimnames") = list( space=O[[vnS]], stat=tokeep  )
           O[["random"]] [[vnS]] [["combined"]] = W
+          W = NULL
         }
 
         if (!is.null(exceedance_threshold)) {
@@ -329,6 +371,7 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
           names(dimnames(W))[1] = vnS
           dimnames( W )[[vnS]] = O[[vnS]]
           O[["random"]] [[vnS]] [["exceedance"]] = W
+          W = m = NULL
         }
 
         if (!is.null(deceedance_threshold)) {
@@ -337,16 +380,20 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
           names(dimnames(W))[1] = vnS
           dimnames( W )[[vnS]] = O[[vnS]]
           O[["random"]] [[vnS]] [["deceedance"]] = W
+          W = m = NULL
         }
 
       }
     }
+    Z = g = NULL
+    gc()
 
   }
 
 
   if ("random_spatiotemporal"  %in% toget ) {
     # space-year
+    summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
 
     if (exists("marginals.random", fit)) {
 
@@ -375,7 +422,7 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
 
           g = fit$marginals.random[[vnST]]
           # m = list_simplify ( sapply( g, inla.zmarginal, silent=TRUE ) )
-          m = list_simplify ( sapply( g, summary_inv ) )
+          m = list_simplify ( sapply( g, summary_inv_random ) )
 
           if (!is.null(iid)) {
             #  spatiotemporal interaction effects  iid
@@ -386,6 +433,7 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
               W[,,k] = reformat_to_array(  input = unlist(m[iid,k]), matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  ) )
             }
             O[["random"]] [[vnST]] [["iid"]] = W [,, tokeep, drop =FALSE]
+            W = NULL
           }
 
           if (!is.null(bym)) {
@@ -398,19 +446,26 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
               W[,,k] = reformat_to_array(  input = unlist(m[bym,k]), matchfrom = list( space=Z[["space"]][bym],  time=Z[["time"]][bym]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  ) )
             }
             O[["random"]] [[vnST]] [["bym"]] = W [,, tokeep, drop =FALSE]
+            W = NULL
           }
+          m = g = NULL
 
           if (!is.null(iid)  & !is.null(bym) ) {
             # space == iid + bym combined:
             selection=list()
             selection[vnST] = 0  # 0 means everything matching space
             aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )
-            g = sapply( aa, function(x) invlink(x$latent[iid] + x$latent[bym]) )
+            g = sapply( aa, function(x) invlink_random(x$latent[iid] + x$latent[bym]) )
+            aa = NULL
+
             mq = t( apply( g, 1, quantile, probs =c(0.025, 0.5, 0.975), na.rm =TRUE) )
             mm = apply( g, 1, mean, na.rm =TRUE)
             ms = apply( g, 1, sd, na.rm =TRUE)
+
             m = data.frame( cbind(mm, ms, mq) )
             names(m) = tokeep
+            mm = ms = mq = NULL
+            
             W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
             names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
             names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
@@ -419,18 +474,22 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
               W[,,k] = reformat_to_array(  input = m[,k], matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  ) )
             }
             O[["random"]] [[vnST]] [["combined"]] = W [,, tokeep, drop =FALSE]
+            W = NULL
           }
+
 
           if (!is.null(exceedance_threshold)) {
             m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold) ) ) / nposteriors
             W = reformat_to_array(
               input = m, matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  )
             )
+            m = NULL
             names(dimnames(W))[1] = vnS
             names(dimnames(W))[2] = vnT
             dimnames( W )[[vnS]] = O[[vnS]]
             dimnames( W )[[vnT]] = O[[vnT]]
             O[["random"]] [[vnST]] [["exceedance"]] = W
+            W = NULL
           }
 
           if (!is.null(deceedance_threshold)) {
@@ -438,47 +497,61 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
             W = reformat_to_array(
               input = m, matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  )
             )
+            m = NULL
             names(dimnames(W))[1] = vnS
             names(dimnames(W))[2] = vnT
             dimnames( W )[[vnS]] = O[[vnS]]
             dimnames( W )[[vnT]] = O[[vnT]]
 
             O[["random"]] [[vnST]] [["deceedance"]] = W
+            W = NULL
           }
         }  # ned space-year
       }
     }
+    Z = g = NULL
+    gc()
   }
 
 
-
   if ("predictions"  %in% toget ) {
-      # adjusted by offset
+
+    summary_inv_predictions = function(x) inla.zmarginal( inla.tmarginal( invlink_predictions, x) , silent=TRUE  )
+    truncate_upperbound = function( b, upper_limit, eps=1e-12 ) {
+      k = which( b[,1] > upper_limit )
+      if (length(k) > 0) b[k,2] = 0
+      return( b )
+    }
+
+    # adjusted by offset
     if (exists("marginals.fitted.values", fit)) {
-
-
+      
       if (  "space"==p$aegis_dimensionality ) {
         ipred = which( M$tag=="predictions"  &  M[,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
-
         g = fit$marginals.fitted.values[ipred]  # g is already on user scale
+        if (exists("data_transformation", p)) {
+          for (i in 1:length(g)) g[,1] = p$data_transformation$backward(  g[,1] )
+        }
         if (!is.null(quantile_limit)) g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
-        m = list_simplify ( sapply( g, inla.zmarginal, silent=TRUE ) )  # already backtransformed by link=1
-
+        m = list_simplify ( sapply( g, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]),  length(names(m)) ),  dimnames=list( space=O[[vnS]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
 
         for (k in 1:length(names(m))) {
           W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=list( space=M[ ipred, vnS0] ), matchto=list( space=O[[vnS]] ))
         }
-        O[["predictions"]] = W[,, tokeep, drop =FALSE]
+        O[["predictions"]] = W[, tokeep, drop =FALSE]
+        W = m = NULL
       }
 
       if (  "space-year"==p$aegis_dimensionality ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]] & M[,vnT0] %in% O[[vnT]] )
         g = fit$marginals.fitted.values[ipred]  # g is already on user scale
+        if (exists("data_transformation", p)) {
+          for (i in 1:length(g)) g[,1] = p$data_transformation$backward(  g[,1] )
+        }
         if (!is.null(quantile_limit)) g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
-        m = list_simplify ( sapply( g, inla.zmarginal, silent=TRUE ) )  # already backtransformed by link=1
-
+        m = list_simplify ( sapply( g, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
@@ -487,15 +560,17 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
           W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=list( space=M[ipred,vnS0], time=M[ipred,vnT0] ), matchto= list( space=O[[vnS]], time=O[[vnT]] ))
         }
         O[["predictions"]] = W[,, tokeep, drop =FALSE]
-
+        W = m = NULL
       }
 
       if (  "space-year-season"==p$aegis_dimensionality ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]]  &  M[,vnT0] %in% O[[vnT]] &  M[,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         g = fit$marginals.fitted.values[ipred]  # g is already on user scale
+        if (exists("data_transformation", p)) {
+          for (i in 1:length(g)) g[,1] = p$data_transformation$backward(  g[,1] )
+        }
         if (!is.null(quantile_limit)) g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
-        m = list_simplify ( sapply( g, inla.zmarginal, silent=TRUE ) )  # already backtransformed by link=1
-
+        m = list_simplify ( sapply( g, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], season=O[[vnU]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
@@ -504,12 +579,9 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
         for (k in 1:length(names(m))) {
           W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=list( space=M[ipred, vnS0], time=M[ipred, vnT0], season=M[ipred, vnU0] ), matchto=list( space=O[[vnS]], time=O[[vnT]], season=O[[vnU]] ))
         }
-        O[["predictions"]] = W[,, tokeep, drop =FALSE]
+        O[["predictions"]] = W[,,, tokeep, drop =FALSE]
+        W = m = NULL
       }
-
-
-      if (exists("data_transformation", p) ) O[["predictions"]] = p$data_transformation$backward( O[["predictions"]] ) # make all positive
-
 
       if (!is.null(exceedance_threshold)) {
         m = list_simplify ( sapply( g, FUN=exceedance_prob, threshold=exceedance_threshold ) )
@@ -518,12 +590,12 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
           matchfrom = list( space=M[ipred,vnS], time=M[ipred,vnT]  ),
           matchto =   m_to
         )
-          names(dimnames(W))[1] = vnS
-          names(dimnames(W))[2] = vnT
-          dimnames( W )[[vnS]] = O[[vnS]]
-          dimnames( W )[[vnT]] = O[[vnT]]
-
-          O[["exceedance_probability"]] = W
+        names(dimnames(W))[1] = vnS
+        names(dimnames(W))[2] = vnT
+        dimnames( W )[[vnS]] = O[[vnS]]
+        dimnames( W )[[vnT]] = O[[vnT]]
+        O[["exceedance_probability"]] = W
+        W = m = NULL
       }
 
       if (!is.null(deceedance_threshold)) {
@@ -533,12 +605,12 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
           matchfrom = list( space=M[ipred,vnS], time=M[ipred,vnT] ),
           matchto =   m_to
         )
-          names(dimnames(W))[1] = vnS
-          names(dimnames(W))[2] = vnT
-          dimnames( W )[[vnS]] = O[[vnS]]
-          dimnames( W )[[vnT]] = O[[vnT]]
-
-          O[["deceedance_probability"]] = W
+        names(dimnames(W))[1] = vnS
+        names(dimnames(W))[2] = vnT
+        dimnames( W )[[vnS]] = O[[vnS]]
+        dimnames( W )[[vnT]] = O[[vnT]]
+        O[["deceedance_probability"]] = W
+        W = m = NULL
       }
 
       if ( length(O[[vnT]]) > 2 ) {
@@ -547,8 +619,9 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
           lmslope = function( x ) summary( lm(x~ti) )$coefficients["ti",1:2]
           W = t ( apply( O[["predictions"]][,,"mean"], 1, lmslope ) )  # relative rate per year
           names(dimnames(W))[1] = vnS
-            dimnames( W )[[vnS]] = O[[vnS]]
-              O[["time_slope"]] = W
+          dimnames( W )[[vnS]] = O[[vnS]]
+          O[["time_slope"]] = W
+          W = NULL
         }
       }
     }
@@ -558,7 +631,7 @@ carstm_model_inla = function(p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rda
   O[["M"]] = M
   O[["sppoly"]] = sppoly
 
-  save( O, file=fn_res, compress=file_compress_method )
+  save( O, file=fn_res, compression_level=compression_level )
 
   message( "carstm summary saved as: ", fn_res )
 
