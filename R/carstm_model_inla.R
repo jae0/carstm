@@ -83,8 +83,6 @@ carstm_model_inla = function(p, M,
 
   if (is.null(nposteriors))  nposteriors = ifelse( exists("nposteriors", p), p$nposteriors, 1000 )
 
-  vnY = p$variabletomodel
-  if (exists("data_transformation", p)) M[, vnY]  = p$data_transformation$forward( M[, vnY] ) # make all positive
 
   if (!exists("carstm_model_family", p )) p$carstm_model_family = "gaussian"
 
@@ -119,9 +117,19 @@ carstm_model_inla = function(p, M,
     }
   } 
   
+  # on user scale
+  ii = which(is.finite(M[ , vnY ]))
+  if (!is.null(quantile_limit)) upper_limit = quantile( M[ ii, vnY ], probs=quantile_limit )
+  mq = quantile( M[ ii, vnY ], probs=c(0.025, 0.5, 0.975) )
 
+  O[["data_range"]] = c( mean=mean(M[ ii, vnY ]), sd=sd(M[ ii, vnY ]), min=min(M[ ii, vnY ]), max=max(M[ ii, vnY ]),  
+      lb=mq[1], median=mq[2], ub=mq[3], quantile_limit=quantile_limit, upper_limit=upper_limit  )  # on data /user scale not internal link
+
+  # prefilter/transformation (e.g. translation to make all positive)
+  if (exists("data_transformation", p)) M[, vnY]  = p$data_transformation$forward( M[, vnY] ) 
 
   # get hyper param scalings
+  vnY = p$variabletomodel
   j = which( is.finite(M[,vnY]) )
   m = M[ j, vnY ]
 
@@ -129,14 +137,6 @@ carstm_model_inla = function(p, M,
   if (any( grepl( vnO, p$carstm_model_formula )))  {
     if (exists( vnO, M)) m = m / M[ j, vnO ]
   }
-
-
-  # on user scale
-  ii = which(is.finite(m))
-  if (!is.null(quantile_limit)) upper_limit = quantile( m[ii], probs=quantile_limit )
-  mq = quantile( m[ii], probs=c(0.025, 0.5, 0.975) )
-
-  O[["data_range"]] = c( mean=mean(m[ii]), sd=sd(m[ii]), min=min(m[ii]), max=max(m[ii]),  lb=mq[1], median=mq[2], ub=mq[3]  )  # on data /user scale not internal link
 
   # on link scale:
   ml = lnk_function( m ) # necessary in case of log(0)
@@ -147,6 +147,7 @@ carstm_model_inla = function(p, M,
 
   p = parameters_add_without_overwriting( p, options.control.family = inla.set.control.family.default() )
 
+  
   fit  = NULL
 
   if (!exists("options.control.inla", p )) p$options.control.inla = list(
@@ -515,30 +516,45 @@ carstm_model_inla = function(p, M,
 
 
   if ("predictions"  %in% toget ) {
-
-    summary_inv_predictions = function(x) inla.zmarginal( inla.tmarginal( invlink_predictions, x) , silent=TRUE  )
+    
+    invlink_predictions = function(x) lnk_function( x,  inverse=TRUE ) 
     truncate_upperbound = function( b, upper_limit, eps=1e-12 ) {
       k = which( b[,1] > upper_limit )
       if (length(k) > 0) b[k,2] = 0
       return( b )
     }
+    if (exists("data_transformation", p))  {
+      backtransform = function( b ) {
+        b[,1] =  p$data_transformation$backward( b[,1]   )
+        return( b )
+      }
+    } 
+
+  
+    summary_inv_predictions = function(x) inla.zmarginal( x, silent=TRUE  )
+    
+       
+
 
     # adjusted by offset
     if (exists("marginals.fitted.values", fit)) {
       
       if (  "space"==p$aegis_dimensionality ) {
         ipred = which( M$tag=="predictions"  &  M[,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
-        g = fit$marginals.fitted.values[ipred]  # g is already on user scale
-        if (exists("data_transformation", p)) {
-          for (i in 1:length(g)) g[,1] = p$data_transformation$backward(  g[,1] )
-        }
-        if (!is.null(quantile_limit)) g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
+        g = fit$marginals.fitted.values[ipred]   
+        g = lapply( g, invlink_predictions )
+        if (exists("data_transformation", p)) g = lapply( g, backtransform )
+        if  (!is.null(quantile_limit))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
+
         m = list_simplify ( sapply( g, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]),  length(names(m)) ),  dimnames=list( space=O[[vnS]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
+        
+        matchfrom = list( space=M[ ipred, vnS0] ) 
+        matchto = list( space=O[[vnS]] )
 
         for (k in 1:length(names(m))) {
-          W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=list( space=M[ ipred, vnS0] ), matchto=list( space=O[[vnS]] ))
+          W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=matchfrom, matchto=matchto )
         }
         O[["predictions"]] = W[, tokeep, drop =FALSE]
         W = m = NULL
@@ -546,18 +562,21 @@ carstm_model_inla = function(p, M,
 
       if (  "space-year"==p$aegis_dimensionality ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]] & M[,vnT0] %in% O[[vnT]] )
-        g = fit$marginals.fitted.values[ipred]  # g is already on user scale
-        if (exists("data_transformation", p)) {
-          for (i in 1:length(g)) g[,1] = p$data_transformation$backward(  g[,1] )
-        }
-        if (!is.null(quantile_limit)) g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
+        g = fit$marginals.fitted.values[ipred]   
+        g = lapply( g, invlink_predictions )
+        if (exists("data_transformation", p)) g = lapply( g, backtransform )
+        if  (!is.null(quantile_limit))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
+
         m = list_simplify ( sapply( g, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
+      
+        matchfrom = list( space=M[ipred,vnS0], time=M[ipred,vnT0] )
+        matchto = list( space=O[[vnS]], time=O[[vnT]] )
 
         for (k in 1:length(names(m))) {
-          W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=list( space=M[ipred,vnS0], time=M[ipred,vnT0] ), matchto= list( space=O[[vnS]], time=O[[vnT]] ))
+          W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=matchfrom, matchto=matchto)
         }
         O[["predictions"]] = W[,, tokeep, drop =FALSE]
         W = m = NULL
@@ -565,19 +584,22 @@ carstm_model_inla = function(p, M,
 
       if (  "space-year-season"==p$aegis_dimensionality ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]]  &  M[,vnT0] %in% O[[vnT]] &  M[,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
-        g = fit$marginals.fitted.values[ipred]  # g is already on user scale
-        if (exists("data_transformation", p)) {
-          for (i in 1:length(g)) g[,1] = p$data_transformation$backward(  g[,1] )
-        }
-        if (!is.null(quantile_limit)) g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
+        g = fit$marginals.fitted.values[ipred]   
+        g = lapply( g, invlink_predictions )
+        if (exists("data_transformation", p)) g = lapply( g, backtransform )
+        if  (!is.null(quantile_limit))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
+
         m = list_simplify ( sapply( g, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], season=O[[vnU]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
         names(dimnames(W))[3] = vnU  # need to do this in a separate step ..
 
+        matchfrom = list( space=M[ipred, vnS0], time=M[ipred, vnT0], season=M[ipred, vnU0] )
+        matchto = list( space=O[[vnS]], time=O[[vnT]], season=O[[vnU]] )
+
         for (k in 1:length(names(m))) {
-          W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=list( space=M[ipred, vnS0], time=M[ipred, vnT0], season=M[ipred, vnU0] ), matchto=list( space=O[[vnS]], time=O[[vnT]], season=O[[vnU]] ))
+          W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=matchfrom, matchto=matchto )
         }
         O[["predictions"]] = W[,,, tokeep, drop =FALSE]
         W = m = NULL
@@ -585,30 +607,36 @@ carstm_model_inla = function(p, M,
 
       if (!is.null(exceedance_threshold)) {
         m = list_simplify ( sapply( g, FUN=exceedance_prob, threshold=exceedance_threshold ) )
-        W = reformat_to_array(
-          input = unlist(m ),
-          matchfrom = list( space=M[ipred,vnS], time=M[ipred,vnT]  ),
-          matchto =   m_to
-        )
+        W = reformat_to_array(  input = unlist(m ), matchfrom = matchfrom, matchto = matchto )
         names(dimnames(W))[1] = vnS
-        names(dimnames(W))[2] = vnT
         dimnames( W )[[vnS]] = O[[vnS]]
-        dimnames( W )[[vnT]] = O[[vnT]]
+        if (!is.null(vnT)) {
+          names(dimnames(W))[2] = vnT
+          dimnames( W )[[vnT]] = O[[vnT]]
+        }
+        if (!is.null(vnU)) {
+          names(dimnames(W))[3] = vnU
+          dimnames( W )[[vnU]] = O[[vnU]]
+        }
+        
         O[["exceedance_probability"]] = W
         W = m = NULL
       }
 
       if (!is.null(deceedance_threshold)) {
         m = list_simplify ( sapply( g, FUN=deceedance_prob, threshold=deceedance_threshold ) )
-        W = reformat_to_array(
-          input = unlist(m ),
-          matchfrom = list( space=M[ipred,vnS], time=M[ipred,vnT] ),
-          matchto =   m_to
-        )
+        W = reformat_to_array(  input = unlist(m ), matchfrom = matchfrom, matchto = matchto )
         names(dimnames(W))[1] = vnS
-        names(dimnames(W))[2] = vnT
         dimnames( W )[[vnS]] = O[[vnS]]
-        dimnames( W )[[vnT]] = O[[vnT]]
+        if (!is.null(vnT)) {
+          names(dimnames(W))[2] = vnT
+          dimnames( W )[[vnT]] = O[[vnT]]
+        }
+        if (!is.null(vnU)) {
+          names(dimnames(W))[3] = vnU
+          dimnames( W )[[vnU]] = O[[vnU]]
+        }
+        
         O[["deceedance_probability"]] = W
         W = m = NULL
       }
