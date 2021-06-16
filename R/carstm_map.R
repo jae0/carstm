@@ -35,7 +35,7 @@
       xyz = st_transform(xyz, plot_crs )
       xyz$AUID = st_points_in_polygons( pts=xyz, polys=sppoly[, "AUID"], varname="AUID" )
 
-      if !is.null(vn_parent)) {
+      if (!is.null(vn_parent)) {
         toplot = xyz[[vn_parent]][[vn]]
       } else {
         toplot = xyz[[vn]]   
@@ -51,7 +51,7 @@
         if (is.null(sppoly)) sppoly = res$sppoly
 
         # first index is spatial strata
-        if !is.null(vn_parent)) {
+        if (!is.null(vn_parent)) {
           toplot = res[[vn_parent]][[vn]]
         } else {
           toplot = res[[vn]]   
