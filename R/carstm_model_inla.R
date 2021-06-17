@@ -42,6 +42,8 @@ carstm_model_inla = function(p, M,
 
   vnST = vnTS = NULL  # this is also used as a flag for random st effects extraction
 
+  vnY = p$variabletomodel
+
   vnI = ifelse( exists("vnI", p), p$vnI, "uid" )  # iid of observations
   if (!exists(vnI, M)) M[,vnI] = 1:nrow(M)
 
@@ -129,7 +131,6 @@ carstm_model_inla = function(p, M,
   if (exists("data_transformation", p)) M[, vnY]  = p$data_transformation$forward( M[, vnY] ) 
 
   # get hyper param scalings
-  vnY = p$variabletomodel
   j = which( is.finite(M[,vnY]) )
   m = M[ j, vnY ]
 
