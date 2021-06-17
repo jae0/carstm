@@ -642,15 +642,17 @@ carstm_model_inla = function(p, M,
         W = m = NULL
       }
 
-      if ( length(O[[vnT]]) > 2 ) {
-        if ( exists("predictions", O ) ) {
-          ti = as.numeric( O[[vnT]] )
-          lmslope = function( x ) summary( lm(x~ti) )$coefficients["ti",1:2]
-          W = t ( apply( O[["predictions"]][,,"mean"], 1, lmslope ) )  # relative rate per year
-          names(dimnames(W))[1] = vnS
-          dimnames( W )[[vnS]] = O[[vnS]]
-          O[["time_slope"]] = W
-          W = NULL
+      if (!is.null(vnT)) {
+        if ( length(O[[vnT]]) > 2 ) {
+          if ( exists("predictions", O ) ) {
+            ti = as.numeric( O[[vnT]] )
+            lmslope = function( x ) summary( lm(x~ti) )$coefficients["ti",1:2]
+            W = t ( apply( O[["predictions"]][,,"mean"], 1, lmslope ) )  # relative rate per year
+            names(dimnames(W))[1] = vnS
+            dimnames( W )[[vnS]] = O[[vnS]]
+            O[["time_slope"]] = W
+            W = NULL
+          }
         }
       }
     }
