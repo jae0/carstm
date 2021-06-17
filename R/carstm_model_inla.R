@@ -42,6 +42,7 @@ carstm_model_inla = function(p, M,
 
   vnST = vnTS = NULL  # this is also used as a flag for random st effects extraction
 
+  vnT = vnU = vnS = NULL 
   vnY = p$variabletomodel
 
   vnI = ifelse( exists("vnI", p), p$vnI, "uid" )  # iid of observations
