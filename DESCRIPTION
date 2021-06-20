@@ -3,7 +3,7 @@ Title: Conditional autoregressive spatiotemporal models with a focus upon fisher
 Version: 2021.1
 Authors@R: c( person("Jae", "Choi", email="choi.jae.seok@gmail.com", role=c("aut", "cre")) )
 Description: Spatio-temporal models using conditional autoregressive methods.
-Depends: R (>= 3.0.0),
+Depends: R (>= 3.0.0), data.table
 Imports: lubridate, rgeos, sf, sp, spdep, INLA, lattice, GADMTools, maps, mapdata, raster, fasterize
 Suggests: aegis
 NeedsCompilation: no
