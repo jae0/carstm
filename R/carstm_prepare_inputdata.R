@@ -30,6 +30,15 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     M = M[ which(!is.na(M$AUID)),]
     M$AUID = as.character( M$AUID )  # match each datum to an area
     M$tag = "observations"
+    if (!exists("data_offset", M)) {
+      if (exists("data_offset", sppoly)) {
+        message("data_offset not defined, using data_offset from sppoly")
+        M$data_offset = sppoly$data_offset[ match(  M$AUID,  sppoly$AUID ) ]
+      } else {
+        message("data_offset not defined, using data_offset=1")
+        M$data_offset = 1
+      }
+    } 
 
     # end observations
     # ----------
@@ -40,11 +49,12 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     region.id = slot( slot(sppoly, "nb"), "region.id" )
     APS = st_drop_geometry(sppoly)
 
+    vn = p$variabletomodel
     APS$AUID = as.character( APS$AUID )
     APS$tag ="predictions"
-    APS[,p$variabletomodel] = NA
-    vn = p$variabletomodel
-
+    APS[,vn] = NA
+    APS$au_sa_km2=NULL
+    APS$sa=NULL
 
     if ( "bathymetry" %in% lookup ) {
       require(aegis.bathymetry)
@@ -123,7 +133,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     # useful vars to have for analyses outside of carstm_summary
     for (vn in varstoretain) if (!exists( vn, APS)) APS[,vn] = NA
     APS$data_offset = APS_data_offset  # force to solve for unit area (1 km^2)
-
+ 
     M = rbind( M[, names(APS)], APS )
 
     APS = NULL; gc()
