@@ -8,7 +8,7 @@ carstm_model_inla = function(p, M,
   toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), 
   toinvert=c("fixed_effects", "random_effects", "predictions"), 
   exceedance_threshold=NULL, deceedance_threshold=NULL, nposteriors=NULL, 
-  improve.hyperparam.estimates=NULL, quantile_limit=NULL, ... ) {
+  improve.hyperparam.estimates=NULL, quantile_bounds=NULL, ... ) {
 
   # outputs
   O = list()
@@ -124,9 +124,9 @@ carstm_model_inla = function(p, M,
   # on user scale
   ii = which(is.finite(M[ , vnY ]))
   
-  if (exists("upper_limit")) {
-    if (!is.null(quantile_limit)) {
-      upper_limit = quantile( M[ ii, vnY ], probs=quantile_limit )
+  if (!exists("upper_limit")) {
+    if (!is.null(quantile_bounds)) {
+      upper_limit = quantile( M[ ii, vnY ], probs=max(quantile_bounds) )
     } 
   }
   
@@ -141,7 +141,7 @@ carstm_model_inla = function(p, M,
   mq = quantile( M[ ii, vnY ], probs=c(0.025, 0.5, 0.975) )
 
   O[["data_range"]] = c( mean=mean(M[ ii, vnY ]), sd=sd(M[ ii, vnY ]), min=min(M[ ii, vnY ]), max=max(M[ ii, vnY ]),  
-      lb=mq[1], median=mq[2], ub=mq[3], quantile_limit=quantile_limit, upper_limit=upper_limit  )  # on data /user scale not internal link
+      lb=mq[1], median=mq[2], ub=mq[3], quantile_bounds=quantile_bounds, upper_limit=upper_limit  )  # on data /user scale not internal link
 
   # prefilter/transformation (e.g. translation to make all positive)
   if (exists("data_transformation", p)) M[, vnY]  = p$data_transformation$forward( M[, vnY] ) 
@@ -566,7 +566,7 @@ carstm_model_inla = function(p, M,
           g = fit$marginals.fitted.values[ipred]   
           g = lapply( g, invlink_predictions )
           if (exists("data_transformation", p)) g = lapply( g, backtransform )
-          if  (!is.null(quantile_limit))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
+          if  (!is.null(quantile_bounds))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
 
           m = list_simplify ( sapply( g, summary_inv_predictions ) )
           W = array( NA, dim=c( length(O[[vnS]]),  length(names(m)) ),  dimnames=list( space=O[[vnS]], stat=names(m) ) )
@@ -587,7 +587,7 @@ carstm_model_inla = function(p, M,
           g = fit$marginals.fitted.values[ipred]   
           g = lapply( g, invlink_predictions )
           if (exists("data_transformation", p)) g = lapply( g, backtransform )
-          if  (!is.null(quantile_limit))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
+          if  (!is.null(quantile_bounds))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
 
           m = list_simplify ( sapply( g, summary_inv_predictions ) )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
@@ -609,7 +609,7 @@ carstm_model_inla = function(p, M,
           g = fit$marginals.fitted.values[ipred]   
           g = lapply( g, invlink_predictions )
           if (exists("data_transformation", p)) g = lapply( g, backtransform )
-          if  (!is.null(quantile_limit))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
+          if  (!is.null(quantile_bounds))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
 
           m = list_simplify ( sapply( g, summary_inv_predictions ) )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], season=O[[vnU]], stat=names(m) ) )
