@@ -1,5 +1,5 @@
 
-  carstm_model_glm = function( p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), fn_res=tempfile(pattern="res_", fileext=".Rdata"), compression_level=6 ) {
+  carstm_model_glm = function( p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), fn_res=tempfile(pattern="res_", fileext=".Rdata"), compression_level=6,   redo_fit=TRUE , ...  ) {
     
 
     # permit passing a function rather than data directly .. less RAM usage in parent call
@@ -10,14 +10,22 @@
 
     if (exists("data_transformation", p)) M[, vn]  = p$data_transformation$forward( M[, vn] ) # make all positive
 
-    fit = try( glm( p$carstm_model_formula , data=M, family=p$carstm_model_family ) )
+    fit = NULL
 
-    if (is.null(fit)) warning("model fit error")
-    if ("try-error" %in% class(fit) ) warning("model fit error")
+    if (redo_fit) {
 
-    message( "Saving carstm fit: ", fn_fit )
+      fit = try( glm( p$carstm_model_formula , data=M, family=p$carstm_model_family ) )
 
-    save( fit, file=fn_fit, compression_level=compression_level )
+      if (is.null(fit)) warning("model fit error")
+      if ("try-error" %in% class(fit) ) warning("model fit error")
+
+      message( "Saving carstm fit: ", fn_fit )
+
+      save( fit, file=fn_fit, compression_level=compression_level )
+
+    }
+
+    if (is.null(fit)) load( fn_fit )
 
     # do the computations here as fit can be massive ... best not to copy, etc ..
     message( "Computing summaries ..." )
