@@ -122,7 +122,21 @@ carstm_model_inla = function(p, M,
   
   # on user scale
   ii = which(is.finite(M[ , vnY ]))
-  if (!is.null(quantile_limit)) upper_limit = quantile( M[ ii, vnY ], probs=quantile_limit )
+  
+  if (exists("upper_limit")) {
+    if (!is.null(quantile_limit)) {
+      upper_limit = quantile( M[ ii, vnY ], probs=quantile_limit )
+    } 
+  }
+  
+  if (!exists("upper_limit")) {
+      upper_limit = max(M[ ii, vnY ]) 
+  }
+
+  oo = which( M[, vnY ] > upper_limit )
+  if (length(oo) > 0 ) M[oo, vnY] = upper_limit
+
+
   mq = quantile( M[ ii, vnY ], probs=c(0.025, 0.5, 0.975) )
 
   O[["data_range"]] = c( mean=mean(M[ ii, vnY ]), sd=sd(M[ ii, vnY ]), min=min(M[ ii, vnY ]), max=max(M[ ii, vnY ]),  
