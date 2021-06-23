@@ -32,12 +32,12 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
    
   if ( grepl("glm", p$carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
-    O = carstm_model_glm( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compression_level=compression_level, redo=redo, ... ) 
+    O = carstm_model_glm( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compression_level=compression_level, ... ) 
   }
 
   if ( grepl("gam", p$carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
-    O = carstm_model_gam( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compression_level=compression_level, redo=redo, ... ) 
+    O = carstm_model_gam( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compression_level=compression_level, ... ) 
   }
 
   if (grepl("bayesx", p$carstm_modelengine) ) {
@@ -46,7 +46,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
 
 
   if ( grepl("inla", p$carstm_modelengine) ) {
-    O = carstm_model_inla( p=p, M=M, fn_fit=fn_fit, fn_res=fn_res, compression_level=compression_level, redo=redo, ... ) 
+    O = carstm_model_inla( p=p, M=M, fn_fit=fn_fit, fn_res=fn_res, compression_level=compression_level, ... ) 
       #  print(O[["summary"]])
   }
    
