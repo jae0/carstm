@@ -687,6 +687,9 @@ carstm_model_inla = function(p, M,
       }
     }
   }
+  
+  fit = NULL
+  gc()
 
   # copy data in case needed for plotting ..
   O[["M"]] = M
