@@ -217,6 +217,10 @@ carstm_model_inla = function(p, M,
 
   if (is.null(fit)) load( fn_fit )
   
+  if (is.null(fit)) {
+    message( "fit file not found:", fn_fit )
+    stop()
+  }
 
   # do the computations here as fit can be massive ... best not to copy, etc ..
   message( "\nComputing summaries (also very slow) ..." )
@@ -262,7 +266,7 @@ carstm_model_inla = function(p, M,
         precs = try( list_simplify( sapply( fit$marginals.hyperpar[j], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
         if (inherits(precs, "try-error")) precs = try( list_simplify( sapply( fit$marginals.hyperpar[j], FUN=summary_inv_prec_1024 ) ), silent=TRUE )
         if (inherits(precs, "try-error")) {
-          message( "Try alt parameterization for prec -> sd or smaller number of n or masking negative values, using direct cionversion of summaries instead")
+          message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
           precs = fit$summary.hyperpar[j,1:5]
           precs[,c(1,3:5)] = 1/sqrt( precs[,c(1,3:5)] )
           rownames(precs) = gsub("Precision for", "SD", rownames(precs) )
@@ -281,10 +285,15 @@ carstm_model_inla = function(p, M,
 
       j = grep( ".*Rho.*", rownames(fit$summary.hyperpar), value=TRUE )
       if (length(j) > 0) {
-        rhos = list_simplify( sapply( fit$marginals.hyperpar[j], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) )
-        #  rhos[,"mode"] = sapply( fit$marginals.hyperpar[j], FUN=function(x) inla.mmarginal( x ))
-        O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], rhos[, tokeep, drop =FALSE] )
-        rhos = NULL
+        rhos = try( list_simplify( sapply( fit$marginals.hyperpar[j], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
+        if (inherits(precs, "try-error")) {
+          message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
+        } else {
+          #  rhos[,"mode"] = sapply( fit$marginals.hyperpar[j], FUN=function(x) inla.mmarginal( x ))
+          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], rhos[, tokeep, drop =FALSE] )
+          rhos = NULL
+
+        }
       }
 
       # update phi's
