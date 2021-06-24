@@ -1,6 +1,6 @@
 carstm_prepare_inputdata = function( p, M, sppoly,
     lookup = c("bathymetry", "substrate", "temperature", "speciescomposition"),
-    data_offset=NULL
+    APS_data_offset=NULL
 ) {
  
 
@@ -63,7 +63,12 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     APS$tag ="predictions"
 
     if (any( grepl("offset", as.character(p$carstm_model_formula)))) {
-      if (!is.null(APS_data_offset)) APS$data_offset =  APS_data_offset   
+      if (!is.null(APS_data_offset)) {
+        APS$data_offset =  APS_data_offset   
+      } else {
+        message( "APS_data_offset is required as there is an offset in the formula ... using 1 for now")
+        APS$data_offset = 1
+      }
       APS = APS[ , c( "AUID", "tag", "data_offset" ) ]
     } else {
       APS = APS[ , c( "AUID", "tag" ) ]

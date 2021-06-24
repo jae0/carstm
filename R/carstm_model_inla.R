@@ -125,6 +125,9 @@ carstm_model_inla = function(p, M,
   ii = which(is.finite(M[ , vnY ]))
   
   if (!exists("upper_limit")) {
+    if (is.null(quantile_bounds)) {
+      if (exists("quantile_bounds", p)) quantile_bounds=p$quantile_bounds
+    } 
     if (!is.null(quantile_bounds)) {
       upper_limit = quantile( M[ ii, vnY ], probs=max(quantile_bounds) )
     } 
@@ -570,7 +573,7 @@ carstm_model_inla = function(p, M,
     # adjusted by offset
     if (exists("marginals.fitted.values", fit)) {
       
-      if (  "space"==p$aegis_dimensionality ) {
+      if (  p$aegis_dimensionality == "space" ) {
         ipred = which( M$tag=="predictions"  &  M[,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         g = fit$marginals.fitted.values[ipred]   
         g = lapply( g, invlink_predictions )
@@ -591,7 +594,7 @@ carstm_model_inla = function(p, M,
         W = m = NULL
       }
 
-      if (  "space-year"==p$aegis_dimensionality ) {
+      if ( p$aegis_dimensionality == "space-year" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]] & M[,vnT0] %in% O[[vnT]] )
         g = fit$marginals.fitted.values[ipred]   
         g = lapply( g, invlink_predictions )
@@ -613,7 +616,9 @@ carstm_model_inla = function(p, M,
         W = m = NULL
       }
 
-      if (  "space-year-season"==p$aegis_dimensionality ) {
+browser()
+
+      if ( p$aegis_dimensionality == "space-year-season" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]]  &  M[,vnT0] %in% O[[vnT]] &  M[,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         g = fit$marginals.fitted.values[ipred]   
         g = lapply( g, invlink_predictions )
@@ -670,20 +675,6 @@ carstm_model_inla = function(p, M,
         
         O[["deceedance_probability"]] = W
         W = m = NULL
-      }
-
-      if (!is.null(vnT)) {
-        if ( length(O[[vnT]]) > 2 ) {
-          if ( exists("predictions", O ) ) {
-            ti = as.numeric( O[[vnT]] )
-            lmslope = function( x ) summary( lm(x~ti) )$coefficients["ti",1:2]
-            W = t ( apply( O[["predictions"]][,,"mean"], 1, lmslope ) )  # relative rate per year
-            names(dimnames(W))[1] = vnS
-            dimnames( W )[[vnS]] = O[[vnS]]
-            O[["time_slope"]] = W
-            W = NULL
-          }
-        }
       }
     }
   }
