@@ -24,8 +24,8 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
 
   if ( !exists("carstm_inputdata_model_source", p))  p$carstm_inputdata_model_source = list()
   p$carstm_inputdata_model_source = parameters_add_without_overwriting( p$carstm_inputdata_model_source,
-     bathymetry = "stmv",  # "stmv", "hybrid", "carstm"
-     substrate = "stmv",  # "stmv", "hybrid", "carstm"
+     bathymetry = "stmv",  # "stmv", "hybrid", "carstm" -- could use carstm but stmv does well with pure spatial processess
+     substrate = "stmv",  # "stmv", "hybrid", "carstm" -- could use carstm but stmv does well with pure spatial processess
      temperature = "carstm",  # "stmv", "hybrid", "carstm"
      speciescomposition = "carstm" # "stmv", "hybrid", "carstm"
   )

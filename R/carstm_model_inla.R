@@ -616,7 +616,6 @@ carstm_model_inla = function(p, M,
         W = m = NULL
       }
 
-browser()
 
       if ( p$aegis_dimensionality == "space-year-season" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]]  &  M[,vnT0] %in% O[[vnT]] &  M[,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
