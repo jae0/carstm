@@ -1,50 +1,153 @@
+
 carstm_prepare_inputdata = function( p, M, sppoly,
     lookup = c("bathymetry", "substrate", "temperature", "speciescomposition"),
     APS_data_offset=NULL
 ) {
  
+  setDT(M)
 
   M$tag = "observations"
-
-  if (grepl("space", p$aegis_dimensionality)) {
-
-    crs_lonlat = st_crs(projection_proj4string("lonlat_wgs84"))
  
-    # observations
-    M$AUID = st_points_in_polygons(
-      pts = st_as_sf( M, coords=c("lon","lat"), crs=crs_lonlat ),
-      polys = sppoly[, "AUID"],
-      varname = "AUID"
-    )
-    M = M[!is.na(M$AUID),]
-    M$AUID = as.character( M$AUID )  # match each datum to an area
+  crs_lonlat = st_crs(projection_proj4string("lonlat_wgs84"))
 
-    for (lu in lookup)  M = lookup_point_data( p=p, M=M, tolookup=lu )
+  # observations
+  M$AUID = st_points_in_polygons(
+    pts = st_as_sf( M, coords=c("lon","lat"), crs=crs_lonlat ),
+    polys = sppoly[, "AUID"],
+    varname = "AUID"
+  )
+  M = M[!is.na(M$AUID),]
+  M$AUID = as.character( M$AUID )  # match each datum to an area
 
-    M$plon = M$plat = M$lon = M$lat = NULL
+      
+  if ("bathymetry" %in% lookup) {
+    require(aegis.bathymetry)
 
-    if (any( grepl("offset", as.character(p$carstm_model_formula)))){
-      if (!exists("data_offset", M)) {
-        if (exists("data_offset", sppoly)) {
-          message("data_offset not defined, using data_offset from sppoly")
-          M$data_offset = sppoly$data_offset[ match(  M$AUID,  sppoly$AUID ) ]
-        }
+    pB = bathymetry_parameters( p=parameters_reset(p), project_class="carstm"  )
+    vnB = pB$variabletomodel
+    if ( !(exists(vnB, M ))) {
+      vnB2 = paste(vnB, "mean", sep=".")
+      if ((exists(vnB2, M ))) {
+        names(M)[which(names(M) == vnB2 )] = vnB
+      } else {
+        M[[vnB]] = NA
       }
     }
+    iM = which(!is.finite( M[[vnB]] ))
+    if (length(iM > 0)) {
+      M[iM, vnB] = aegis_lookup(  data_class="bathymetry", LOCS=M[ iM, c("lon", "lat")],  lookup_from="core", lookup_to="points" , lookup_from_class="aggregated_data" ) # core=="rawdata"
+
+    }
+
+    M = M[ is.finite(M[[vnB]] ) , ]
+
+    if ( exists("spatial_domain", p)) {
+        M = M[ geo_subset( spatial_domain=p$spatial_domain, Z=M ) , ] # need to be careful with extrapolation ...  filter depths
+    }
+
+    if ( p$carstm_inputdata_model_source$bathymetry %in% c("stmv", "hybrid") ) {
+      pBD = bathymetry_parameters(  spatial_domain=p$spatial_domain, project_class=p$carstm_inputdata_model_source$bathymetry )  # full default
+      LU = bathymetry_db( p=pBD, DS="baseline", varnames="all" )
+      LU_map = array_map( "xy->1", LU[,c("plon","plat")], gridparams=p$gridparams )
+      M_map  = array_map( "xy->1", M[, c("plon","plat")], gridparams=p$gridparams )
+      iML = match( M_map, LU_map )
+      vns = intersect(  c( "z", "dZ", "ddZ", "b.sdSpatial", "b.sdObs", "b.phi", "b.nu", "b.localrange" ), names(LU) )
+      for (vn in setdiff( vns, "z") ) M[[ vn]] = LU[ iML, vn ]
+      M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
+      LU = LU_map = M_map = iML = vns = NULL
+    }
+
   }
 
-  # in case it is purely spatial
-  if ( grepl( "year", p$aegis_dimensionality ) ) {
-    if (!exists("year", M)) {
-      if (exists("yr", M)) names(M)[which(names(M)=="yr") ] = "year"
-    }
-  }
 
-  if ( grepl( "season", p$aegis_dimensionality ) ) {
-    if (!exists("dyear", M)) {
-      if (exists("tiyr", M )) M$dyear = M$tiyr - M$year 
+    # --------------------------
+
+
+    if ("substrate" %in% lookup) {
+      require(aegis.substrate)
+      pS = substrate_parameters( p=parameters_reset(p), project_class="carstm"  )
+      if (!(exists(pS$variabletomodel, M ))) M[[pS$variabletomodel]] = NA
+      iM = which(!is.finite( M[[pS$variabletomodel]] ))
+      if (length(iM > 0)) {
+        M[[pS$variabletomodel]] [iM]  = aegis_lookup(  data_class="substrate", LOCS=M[iM, c("lon", "lat")], lookup_from="core", lookup_to="points" , lookup_from_class="aggregated_data" ) # core=="rawdata"
+      }
+      M = M[ is.finite(M[[pS$variabletomodel] ] ) , ]
     }
-  }
+
+
+    # --------------------------
+
+
+    if ("temperature" %in% lookup) {
+      require(aegis.temperature)
+      pT = temperature_parameters( p=parameters_reset(p), project_class="carstm", year.assessment=p$year.assessment  )
+      if (!(exists(pT$variabletomodel, M ))) M[[pT$variabletomodel]] = NA
+      iM = which(!is.finite( M[[pT$variabletomodel]] ))
+      if (length(iM > 0)) {
+        M[[pT$variabletomodel]] [iM] = aegis_lookup(  data_class="temperature", LOCS=M[ iM, c("lon", "lat", "timestamp")],lookup_from="core", lookup_to="points", lookup_from_class="aggregated_data", tz="America/Halifax",
+            year.assessment=p$year.assessment
+          )
+      }
+      M = M[ is.finite(M[[ pT$variabletomodel]]  ) , ]
+      M = M[ which( M[[ pT$variabletomodel]]  < 14 ) , ]  #
+    }
+
+
+    # --------------------------
+
+
+    if ("speciescomposition" %in% lookup) {
+      require(aegis.temperature)
+
+      pPC1 = speciescomposition_parameters( p=parameters_reset(p), project_class="carstm", variabletomodel="pca1" , year.assessment=p$year.assessment)
+      if (!(exists(pPC1$variabletomodel, M ))) M[[pPC1$variabletomodel]] = NA
+      iM = which(!is.finite( M[[pPC1$variabletomodel]] ))
+      if (length(iM > 0)) {
+        M[[pPC1$variabletomodel]][iM] = aegis_lookup(  data_class="speciescomposition", LOCS=M[ iM, c("lon", "lat", "timestamp")],lookup_from="core", lookup_to="points", lookup_from_class="aggregated_data", tz="America/Halifax" ,
+            year.assessment=p$year.assessment ,
+            vnames=pPC1$variabletomodel
+          )
+
+      }
+      M = M[ which(is.finite(M[[pPC1$variabletomodel]] )), ]
+
+      pPC2 = speciescomposition_parameters( p=parameters_reset(p), project_class="carstm", variabletomodel="pca2", year.assessment=p$year.assessment )
+      if (!(exists(pPC2$variabletomodel, M ))) M[,pPC2$variabletomodel] = NA
+      iM = which(!is.finite( M[[pPC2$variabletomodel]] ))
+      if (length(iM > 0)) {
+         M[[pPC2$variabletomodel]][iM]  = aegis_lookup(  data_class="speciescomposition", LOCS=M[ iM, c("lon", "lat", "timestamp")], lookup_from="core", lookup_to="points", lookup_from_class="aggregated_data", tz="America/Halifax" ,
+            year.assessment=p$year.assessment,
+            vnames=pPC2$variabletomodel
+          )
+
+      }
+      M = M[ which(is.finite(M[[pPC2$variabletomodel]] )),]
+
+
+      M$plon = M$plat = M$lon = M$lat = NULL
+
+      if (any( grepl("offset", as.character(p$carstm_model_formula)))){
+          if (!exists("data_offset", M)) {
+            if (exists("data_offset", sppoly)) {
+              message("data_offset not defined, using data_offset from sppoly")
+              M$data_offset = sppoly$data_offset[ match(  M$AUID,  sppoly$AUID ) ]
+            }
+          }
+        }
+      }
+      
+
+    if ( grepl( "year", p$aegis_dimensionality ) ) {
+      if (!exists("year", M)) {
+        if (exists("yr", M)) names(M)[which(names(M)=="yr") ] = "year"
+      }
+    }
+
+    if ( grepl( "season", p$aegis_dimensionality ) ) {
+      if (!exists("dyear", M)) {
+        if (exists("tiyr", M )) M$dyear = M$tiyr - M$year 
+      }
+    }
 
 
   # end observations
@@ -52,12 +155,13 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
 
   # ----------
-  # predicted locations (APS)
+  # generate prediction surface locations (APS)
 
   if (grepl("space", p$aegis_dimensionality)) {
 
     region.id = slot( slot(sppoly, "nb"), "region.id" )
     APS = st_drop_geometry(sppoly)
+    setDT(APS)
 
     APS$AUID = as.character( APS$AUID )
     APS$tag ="predictions"
@@ -80,7 +184,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
   if ( "bathymetry" %in% lookup ) {
     require(aegis.bathymetry)
     pB = bathymetry_parameters( p=parameters_reset(p), project_class="carstm"  )
-    APS[, pB$variabletomodel] = bathymetry_lookup(  LOCS=sppoly,
+    APS[[pB$variabletomodel]] = aegis_lookup( data_class="bathymetry", LOCS=sppoly,
       lookup_from = p$carstm_inputdata_model_source$bathymetry,
       lookup_to = "areal_units",
       vnames=pB$variabletomodel
@@ -90,34 +194,23 @@ carstm_prepare_inputdata = function( p, M, sppoly,
   if ( "substrate" %in% lookup ) {
     require(aegis.substrate)
     pS = substrate_parameters( p=parameters_reset(p), project_class="carstm"  )
-    APS[, pS$variabletomodel] = substrate_lookup(  LOCS=sppoly,
+    APS[[pS$variabletomodel]] = aegis_lookup( data_class="substrate", LOCS=sppoly,
       lookup_from = p$carstm_inputdata_model_source$substrate,
       lookup_to = "areal_units",
       vnames=pS$variabletomodel
     )
   }
 
-
   # prediction surface in time
-  # to this point APS is static, now add time dynamics (teperature)
-
-  # in case it is purely spatial
+  # to this point APS is static, now add time dynamics (teperature),  expand APS to all time slices
   if ( grepl( "year", p$aegis_dimensionality ) | (grepl( "season", p$aegis_dimensionality )  ) ) {
-    # expand APS to all time slices
     n_aps = nrow(APS)
     APS = cbind( APS[ rep.int(1:n_aps, p$nt), ], rep.int( p$prediction_ts, rep(n_aps, p$nt )) )
-    names(APS)[grep("rep.int", names(APS))] = "tiyr"
-
+    names(APS)[ncol(APS)] = "tiyr"
     APS$timestamp = lubridate::date_decimal( APS$tiyr, tz=p$timezone )
-
-    if ( grepl( "year", p$aegis_dimensionality ) ) {
-      APS$year = aegis_floor( APS$tiyr)
-    }
-    if ( grepl( "season", p$aegis_dimensionality ) ) {
-      APS$dyear = APS$tiyr - APS$year
-    }
+    if ( grepl( "year", p$aegis_dimensionality ) )  APS$year = aegis_floor( APS$tiyr)
+    if ( grepl( "season", p$aegis_dimensionality ) )  APS$dyear = APS$tiyr - APS$year
   }
-
   vn  = names(APS) #update
 
 
@@ -125,10 +218,9 @@ carstm_prepare_inputdata = function( p, M, sppoly,
   if ( "temperature" %in% lookup ) {
     require("aegis.temperature")
     pT = temperature_parameters( p=parameters_reset(p), project_class="carstm", year.assessment=p$year.assessment  )
-    APS[, pT$variabletomodel] = temperature_lookup(  LOCS=APS[ , c("AUID", "timestamp")], AU_target=sppoly,
+    APS[[ pT$variabletomodel ]] = aegis_lookup( data_class="temperature", LOCS=APS[ , c("AUID", "timestamp")], AU_target=sppoly,
       lookup_from = p$carstm_inputdata_model_source$temperature,
       lookup_to = "areal_units",
-      vnames_from= paste( pT$variabletomodel, "predicted", sep="."),
       vnames=pT$variabletomodel ,
       year.assessment=p$year.assessment
     )
@@ -137,23 +229,19 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
   if ( "speciescomposition" %in% lookup ) {
     require("aegis.speciescomposition")
-
     pPC1 = speciescomposition_parameters( p=parameters_reset(p), project_class="carstm", variabletomodel="pca1" , year.assessment=p$year.assessment)
-
-    APS[, pPC1$variabletomodel] = speciescomposition_lookup(  LOCS=APS[ , c("AUID", "timestamp")], AU_target=sppoly,
+    APS[[ pPC1$variabletomodel ]] = aegis_lookup( data_class="speciescomposition", LOCS=APS[ , c("AUID", "timestamp")], AU_target=sppoly, 
       lookup_from = p$carstm_inputdata_model_source$speciescomposition,
       lookup_to = "areal_units",
-      vnames_from= paste( pPC1$variabletomodel, "predicted", sep="."),
       vnames=pPC1$variabletomodel ,
       year.assessment=p$year.assessment
     )
 
 
     pPC2 = speciescomposition_parameters( p=parameters_reset(p), project_class="carstm", variabletomodel="pca2", year.assessment=p$year.assessment )
-    APS[, pPC2$variabletomodel] = speciescomposition_lookup(  LOCS=APS[ , c("AUID", "timestamp")], AU_target=sppoly,
+    APS[[ pPC2$variabletomodel ]] = aegis_lookup( data_class="speciescomposition", LOCS=APS[ , c("AUID", "timestamp")], AU_target=sppoly,
       lookup_from = p$carstm_inputdata_model_source$speciescomposition,
       lookup_to = "areal_units",
-      vnames_from= paste( pPC2$variabletomodel, "predicted", sep="."),
       vnames=pPC2$variabletomodel,
       year.assessment=p$year.assessment
     )
@@ -161,7 +249,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
   APS$timestamp = NULL  # time-based matching finished
 
-  M = rbind( M[, names(APS)], APS )
+  M = rbind( M[, names(APS), with=FALSE ], APS )
 
   APS = NULL; gc()
 
