@@ -62,29 +62,34 @@ carstm_model_inla = function(p, M,
     M[,vnS] = match( M[,vnS0], O[[vnS]] )  # overwrite with numeric values that must match index of neighbourhood matrix
   }
 
-  if (grepl("year", p$aegis_dimensionality)) {
+  if ( grepl("year", p$aegis_dimensionality) | grepl("season", p$aegis_dimensionality) ) {
+
     vnT = ifelse( exists("vnT", p), p$vnT, "time" )
     vnT0 = ifelse( exists("vnT0", p), p$vnT0, "time0" )
 
-    O[[vnT]] = as.character( p$yrs )
-    M[,vnT0] = as.character( M[,vnT] ) # copy
-    M[,vnT] = match( M[,vnT0], O[[vnT]] )
-
-      # internal vars, for inla
+    if (any( grepl( vnT, p$carstm_model_formula )))  {
+      O[[vnT]] = as.character( p$yrs )
+      M[,vnT0] = as.character( M[,vnT] ) # a copy for internal matching 
+      M[,vnT] = match( M[,vnT0], O[[vnT]] ) # convert to numeric (ie. a numeric factor)
+    }
+    # internal vars, for inla
     vnST = ifelse( exists("vnST", p), p$vnST, "space_time" )
+    if (any( grepl( vnST, p$carstm_model_formula )))  M[,vnST] = M[,vnS]
+
     vnTS = ifelse( exists("vnTS", p), p$vnTS, "time_space" )
-    M[,vnST] = M[,vnS]
-    M[,vnTS] = M[,vnT]
-  }
+    if (any( grepl( vnST, p$carstm_model_formula )))  M[,vnTS] = M[,vnT]
 
-  if (grepl("season", p$aegis_dimensionality)) {
-    vnU = ifelse( exists("vnU", p), p$vnU, "season" )  # sub-annual time
+    # sub-annual time
+    vnU = ifelse( exists("vnU", p), p$vnU, "season" )  
     vnU0 = ifelse( exists("vnU0", p), p$vnU0, "season0" )
+    if (any( grepl( vnO, p$carstm_model_formula )))  {
+      O[[vnU]] = as.character( p$dyears + diff(p$dyears)[1]/2)
+      M[,vnU0] = as.character( M[,vnU] )  # a copy for internal matching 
+      M[,vnU] = match( M[,vnU0], O[[vnU]] )  # convert to numeric (ie. a numeric factor)
+    }
 
-    O[[vnU]] = as.character( p$dyears + diff(p$dyears)[1]/2)
-    M[,vnU0] = as.character( M[,vnU] )
-    M[,vnU] = match( M[,vnU0], O[[vnU]] )
   }
+
 
 
   if (is.null(nposteriors))  nposteriors = ifelse( exists("nposteriors", p), p$nposteriors, 1000 )
