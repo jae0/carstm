@@ -18,6 +18,8 @@ carstm_model_inla = function(p, M,
   # permit passing a function rather than data directly .. less RAM usage in parent call
   if (class(M)=="character") assign("M", eval(parse(text=M) ) )
 
+  setDF(M)
+
   if (0) {
       # usual variable names used in aegis .. char / num
       p$vnS = "space"  # "space"
