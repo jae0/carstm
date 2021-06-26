@@ -50,6 +50,8 @@ carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
     n.season = length(p$discretization[["dyear"]]) - 1   # used by seasonal error in inla ... not really useful
   )
 
+  message ( p$project_name, " areal_units_resolution_km: ", p$areal_units_resolution_km)
+
   return(p)
 
 }

@@ -141,9 +141,8 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       if (!exists("year", M)) {
         if (exists("yr", M)) names(M)[which(names(M)=="yr") ] = "year"
       }
-    }
-
-    if ( grepl( "season", p$aegis_dimensionality ) ) {
+      # though dyear is required for seasonal models, it can also be used in annual as well 
+      # that is, if not predicting the full seasonal array but only A GIVEN time slice 
       if (!exists("dyear", M)) {
         if (exists("tiyr", M )) M$dyear = M$tiyr - M$year 
       }
@@ -208,8 +207,8 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     APS = cbind( APS[ rep.int(1:n_aps, p$nt), ], rep.int( p$prediction_ts, rep(n_aps, p$nt )) )
     names(APS)[ncol(APS)] = "tiyr"
     APS$timestamp = lubridate::date_decimal( APS$tiyr, tz=p$timezone )
-    if ( grepl( "year", p$aegis_dimensionality ) )  APS$year = aegis_floor( APS$tiyr)
-    if ( grepl( "season", p$aegis_dimensionality ) )  APS$dyear = APS$tiyr - APS$year
+    APS$year = aegis_floor( APS$tiyr)
+    APS$dyear = APS$tiyr - APS$year
   }
   vn  = names(APS) #update
 
@@ -257,14 +256,16 @@ carstm_prepare_inputdata = function( p, M, sppoly,
   M$AUID  = as.character(M$AUID)  # revert to factors -- should always be a character
   M$space = as.character( M$AUID)
 
-  if (exists("tiyr", M)) M$tiyr  = aegis_floor( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
-  if (exists("tiyr", M)) M$yr = aegis_floor( M$tiyr)
+  if (exists("tiyr", M)) {
+    M$tiyr  = aegis_floor( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
+    M$yr = aegis_floor( M$tiyr)
+    M$time = as.character( M$yr )  # copy for INLA
+    M$yr_factor = factor(M$yr)
   
-  if (exists("yr", M))  M$time = as.character( M$yr )  # copy for INLA
-  if (exists("yr", M))  M$yr_factor = factor(M$yr)
-  
-  if (exists("dyear", M)) M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
-  if (exists("dyri", M))  M$season = as.character( M$dyri )  # copy for INLA
-   
+    # do not sepraate out as season can be used even if not predicted upon
+    M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
+    M$season = as.character( M$dyri )  # copy for INLA
+  }
+
   return(M)
 }
