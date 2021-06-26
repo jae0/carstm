@@ -255,7 +255,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
   M$uid = 1:nrow(M)  # seems to require an iid model for each obs for stability .. use this for iid
   M$AUID  = as.character(M$AUID)  # revert to factors -- should always be a character
   M$space = as.character( M$AUID)
-
+ 
   if (exists("tiyr", M)) {
     M$tiyr  = aegis_floor( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
     M$yr = aegis_floor( M$tiyr)
@@ -263,7 +263,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     M$yr_factor = factor(M$yr)
   
     # do not sepraate out as season can be used even if not predicted upon
-    M$dyri = discretize_data( M[, "dyear"], p$discretization[["dyear"]] )
+    M$dyri = discretize_data( M[["dyear"]], p$discretization[["dyear"]] )
     M$season = as.character( M$dyri )  # copy for INLA
   }
 

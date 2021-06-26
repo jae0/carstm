@@ -82,7 +82,7 @@ carstm_model_inla = function(p, M,
     # sub-annual time
     vnU = ifelse( exists("vnU", p), p$vnU, "season" )  
     vnU0 = ifelse( exists("vnU0", p), p$vnU0, "season0" )
-    if (any( grepl( vnO, p$carstm_model_formula )))  {
+    if (any( grepl( vnU, p$carstm_model_formula )))  {
       O[[vnU]] = as.character( p$dyears + diff(p$dyears)[1]/2)
       M[,vnU0] = as.character( M[,vnU] )  # a copy for internal matching 
       M[,vnU] = match( M[,vnU0], O[[vnU]] )  # convert to numeric (ie. a numeric factor)
