@@ -36,13 +36,13 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     iM = which(!is.finite( M[[vnB]] ))
     if (length(iM > 0)) {
       M[iM, vnB] = aegis_lookup(  data_class="bathymetry", LOCS=M[ iM, c("lon", "lat")],  lookup_from="core", lookup_to="points" , lookup_from_class="aggregated_data" ) # core=="rawdata"
-
     }
 
     M = M[ is.finite(M[[vnB]] ) , ]
-
+ 
     if ( exists("spatial_domain", p)) {
-        M = M[ geo_subset( spatial_domain=p$spatial_domain, Z=M ) , ] # need to be careful with extrapolation ...  filter depths
+        ii = geo_subset( spatial_domain=p$spatial_domain, Z=M )
+        if (length(ii)> 0 ) M = M[ ii , ] # need to be careful with extrapolation ...  filter depths
     }
 
     if ( p$carstm_inputdata_model_source$bathymetry %in% c("stmv", "hybrid") ) {

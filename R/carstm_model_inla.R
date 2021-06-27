@@ -51,6 +51,7 @@ carstm_model_inla = function(p, M,
   vnI = ifelse( exists("vnI", p), p$vnI, "uid" )  # iid of observations
   if (!exists(vnI, M)) M[,vnI] = 1:nrow(M)
 
+  # converte space and time to numeric codes for INLA
   if (grepl("space", p$aegis_dimensionality)) {
     # labels
     vnS = ifelse( exists("vnS", p), p$vnS, "space" )
