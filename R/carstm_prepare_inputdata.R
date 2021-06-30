@@ -263,7 +263,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     )
     imd = which(!is.finite( APS[[pPC1$variabletomodel]]  )) 
     if (length(imd) > 0 ) {
-      APS[[pPC1$variabletomodel]][imd] = aegis_lookup( data_class="speciescomposition", LOCS=APS[ imd, c("AUID", "timestamp")]AU_target=sppoly, 
+      APS[[pPC1$variabletomodel]][imd] = aegis_lookup( data_class="speciescomposition", LOCS=APS[ imd, c("AUID", "timestamp")],AU_target=sppoly, 
         lookup_from = setdiff( c("stmv", "carstm"), p$carstm_inputdata_model_source$speciescomposition),
         lookup_to = "areal_units",
         variable_name=pPC1$variabletomodel ,
@@ -280,7 +280,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     )
     imd = which(!is.finite( APS[[pPC2$variabletomodel]]  )) 
     if (length(imd) > 0 ) {
-      APS[[pPC2$variabletomodel]][imd] = aegis_lookup( data_class="speciescomposition", LOCS=APS[ imd, c("AUID", "timestamp")]AU_target=sppoly, 
+      APS[[pPC2$variabletomodel]][imd] = aegis_lookup( data_class="speciescomposition", LOCS=APS[ imd, c("AUID", "timestamp")],AU_target=sppoly, 
         lookup_from = setdiff( c("stmv", "carstm"), p$carstm_inputdata_model_source$speciescomposition),
         lookup_to = "areal_units",
         variable_name=pPC2$variabletomodel ,
