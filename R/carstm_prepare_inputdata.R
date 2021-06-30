@@ -35,7 +35,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     }
     iM = which(!is.finite( M[[vnB]] ))
     if (length(iM > 0)) {
-      M[iM, vnB] = aegis_lookup(  data_class="bathymetry", LOCS=M[ iM, c("lon", "lat")],  lookup_from="core", lookup_to="points" , lookup_from_class="aggregated_data" ) # core=="rawdata"
+      M[[vnB]][iM] = aegis_lookup(  data_class="bathymetry", LOCS=M[ iM, c("lon", "lat")],  lookup_from="core", lookup_to="points" , lookup_from_class="aggregated_data", variable_name="z.mean" ) # core=="rawdata"
     }
 
     M = M[ is.finite(M[[vnB]] ) , ]
@@ -69,7 +69,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       if (!(exists(pS$variabletomodel, M ))) M[[pS$variabletomodel]] = NA
       iM = which(!is.finite( M[[pS$variabletomodel]] ))
       if (length(iM > 0)) {
-        M[[pS$variabletomodel]] [iM]  = aegis_lookup(  data_class="substrate", LOCS=M[iM, c("lon", "lat")], lookup_from="core", lookup_to="points" , lookup_from_class="aggregated_data" ) # core=="rawdata"
+        M[[pS$variabletomodel]] [iM]  = aegis_lookup(  data_class="substrate", LOCS=M[iM, c("lon", "lat")], lookup_from="core", lookup_to="points" , lookup_from_class="aggregated_data", variable_name="substrate.grainsize.mean" ) # core=="rawdata"
       }
       M = M[ is.finite(M[[pS$variabletomodel] ] ) , ]
     }
@@ -84,7 +84,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       if (!(exists(pT$variabletomodel, M ))) M[[pT$variabletomodel]] = NA
       iM = which(!is.finite( M[[pT$variabletomodel]] ))
       if (length(iM > 0)) {
-        M[[pT$variabletomodel]] [iM] = aegis_lookup(  data_class="temperature", LOCS=M[ iM, c("lon", "lat", "timestamp")],lookup_from="core", lookup_to="points", lookup_from_class="aggregated_data", tz="America/Halifax",
+        M[[pT$variabletomodel]] [iM] = aegis_lookup(  data_class="temperature", LOCS=M[ iM, c("lon", "lat", "timestamp")],lookup_from="core", lookup_to="points", lookup_from_class="aggregated_data", variable_name="t.mean", tz="America/Halifax",
             year.assessment=p$year.assessment
           )
       }
@@ -103,9 +103,9 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       if (!(exists(pPC1$variabletomodel, M ))) M[[pPC1$variabletomodel]] = NA
       iM = which(!is.finite( M[[pPC1$variabletomodel]] ))
       if (length(iM > 0)) {
-        M[[pPC1$variabletomodel]][iM] = aegis_lookup(  data_class="speciescomposition", LOCS=M[ iM, c("lon", "lat", "timestamp")],lookup_from="core", lookup_to="points", lookup_from_class="aggregated_data", tz="America/Halifax" ,
+        M[[pPC1$variabletomodel]][iM] = aegis_lookup(  data_class="speciescomposition", LOCS=M[ iM, c("lon", "lat", "timestamp")],lookup_from="core", lookup_to="points", lookup_from_class="aggregated_data", variable_name="pc1.mean", tz="America/Halifax" ,
             year.assessment=p$year.assessment ,
-            vnames=pPC1$variabletomodel
+            variable_name=pPC1$variabletomodel
           )
 
       }
@@ -115,9 +115,9 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       if (!(exists(pPC2$variabletomodel, M ))) M[,pPC2$variabletomodel] = NA
       iM = which(!is.finite( M[[pPC2$variabletomodel]] ))
       if (length(iM > 0)) {
-         M[[pPC2$variabletomodel]][iM]  = aegis_lookup(  data_class="speciescomposition", LOCS=M[ iM, c("lon", "lat", "timestamp")], lookup_from="core", lookup_to="points", lookup_from_class="aggregated_data", tz="America/Halifax" ,
+         M[[pPC2$variabletomodel]][iM]  = aegis_lookup(  data_class="speciescomposition", LOCS=M[ iM, c("lon", "lat", "timestamp")], lookup_from="core", lookup_to="points", lookup_from_class="aggregated_data", variable_name="pc2.mean", tz="America/Halifax" ,
             year.assessment=p$year.assessment,
-            vnames=pPC2$variabletomodel
+            variable_name=pPC2$variabletomodel
           )
 
       }
@@ -186,8 +186,16 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     APS[[pB$variabletomodel]] = aegis_lookup( data_class="bathymetry", LOCS=sppoly,
       lookup_from = p$carstm_inputdata_model_source$bathymetry,
       lookup_to = "areal_units",
-      vnames=pB$variabletomodel
+      variable_name=pB$variabletomodel
     )
+    imd = which(!is.finite( APS[[pB$variabletomodel]]  )) 
+    if (length(imd) > 0 ) {
+      APS[[pB$variabletomodel]][imd] = aegis_lookup( data_class="bathymetry", LOCS=sppoly[imd,],
+        lookup_from = setdiff( c("stmv", "carstm"), p$carstm_inputdata_model_source$bathymetry),
+        lookup_to = "areal_units",
+        variable_name=pB$variabletomodel
+      )
+    }
   }
 
   if ( "substrate" %in% lookup ) {
@@ -196,8 +204,16 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     APS[[pS$variabletomodel]] = aegis_lookup( data_class="substrate", LOCS=sppoly,
       lookup_from = p$carstm_inputdata_model_source$substrate,
       lookup_to = "areal_units",
-      vnames=pS$variabletomodel
+      variable_name=pS$variabletomodel
     )
+    imd = which(!is.finite( APS[[pS$variabletomodel]]  )) 
+    if (length(imd) > 0 ) {
+      APS[[pS$variabletomodel]][imd] = aegis_lookup( data_class="substrate", LOCS=sppoly[,imd],
+        lookup_from = setdiff( c("stmv", "carstm"), p$carstm_inputdata_model_source$substrate),
+        lookup_to = "areal_units",
+        variable_name=pS$variabletomodel
+      )
+    }
   }
 
   # prediction surface in time
@@ -220,9 +236,19 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     APS[[ pT$variabletomodel ]] = aegis_lookup( data_class="temperature", LOCS=APS[ , c("AUID", "timestamp")], AU_target=sppoly,
       lookup_from = p$carstm_inputdata_model_source$temperature,
       lookup_to = "areal_units",
-      vnames=pT$variabletomodel ,
+      variable_name=pT$variabletomodel,
       year.assessment=p$year.assessment
     )
+    imd = which(!is.finite( APS[[pT$variabletomodel]]  )) 
+    if (length(imd) > 0 ) {
+      APS[[pT$variabletomodel]][imd] = aegis_lookup( data_class="temperature",LOCS=APS[ imd, c("AUID", "timestamp")], AU_target=sppoly,
+        lookup_from = setdiff( c("stmv", "carstm"), p$carstm_inputdata_model_source$temperature) ,
+        lookup_to = "areal_units",
+        variable_name=pT$variabletomodel,
+        year.assessment=p$year.assessment
+      )
+    }
+
   }
 
 
@@ -232,21 +258,38 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     APS[[ pPC1$variabletomodel ]] = aegis_lookup( data_class="speciescomposition", LOCS=APS[ , c("AUID", "timestamp")], AU_target=sppoly, 
       lookup_from = p$carstm_inputdata_model_source$speciescomposition,
       lookup_to = "areal_units",
-      vnames=pPC1$variabletomodel ,
+      variable_name=pPC1$variabletomodel ,
       year.assessment=p$year.assessment
     )
-
+    imd = which(!is.finite( APS[[pPC1$variabletomodel]]  )) 
+    if (length(imd) > 0 ) {
+      APS[[pPC1$variabletomodel]][imd] = aegis_lookup( data_class="speciescomposition", LOCS=APS[ imd, c("AUID", "timestamp")]AU_target=sppoly, 
+        lookup_from = setdiff( c("stmv", "carstm"), p$carstm_inputdata_model_source$speciescomposition),
+        lookup_to = "areal_units",
+        variable_name=pPC1$variabletomodel ,
+        year.assessment=p$year.assessment
+      )
+    }
 
     pPC2 = speciescomposition_parameters( p=parameters_reset(p), project_class="carstm", variabletomodel="pca2", year.assessment=p$year.assessment )
     APS[[ pPC2$variabletomodel ]] = aegis_lookup( data_class="speciescomposition", LOCS=APS[ , c("AUID", "timestamp")], AU_target=sppoly,
       lookup_from = p$carstm_inputdata_model_source$speciescomposition,
       lookup_to = "areal_units",
-      vnames=pPC2$variabletomodel,
+      variable_name=pPC2$variabletomodel,
       year.assessment=p$year.assessment
     )
-  }
+    imd = which(!is.finite( APS[[pPC2$variabletomodel]]  )) 
+    if (length(imd) > 0 ) {
+      APS[[pPC2$variabletomodel]][imd] = aegis_lookup( data_class="speciescomposition", LOCS=APS[ imd, c("AUID", "timestamp")]AU_target=sppoly, 
+        lookup_from = setdiff( c("stmv", "carstm"), p$carstm_inputdata_model_source$speciescomposition),
+        lookup_to = "areal_units",
+        variable_name=pPC2$variabletomodel ,
+        year.assessment=p$year.assessment
+      )
+    }
+ }
 
-  APS$timestamp = NULL  # time-based matching finished
+  if (exists("timestamp", APS)) APS$timestamp = NULL  # time-based matching finished (if any)
 
   M = rbind( M[, names(APS), with=FALSE ], APS )
 
