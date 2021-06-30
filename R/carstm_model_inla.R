@@ -8,7 +8,7 @@ carstm_model_inla = function(p, M,
   toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), 
   toinvert=c("fixed_effects", "random_effects", "predictions"), 
   exceedance_threshold=NULL, deceedance_threshold=NULL, nposteriors=NULL, 
-  improve.hyperparam.estimates=NULL, quantile_bounds=NULL, ... ) {
+  improve.hyperparam.estimates=NULL,  ... ) {
 
   # outputs
   O = list()
@@ -135,7 +135,7 @@ carstm_model_inla = function(p, M,
   mq = quantile( M[ ii, vnY ], probs=c(0.025, 0.5, 0.975) )
 
   O[["data_range"]] = c( mean=mean(M[ ii, vnY ]), sd=sd(M[ ii, vnY ]), min=min(M[ ii, vnY ]), max=max(M[ ii, vnY ]),  
-      lb=mq[1], median=mq[2], ub=mq[3], quantile_bounds=quantile_bounds  )  # on data /user scale not internal link
+      lb=mq[1], median=mq[2], ub=mq[3]  )  # on data /user scale not internal link
 
   # prefilter/transformation (e.g. translation to make all positive)
   if (exists("data_transformation", p)) M[, vnY]  = p$data_transformation$forward( M[, vnY] ) 
@@ -545,8 +545,7 @@ carstm_model_inla = function(p, M,
 
 
   if ("predictions"  %in% toget ) {
-    
-    invlink_predictions = function(x) lnk_function( x,  inverse=TRUE ) 
+   
     # truncate_upperbound = function( b, upper_limit, eps=1e-12 ) {
     #   k = which( b[,1] > upper_limit )
     #   if (length(k) > 0) b[k,2] = 0
@@ -571,7 +570,6 @@ carstm_model_inla = function(p, M,
       if (  p$aegis_dimensionality == "space" ) {
         ipred = which( M$tag=="predictions"  &  M[,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         g = fit$marginals.fitted.values[ipred]   
-        # if  (!is.null(quantile_bounds))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
         g = lapply( g, invlink_predictions )
         if (exists("data_transformation", p)) g = lapply( g, backtransform )
 
@@ -592,7 +590,6 @@ carstm_model_inla = function(p, M,
       if ( p$aegis_dimensionality == "space-year" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]] & M[,vnT0] %in% O[[vnT]] )
         g = fit$marginals.fitted.values[ipred]   
-        # if  (!is.null(quantile_bounds))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
         g = lapply( g, invlink_predictions )
         if (exists("data_transformation", p)) g = lapply( g, backtransform )
 
@@ -615,7 +612,6 @@ carstm_model_inla = function(p, M,
       if ( p$aegis_dimensionality == "space-year-season" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]]  &  M[,vnT0] %in% O[[vnT]] &  M[,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         g = fit$marginals.fitted.values[ipred]   
-        # if  (!is.null(quantile_bounds))  g = lapply( g, truncate_upperbound, upper_limit=upper_limit )
         g = lapply( g, invlink_predictions )
         if (exists("data_transformation", p)) g = lapply( g, backtransform )
 
