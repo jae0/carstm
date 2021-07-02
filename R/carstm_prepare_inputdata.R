@@ -130,8 +130,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
           LOCS=M[ iM, c("lon", "lat", "timestamp")],
           lookup_from="core", 
           lookup_to="points", 
-          lookup_from_class="aggregated_data", 
-          variable_name="pca1.mean", 
+          variable_name="pca1", 
           tz="America/Halifax" ,
           year.assessment=p$year.assessment
         )
@@ -147,8 +146,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
            LOCS=M[ iM, c("lon", "lat", "timestamp")], 
            lookup_from="core", 
            lookup_to="points", 
-           lookup_from_class="aggregated_data", 
-           variable_name="pca2.mean", 
+           variable_name="pca2", 
            tz="America/Halifax" ,
            year.assessment=p$year.assessment
          )
