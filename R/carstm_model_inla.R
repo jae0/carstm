@@ -167,7 +167,7 @@ carstm_model_inla = function(p, M,
   if (redo_fit) {
 
     if (!exists("options.control.inla", p )) p$options.control.inla = list(
-      list( strategy="adaptive", improved.simplified.laplace=TRUE ), # default h=0.005
+      list( strategy="adaptive"), # default h=0.005
       list( stupid.search=FALSE, strategy="adaptive", h=0.05, cmin=0, tolerance=1e-9),
       list( stupid.search=FALSE, strategy="adaptive", h=0.1, cmin=0),
       list( stupid.search=FALSE, strategy="adaptive", h=0.001, cmin=0), # default h=0.005
