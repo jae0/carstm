@@ -23,7 +23,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
   if ("bathymetry" %in% lookup) {
     require(aegis.bathymetry)
     pB = bathymetry_parameters( p=parameters_reset(p), project_class="carstm"  )
-    if ( !(exists( pB$variabletomodel, M )))  M[[vnB]] = NA
+    if ( !(exists( pB$variabletomodel, M )))  M[[pB$variabletomodel]] = NA
     iM = which(!is.finite( M[[pB$variabletomodel]] ))
     if (length(iM > 0)) {
       M[[pB$variabletomodel]][iM] = aegis_lookup(  
