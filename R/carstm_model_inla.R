@@ -56,9 +56,8 @@ carstm_model_inla = function(p, M,
     # labels
     vnS = ifelse( exists("vnS", p), p$vnS, "space" )
     vnS0 = ifelse( exists("vnS0", p), p$vnS0, "space0" ) # local storage/copy as a character
-
-    O[[vnS]] = region.id  # the sequence is key as index matches nb matrix values
-    O[[vnS]] = as.character( O[[vnS]] ) # local copy
+ 
+    O[[vnS]] = as.character( region.id )  # the sequence is key as index matches nb matrix values
     M[,vnS0] = as.character( M[,vnS] ) # local copy
     M[,vnS] = match( M[,vnS0], O[[vnS]] )  # overwrite with numeric values that must match index of neighbourhood matrix
   }
@@ -557,13 +556,9 @@ carstm_model_inla = function(p, M,
         return( b )
       }
     } 
-
   
     summary_inv_predictions = function(x) inla.zmarginal( x, silent=TRUE  )
     
-      
-
-
     # adjusted by offset
     if (exists("marginals.fitted.values", fit)) {
       

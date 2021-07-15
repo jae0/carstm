@@ -1,5 +1,5 @@
 
-carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compression_level=1, 
+carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compression_level=6, 
    ... ) {
 
   # compute and extract in one go esp as inla data files are too large, otherwise
