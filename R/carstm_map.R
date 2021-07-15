@@ -331,15 +331,18 @@
         return(tmout)
       }
 
-      if (outformat=="pdf") pdf( file=outfilename, width=width, height=height, bg=bg, pointsize=pointsize )
-      if (outformat=="svg") svg( filename=outfilename, width=width, height=height, bg=bg, pointsize=pointsize   )
-      if (outformat=="png") png( filename=outfilename, width=3072, height=2304, pointsize=pointsize, res=pres )
-        print(tmout)
-      dev.off()
-      print(outfilename)
+      if (outformat %in% c("pdf", "svg", "png")){
+        tmap_mode("plot")
+        if (outformat=="pdf") pdf( file=outfilename, width=width, height=height, bg=bg, pointsize=pointsize )
+        if (outformat=="svg") svg( filename=outfilename, width=width, height=height, bg=bg, pointsize=pointsize   )
+        if (outformat=="png") png( filename=outfilename, width=3072, height=2304, pointsize=pointsize, res=pres )
+          print(tmout)
+        dev.off()
+        print(outfilename)
+      }
 
     }
-    
+    tmap_mode("view")    
     return(tmout)
   }
 
