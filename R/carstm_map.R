@@ -20,7 +20,7 @@
     width=9, height=7, bg='white', pointsize=12, pres=300,
     depths = c(50, 100, 200, 400),
     digits=3,
-    tmap_zoom=7, 
+    tmap_zoom=6, 
     ...) {
 
 
@@ -99,8 +99,8 @@
     legend.is.portrait = FALSE   
     compass_position = c( "right", "bottom" )   
     compass_north = 0
-    scale_bar_position = c( "left", "top" )
-    legend_position = c(0.55, 0.8)
+    scale_bar_position = c( "right", "top" )
+    legend_position = c("left", "top")
     legend_scale = 1.0
     legend_title.size=1.4
     legend_text.size=1.0
@@ -285,19 +285,19 @@
 
     if ("scale_bar" %in% plot_elements ) {
       tmout = tmout + 
-        tm_scale_bar( position=c("right", "bottom" ), width=0.2, text.size=0.7) 
-      # tm_scale_bar( position=scale_bar_position, width=0.15, text.size=0.7) +  
+        #tm_scale_bar( position=c("right", "bottom" ), width=0.2, text.size=0.7) 
+        tm_scale_bar( position=scale_bar_position, width=0.15, text.size=0.7)  
     }
 
     if ("legend" %in% plot_elements ) {
       tmout = tmout + 
-        tm_legend( position=c("left", "top") ,  frame=TRUE, scale = 1 , title.size=1.5, text.size=0.80, legend.width=0.75) 
-      # tm_legend( position=legend_position, frame=FALSE, scale = legend_scale , title.size=legend_title.size, text.size=legend_text.size, legend.width=legend.width) +  
+        # tm_legend( position=legend_position ,frame=TRUE, scale = 1 , title.size=1.5, text.size=0.80, legend.width=0.75) 
+        tm_legend( position=legend_position, frame=FALSE, scale = legend_scale , title.size=legend_title.size, text.size=legend_text.size, legend.width=legend.width) 
     }
 
     tmout = tmout + 
         tm_layout( frame=FALSE ) +
-        tm_view(set.view = c(tmap_zoom))
+        tm_view(set.view = tmap_zoom)
 
 
         # tm_layout( frame=FALSE, title=title ) 

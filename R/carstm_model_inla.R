@@ -108,24 +108,18 @@ carstm_model_inla = function(p, M,
     if ("fixed_effects" %in% toinvert) invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
     if ("random_effects" %in% toinvert) invlink_random = function(x) lnk_function( x,  inverse=TRUE )
     if ("predictions" %in% toinvert) invlink_predictions = function(x) lnk_function( x,  inverse=TRUE ) ## preds are on log scale
+ 
   } else if ( grepl( ".*poisson", p$carstm_model_family)) {
     lnk_function = inla.link.log
     if ("fixed_effects" %in% toinvert) invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
     if ("random_effects" %in% toinvert) invlink_random = function(x) lnk_function( x,  inverse=TRUE )
-    if ("predictions" %in% toinvert) {
-      invlink_predictions = inla.link.identity ## preds are on user scale
-    } else {
-      invlink_predictions = lnk_function  
-    }
+    if ("predictions" %in% toinvert)  invlink_predictions = inla.link.identity ## preds are on user scale
+   
   } else if ( grepl( ".*binomial", p$carstm_model_family)) {
     lnk_function = inla.link.logit
     if ("fixed_effects" %in% toinvert) invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
     if ("random_effects" %in% toinvert) invlink_random = function(x) lnk_function( x,  inverse=TRUE )
-    if ("predictions" %in% toinvert) {
-      invlink_predictions = inla.link.identity ## preds are on user scale
-    } else{
-      invlink_predictions = lnk_function
-    }
+    if ("predictions" %in% toinvert)  invlink_predictions = inla.link.identity ## preds are on user scale
   } 
   
   # on user scale
@@ -166,11 +160,10 @@ carstm_model_inla = function(p, M,
   if (redo_fit) {
 
     if (!exists("options.control.inla", p )) p$options.control.inla = list(
-      list( strategy="adaptive"), # default h=0.005
+      inla.set.control.inla.default(),  # first try defaults as they work well
       list( stupid.search=FALSE, strategy="adaptive", h=0.05, cmin=0, tolerance=1e-9),
       list( stupid.search=FALSE, strategy="adaptive", h=0.1, cmin=0),
       list( stupid.search=FALSE, strategy="adaptive", h=0.001, cmin=0), # default h=0.005
-      inla.set.control.inla.default(),  # first try defaults as they work well
       list( stupid.search=TRUE, strategy="adaptive", h=0.2, cmin=0, optimiser="gsl" ), # default h=0.005
       list( stupid.search=TRUE, fast=FALSE, step.factor=0.1),
       list( stupid.search=TRUE, cmin=0, optimiser="gsl" )
