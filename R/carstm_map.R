@@ -14,7 +14,7 @@
     additional_polygons = NULL,
     aggregate_function=mean,
     probs=c(0,0.975), 
-    outformat="png",
+    outformat="mapview",
     outfilename="",
     map_mode="view",
     width=9, height=7, bg='white', pointsize=12, pres=300,
@@ -39,7 +39,7 @@
       plot_elements=NULL
       aggregate_function=mean
       probs=c(0,0.975) 
-      outformat="png"
+      outformat="mapview"
       map_mode="view"
       width=9; height=7; bg='white'; pointsize=12; res=300
       depths = c(50, 100, 200, 400)
@@ -207,9 +207,9 @@
     # https://leaflet-extras.github.io/leaflet-providers/preview/
     # OpenTopoMap, Stamen.Watercolor, Stamen.Terrain, Stamen.TonerLite, Esri.OceanBasemap 
     tmout = 
-#      tm_basemap(leaflet::providers$CartoDB.Positron, alpha=0.8) +
-      tm_basemap(leaflet::providers$Esri.OceanBasemap, alpha=0.9) +
-#      tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, alpha=0.8) +
+      tm_basemap(leaflet::providers$CartoDB.Positron, alpha=0.8) +
+#      tm_basemap(leaflet::providers$Esri.OceanBasemap, alpha=0.9) +
+      tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, alpha=0.8) +
       tm_shape( sppoly, projection=plot_crs ) +
       tm_polygons( 
         col=plot_names, 
@@ -304,21 +304,42 @@
     
 
     if ( outfilename !="" ) {
-      # tmap_save options:
-      twidth=1000
-      theight=800
-      tasp=0
-      if (exists("twidth", ellps) )   twidth = ellps[["twidth"]]
-      if (exists("theight", ellps) )   theight = ellps[["theight"]]
-      if (exists("tasp", ellps) )   tasp = ellps[["tasp"]]
 
       if (outformat=="tmap") {
+        # tmap_save options:
+        twidth=1000
+        theight=800
+        tasp=0
+        if (exists("twidth", ellps) )   twidth = ellps[["twidth"]]
+        if (exists("theight", ellps) )   theight = ellps[["theight"]]
+        if (exists("tasp", ellps) )   tasp = ellps[["tasp"]]
         tmap_mode("plot")
         tmap_save( tmout, outfilename, width=twidth, height=theight, asp=tasp )
+        print(outfilename)
+        return(tmout)
       }
+
+      if (outformat=="mapview") {
+        if (!require(mapview)) install.packages("mapview")
+        if (!require(webshot)) {
+          install.packages("webshot")
+          webshot::install_phantomjs()
+        }
+        require(mapview)
+        mapshot( tmap_leaflet(tmout), file=outfilename )
+        print(outfilename)
+        return(tmout)
+      }
+
+      if (outformat=="pdf") pdf( file=outfilename, width=width, height=height, bg=bg, pointsize=pointsize )
+      if (outformat=="svg") svg( filename=outfilename, width=width, height=height, bg=bg, pointsize=pointsize   )
+      if (outformat=="png") png( filename=outfilename, width=3072, height=2304, pointsize=pointsize, res=pres )
+        print(tmout)
+      dev.off()
+      print(outfilename)
+
     }
     
-    print(outfilename)
     return(tmout)
   }
 
