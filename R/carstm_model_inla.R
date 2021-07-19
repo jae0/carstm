@@ -161,10 +161,11 @@ carstm_model_inla = function(p, M,
 
     if (!exists("options.control.inla", p )) p$options.control.inla = list(
       inla.set.control.inla.default(),  # first try defaults as they work well
-      list( stupid.search=FALSE, strategy="adaptive", h=0.05, cmin=0, tolerance=1e-9),
-      list( stupid.search=FALSE, strategy="adaptive", h=0.1, cmin=0),
-      list( stupid.search=FALSE, strategy="adaptive", h=0.001, cmin=0), # default h=0.005
-      list( stupid.search=TRUE, strategy="adaptive", h=0.2, cmin=0, optimiser="gsl" ), # default h=0.005
+      list( strategy='adaptive', int.strategy='eb' ), # for high memory models
+      list( strategy="adaptive", h=0.05, cmin=0, tolerance=1e-9),
+      list( strategy="adaptive", h=0.1, cmin=0),
+      list( strategy="adaptive", h=0.001, cmin=0), # default h=0.005
+      list( stupid.search=TRUE,  h=0.2, cmin=0, optimiser="gsl" ), # default h=0.005
       list( stupid.search=TRUE, fast=FALSE, step.factor=0.1),
       list( stupid.search=TRUE, cmin=0, optimiser="gsl" )
     )
@@ -175,7 +176,7 @@ carstm_model_inla = function(p, M,
         p$carstm_model_formula ,
         data=M,
         family = p$carstm_model_family,
-        control.compute=list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE),
+        control.compute=list(dic=TRUE, waic=FALSE, cpo=FALSE, config=TRUE),
         control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
         control.predictor=list(compute=TRUE, link=1 ),
         # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),

@@ -150,17 +150,20 @@
     }
 
     if (exists(space, res)) {
-      if (is.null(smatch)) smatch = match( as.character(sppoly[["AUID"]]), res[[space]] )  # should match exactly but in case a subset 
+      suid = res[[space]]
+      if (is.null(smatch)) smatch = suid 
+      js = match( as.character( sppoly[["AUID"]] ), smatch )  # should match exactly but in case a subset 
     }
     if (exists(time, res)) {
       tuid = res[[time]]
       if (is.null(tmatch)) tmatch = tuid
+      jt = match( res[[time]], tmatch )  
     } 
     if (exists(season, res)) {
       uuid = res[[season]]
       if (is.null(umatch)) umatch = uuid
+      ju = match( res[[season]], umatch )  
     }
-
   
     if (is.null(plot_crs)) plot_crs = st_crs( sppoly )
 
@@ -169,13 +172,13 @@
     data_dimensionality = ifelse (is.vector(res), 1, length(dim(res) ) )
 
     if (data_dimensionality==1) {
-      toplot = toplot[ smatch ]
+      toplot = toplot[ js ]
     } else if (data_dimensionality==2) {
-      toplot = toplot[ smatch, vv ]  # year only
+      toplot = toplot[ js, vv ]  # year only
     } else if (data_dimensionality==3) {
-      toplot = toplot[ smatch, tmatch, vv ]  # year only
+      toplot = toplot[ js, jt, vv ]  # year only
     } else if (data_dimensionality==4) {
-      toplot = toplot[ smatch, tmatch, umatch, vv ] # year/subyear
+      toplot = toplot[ js, jt, ju, vv ] # year/subyear
     }
  
     if  ( exists("breaks", ellps)) {
