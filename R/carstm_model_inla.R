@@ -153,36 +153,40 @@ carstm_model_inla = function(p, M,
   m = ml = ii = ll = j = NULL
   gc()
 
-  p = parameters_add_without_overwriting( p, options.control.family = inla.set.control.family.default() )
-
   fit  = NULL
   
   if (redo_fit) {
 
-    if (!exists("options.control.inla", p )) p$options.control.inla = list(
-      inla.set.control.inla.default(),  # first try defaults as they work well
-      list( strategy='adaptive', int.strategy='eb' ), # for high memory models
-      list( strategy="adaptive", h=0.05, cmin=0, tolerance=1e-9),
-      list( strategy="adaptive", h=0.1, cmin=0),
-      list( strategy="adaptive", h=0.001, cmin=0), # default h=0.005
-      list( stupid.search=TRUE,  h=0.2, cmin=0, optimiser="gsl" ), # default h=0.005
-      list( stupid.search=TRUE, fast=FALSE, step.factor=0.1),
-      list( stupid.search=TRUE, cmin=0, optimiser="gsl" )
-    )
+    ellp = list(...) 
 
+    control.inla.iter = NULL 
+    
+    if ( !exists("control.inla", ellp ) ) {
+      if ( exists("control.inla.iter", ellp )) {
+        control.inla.iter = list(
+          inla.set.control.inla.default(),  # first try defaults as they work well
+          list( strategy='adaptive', int.strategy='eb' ), # for high memory models
+          list( strategy="adaptive", h=0.05, cmin=0, tolerance=1e-9),
+          list( strategy="adaptive", h=0.1, cmin=0),
+          list( strategy="adaptive", h=0.001, cmin=0), # default h=0.005
+          list( stupid.search=TRUE,  h=0.2, cmin=0, optimiser="gsl" ), # default h=0.005
+          list( stupid.search=TRUE, fast=FALSE, step.factor=0.1),
+          list( stupid.search=TRUE, cmin=0, optimiser="gsl" )
+        )
+      } 
+    } else {
+        control.inla.iter = list( ellp[["control.inla"]] )
+    }
 
-    for ( civ in 1:length(p$options.control.inla)) {
-      fit = try( inla(
-        p$carstm_model_formula ,
-        data=M,
-        family = p$carstm_model_family,
-        control.compute=list(dic=TRUE, waic=FALSE, cpo=FALSE, config=TRUE),
-        control.results=list(return.marginals.random=TRUE, return.marginals.predictor=TRUE ),
-        control.predictor=list(compute=TRUE, link=1 ),
-        # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
-        control.family = p$options.control.family,
-        control.inla   = p$options.control.inla[[civ]],
-        verbose=TRUE
+    if ( !exists("control.family", ellp ) ) control.family = inla.set.control.family.default()
+    if ( !exists("control.predictor", ellp ) ) control.predictor = list(compute=TRUE, link=1 )
+    if ( !exists("control.results", ellp ) ) control.results = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
+    if ( !exists("control.compute", ellp ) ) control.compute = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE)
+
+    # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
+
+    for ( civ in 1:length(control.inla.iter)) {
+      fit = try( inla( p$carstm_model_formula, data=M, family=p$carstm_model_family, control.inla=control.inla.iter[[civ]], ...
       ))
       if (!inherits(fit, "try-error" )) break()
     }
