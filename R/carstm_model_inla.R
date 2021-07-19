@@ -10,6 +10,8 @@ carstm_model_inla = function(p, M,
   exceedance_threshold=NULL, deceedance_threshold=NULL, nposteriors=NULL, 
   improve.hyperparam.estimates=NULL,  ... ) {
 
+  ellp = list(...)
+
   # outputs
   O = list()
   O[["summary"]] = list()
@@ -148,7 +150,6 @@ carstm_model_inla = function(p, M,
   ll = which(is.finite(ml))
   H = carstm_hyperparameters( sd(ml[ll] ), alpha=0.5, median(ml[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped
    
-
   
   m = ml = ii = ll = j = NULL
   gc()
@@ -157,7 +158,11 @@ carstm_model_inla = function(p, M,
   
   if (redo_fit) {
 
-    ellp = list(...) 
+    ellp[["formula"]] = p$carstm_model_formula
+    ellp[["data"]] = M
+    ellp[["family"]] = p$carstm_model_family
+
+    M = NULL; gc()
 
     control.inla.iter = NULL 
     
@@ -178,16 +183,16 @@ carstm_model_inla = function(p, M,
         control.inla.iter = list( ellp[["control.inla"]] )
     }
 
-    if ( !exists("control.family", ellp ) ) control.family = inla.set.control.family.default()
-    if ( !exists("control.predictor", ellp ) ) control.predictor = list(compute=TRUE, link=1 )
-    if ( !exists("control.results", ellp ) ) control.results = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
-    if ( !exists("control.compute", ellp ) ) control.compute = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE)
+    if ( !exists("control.family", ellp ) ) ellp[["control.family"]] = inla.set.control.family.default()
+    if ( !exists("control.predictor", ellp ) ) ellp[["control.predictor"]] = list(compute=TRUE, link=1 )
+    if ( !exists("control.results", ellp ) ) ellp[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
+    if ( !exists("control.compute", ellp ) ) ellp[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE)
 
     # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
 
     for ( civ in 1:length(control.inla.iter)) {
-      fit = try( inla( p$carstm_model_formula, data=M, family=p$carstm_model_family, control.inla=control.inla.iter[[civ]], ...
-      ))
+      ellp[["control.inla"]] = control.inla.iter[[civ]]
+      fit = try( do.call( inla, ellp ) )      
       if (!inherits(fit, "try-error" )) break()
     }
 
@@ -203,7 +208,10 @@ carstm_model_inla = function(p, M,
 
     if (is.null(fit)) warning("model fit error")
     if ("try-error" %in% class(fit) ) warning("model fit error")
-
+    
+    M = ellp[["data"]]  # rename for following
+    ellp = NULL; gc()
+      
     message( "Saving carstm fit (this can be slow): ", fn_fit )
 
     save( fit, file=fn_fit, compression_level=compression_level )
