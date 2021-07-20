@@ -163,38 +163,16 @@ carstm_model_inla = function(p, M,
     ellp[["family"]] = p$carstm_model_family
 
     M = NULL; gc()
-
-    control.inla.iter = NULL 
-    
-    if ( !exists("control.inla", ellp ) ) {
-      if ( exists("control.inla.iter", ellp )) {
-        control.inla.iter = list(
-          inla.set.control.inla.default(),  # first try defaults as they work well
-          list( strategy='adaptive', int.strategy='eb' ), # for high memory models
-          list( strategy="adaptive", h=0.05, cmin=0, tolerance=1e-9),
-          list( strategy="adaptive", h=0.1, cmin=0),
-          list( strategy="adaptive", h=0.001, cmin=0), # default h=0.005
-          list( stupid.search=TRUE,  h=0.2, cmin=0, optimiser="gsl" ), # default h=0.005
-          list( stupid.search=TRUE, fast=FALSE, step.factor=0.1),
-          list( stupid.search=TRUE, cmin=0, optimiser="gsl" )
-        )
-      } 
-    } else {
-        control.inla.iter = list( ellp[["control.inla"]] )
-    }
-
-    if ( !exists("control.family", ellp ) ) ellp[["control.family"]] = inla.set.control.family.default()
+ 
+    if ( !exists("control.inla", ellp ) ) ellp[["control.inla"]] = list( strategy='adaptive'  )
     if ( !exists("control.predictor", ellp ) ) ellp[["control.predictor"]] = list(compute=TRUE, link=1 )
-    if ( !exists("control.results", ellp ) ) ellp[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
+    # if ( !exists("control.results", ellp ) ) ellp[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
     if ( !exists("control.compute", ellp ) ) ellp[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE)
 
     # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
+    # control.inla = list( strategy='adaptive', int.strategy='eb' )
 
-    for ( civ in 1:length(control.inla.iter)) {
-      ellp[["control.inla"]] = control.inla.iter[[civ]]
-      fit = try( do.call( inla, ellp ) )      
-      if (!inherits(fit, "try-error" )) break()
-    }
+    fit = try( do.call( inla, ellp ) )      
 
     if (inherits(fit, "try-error" )) {
       message("If you are using MSWindows and you get a popup complaining about 'inla stopped working',")
