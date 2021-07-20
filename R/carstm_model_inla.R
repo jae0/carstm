@@ -167,7 +167,7 @@ carstm_model_inla = function(p, M,
     if ( !exists("control.inla", ellp ) ) ellp[["control.inla"]] = list( strategy='adaptive'  )
     if ( !exists("control.predictor", ellp ) ) ellp[["control.predictor"]] = list(compute=TRUE, link=1 )
     # if ( !exists("control.results", ellp ) ) ellp[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
-    if ( !exists("control.compute", ellp ) ) ellp[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE)
+    if ( !exists("control.compute", ellp ) ) ellp[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
 
     # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
     # control.inla = list( strategy='adaptive', int.strategy='eb' )
