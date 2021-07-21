@@ -6,6 +6,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
 
   p = parameters_add(p, list(...)) # add passed args to parameter list, priority to args
 
+  message("Loading sppoly: ", fn_fit )
   sppoly = areal_units( p=p )  # required by car fit
   areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
 
@@ -17,6 +18,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
   
   fit = NULL
   if (DS=="carstm_modelled_fit") {
+    message("Loading carstm fit: ", fn_fit )
     if (file.exists(fn_fit)) load( fn_fit )
     if (is.null(fit)) message("carstm modelled fit not found.")
     return( fit )
@@ -24,6 +26,7 @@ carstm_model = function( p, M=NULL, DS="redo", improve.hyperparam.estimates=FALS
 
   O = NULL
   if (DS=="carstm_modelled_summary") {  # carstm_model.*carstm_modelled
+    message("Loading carstm data summary:  ", fn_res )
     if (file.exists(fn_res)) load( fn_res)
     if (is.null(O)) message("carstm summary not found.")
     return( O )

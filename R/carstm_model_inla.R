@@ -1,6 +1,6 @@
 
 
-carstm_model_inla = function(p, M, 
+carstm_model_inla = function(p, M, sppoly=NULL, 
   fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), 
   fn_res=tempfile(pattern="res_", fileext=".Rdata"), 
   compression_level=1,
@@ -11,6 +11,9 @@ carstm_model_inla = function(p, M,
   improve.hyperparam.estimates=NULL,  ... ) {
 
   ellp = list(...)
+
+  be_verbose = FALSE
+  if ( exists("verbose", ellp ) ) if ( ellp[["verbose"]] )   be_verbose = TRUE
 
   # outputs
   O = list()
@@ -41,7 +44,7 @@ carstm_model_inla = function(p, M,
 
   # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("region.id")
 
-  sppoly = areal_units( p=p )  # required by car fit
+  if (is.null(sppoly)) sppoly = areal_units( p=p )  # required by car fit
   region.id = as.character( slot( slot(sppoly, "nb"), "region.id" ) ) # the master / correct sequence of the AU's and neighbourhood matrix index values
   nAUID = nrow(sppoly)
 
@@ -190,7 +193,7 @@ carstm_model_inla = function(p, M,
     M = ellp[["data"]]  # rename for following
     ellp = NULL; gc()
       
-    message( "Saving carstm fit (this can be slow): ", fn_fit )
+    if (be_verbose)  message( "Saving carstm fit (this can be slow): ", fn_fit )
 
     save( fit, file=fn_fit, compression_level=compression_level )
 
@@ -204,7 +207,7 @@ carstm_model_inla = function(p, M,
   }
 
   # do the computations here as fit can be massive ... best not to copy, etc ..
-  message( "\nComputing summaries (also very slow) ..." )
+  if (be_verbose)  message( "\nComputing summaries (also very slow) ..." )
 
   
   list_simplify = function(x) as.data.frame( t( as.data.frame( x )))
@@ -222,6 +225,8 @@ carstm_model_inla = function(p, M,
 
 
   if ( "summary" %in% toget) {
+
+    if (be_verbose)  message("Extracting and formatting parameter summaries"  )
 
       O[["summary"]][["direct"]] = summary(fit)
 
@@ -247,7 +252,7 @@ carstm_model_inla = function(p, M,
         precs = try( list_simplify( sapply( fit$marginals.hyperpar[j], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
         if (inherits(precs, "try-error")) precs = try( list_simplify( sapply( fit$marginals.hyperpar[j], FUN=summary_inv_prec_1024 ) ), silent=TRUE )
         if (inherits(precs, "try-error")) {
-          message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
+          if (be_verbose)  message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
           precs = fit$summary.hyperpar[j,1:5]
           precs[,c(1,3:5)] = 1/sqrt( precs[,c(1,3:5)] )
           rownames(precs) = gsub("Precision for", "SD", rownames(precs) )
@@ -268,7 +273,7 @@ carstm_model_inla = function(p, M,
       if (length(j) > 0) {
         rhos = try( list_simplify( sapply( fit$marginals.hyperpar[j], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
         if (inherits(precs, "try-error")) {
-          message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
+          if (be_verbose)  message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
         } else {
           #  rhos[,"mode"] = sapply( fit$marginals.hyperpar[j], FUN=function(x) inla.mmarginal( x ))
           O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], rhos[, tokeep, drop =FALSE] )
@@ -291,6 +296,8 @@ carstm_model_inla = function(p, M,
   }
 
   if ("random_other" %in% toget) {
+    if (be_verbose)  message("Extracting and formatting random covariates"  )
+
     summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
     if (exists("marginals.random", fit)) {
       raneff = names( fit$marginals.random )
@@ -307,6 +314,8 @@ carstm_model_inla = function(p, M,
 
 
   if ("random_spatial" %in% toget) {
+    if (be_verbose)  message("Extracting and formatting random spatial errors"  )
+
     # space only
     summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
 
@@ -405,6 +414,9 @@ carstm_model_inla = function(p, M,
 
 
   if ("random_spatiotemporal"  %in% toget ) {
+
+    if (be_verbose)  message("Extracting and formatting random spatiotemporal errors"  )
+
     # space-year
     summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
 
@@ -528,7 +540,9 @@ carstm_model_inla = function(p, M,
 
 
   if ("predictions"  %in% toget ) {
-   
+
+    if (be_verbose)  message("Extracting and formatting predictions"  )
+
     # truncate_upperbound = function( b, upper_limit, eps=1e-12 ) {
     #   k = which( b[,1] > upper_limit )
     #   if (length(k) > 0) b[k,2] = 0
@@ -657,7 +671,7 @@ carstm_model_inla = function(p, M,
 
   save( O, file=fn_res, compression_level=compression_level )
 
-  message( "carstm summary saved as: ", fn_res )
+  if (be_verbose)  message( "Carstm summary saved as: ", fn_res )
 
   return(O)
 
