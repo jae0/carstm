@@ -42,7 +42,7 @@
       probs=c(0,0.975) 
       outformat="mapview"
       map_mode="view"
-      width=9; height=7; bg='white'; pointsize=12; res=300
+      width=9; height=7; bg='white'; pointsize=12; pres=300
       depths = c(50, 100, 200, 400)
       digits=3
 
@@ -170,7 +170,7 @@
 
     sppoly = st_transform( sppoly, crs=st_crs(plot_crs) )
 
-    data_dimensionality = ifelse (is.vector(res), 1, length(dim(res) ) )
+    data_dimensionality = ifelse (is.vector(toplot), 1, length(dim(toplot) ) )
 
     if (data_dimensionality==1) {
       toplot = toplot[ js ]
@@ -290,8 +290,7 @@
 
     if ("scale_bar" %in% plot_elements ) {
       tmout = tmout + 
-        #tm_scale_bar( position=c("right", "bottom" ), width=0.2, text.size=0.7) 
-        tm_scale_bar( position=scale_bar_position, width=0.15, text.size=0.7)  
+        tm_scale_bar( position=scale_bar_position, width=125, text.size=0.7)  
     }
 
     tmout = tmout + 
