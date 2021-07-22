@@ -9,6 +9,7 @@
     sppoly=NULL,
     smatch=NULL, 
     tmatch=NULL, 
+    umatch=NULL, 
     plot_crs=NULL,
     plot_elements=c( "isobaths", "compass", "scale_bar", "legend" ),
     additional_polygons = NULL,
@@ -61,7 +62,7 @@
           vn = vn,
           breaks = pretty(p$discretization$z),
           palette = "viridis",
-          main = "Bathymetry predicted",
+          title = "Bathymetry predicted",
           coastline = coastline,
           isobaths = isobaths 
       )
@@ -94,14 +95,14 @@
     title =  "" 
     showNA =  FALSE 
     lwd =  0.25 
-    border.alpha =  0.5
-    alpha =   0.9
+    border.alpha =  0.75
+    alpha =   0.95
     legend.is.portrait = FALSE   
     compass_position = c( "right", "bottom" )   
     compass_north = 0
-    scale_bar_position = c( "right", "top" )
+    scale_bar_position = c( "left", "top" )
     legend_position = c("left", "top")
-    legend_scale = 1.0
+    scale = 1.0
     legend_title.size=1.4
     legend_text.size=1.0
     legend.width=1
@@ -122,7 +123,7 @@
     if (exists("compass_north", ellps) ) compass_north = ellps[["compass_north"]]
     if (exists("scale_bar_position", ellps) )   scale_bar_position = ellps[["scale_bar_position"]]
     if (exists("legend_position", ellps) )   legend_position = ellps[["legend_position"]]
-    if (exists("legend_scale", ellps) )   legend_scale = ellps[["legend_scale"]]
+    if (exists("scale", ellps) )   scale = ellps[["scale"]]
     if (exists("legend_title.size", ellps) )  legend_title.size = ellps[["legend_title.size"]]
     if (exists("legend_text.size", ellps) )    legend_text.size = ellps[["legend_text.size"]]
     if (exists("legend.width", ellps) )   legend.width = ellps[["legend.width"]]
@@ -152,17 +153,17 @@
     if (exists(space, res)) {
       suid = res[[space]]
       if (is.null(smatch)) smatch = suid 
-      js = match( as.character( sppoly[["AUID"]] ), smatch )  # should match exactly but in case a subset 
+      js = match( as.character( sppoly[["AUID"]] ), smatch )  # should match exactly but in case sppoly is a subset 
     }
     if (exists(time, res)) {
       tuid = res[[time]]
       if (is.null(tmatch)) tmatch = tuid
-      jt = match( res[[time]], tmatch )  
+      jt = match( tmatch, res[[time]] )  
     } 
     if (exists(season, res)) {
       uuid = res[[season]]
       if (is.null(umatch)) umatch = uuid
-      ju = match( res[[season]], umatch )  
+      ju = match( umatch, res[[season]] )  
     }
   
     if (is.null(plot_crs)) plot_crs = st_crs( sppoly )
@@ -216,10 +217,11 @@
       tm_shape( sppoly, projection=plot_crs ) +
       tm_polygons( 
         col=plot_names, 
-        title= ifelse ( exists("main", ellps), ellps[["main"]], vn ) ,
-        style = ifelse ( exists("style", ellps), ellps[["style"]], "cont" ) ,
-        palette = ifelse ( exists("palette", ellps), ellps[["palette"]], "YlOrRd"),
+        title= title,
+        style = style,
+        palette = palette,
         breaks = breaks,
+        midpoint = NA ,
         border.col = "lightgray",
         colorNA = NULL,
         id = id,
@@ -292,15 +294,9 @@
         tm_scale_bar( position=scale_bar_position, width=0.15, text.size=0.7)  
     }
 
-    if ("legend" %in% plot_elements ) {
-      tmout = tmout + 
-        # tm_legend( position=legend_position ,frame=TRUE, scale = 1 , title.size=1.5, text.size=0.80, legend.width=0.75) 
-        tm_legend( position=legend_position, frame=FALSE, scale = legend_scale , title.size=legend_title.size, text.size=legend_text.size, legend.width=legend.width) 
-    }
-
     tmout = tmout + 
-        tm_layout( frame=FALSE ) +
-        tm_view(set.view = tmap_zoom)
+        tm_layout( frame=FALSE, scale=scale, title.size=legend_title.size) +
+        tm_view(set.view = tmap_zoom, view.legend.position=legend_position  )
 
 
         # tm_layout( frame=FALSE, title=title ) 

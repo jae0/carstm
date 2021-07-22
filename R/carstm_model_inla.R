@@ -1,12 +1,11 @@
 
 
-carstm_model_inla = function(p, M, sppoly=NULL, 
+carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
   fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), 
   fn_res=tempfile(pattern="res_", fileext=".Rdata"), 
   compression_level=1,
   redo_fit = TRUE,
   toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), 
-  toinvert=c("fixed_effects", "random_effects", "predictions"), 
   exceedance_threshold=NULL, deceedance_threshold=NULL, nposteriors=NULL, 
   improve.hyperparam.estimates=NULL,  ... ) {
 
@@ -45,7 +44,7 @@ carstm_model_inla = function(p, M, sppoly=NULL,
   # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("region.id")
 
   if (is.null(sppoly)) sppoly = areal_units( p=p )  # required by car fit
-  region.id = as.character( slot( slot(sppoly, "nb"), "region.id" ) ) # the master / correct sequence of the AU's and neighbourhood matrix index values
+  if (is.null(region.id)) region.id = as.character( slot( slot(sppoly, "nb"), "region.id" ) ) # the master / correct sequence of the AU's and neighbourhood matrix index values
   nAUID = nrow(sppoly)
 
   vnST = vnTS = NULL  # this is also used as a flag for random st effects extraction
@@ -110,21 +109,21 @@ carstm_model_inla = function(p, M, sppoly=NULL,
 
   if ( p$carstm_model_family == "lognormal" ) {
     lnk_function = inla.link.log
-    if ("fixed_effects" %in% toinvert) invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
-    if ("random_effects" %in% toinvert) invlink_random = function(x) lnk_function( x,  inverse=TRUE )
-    if ("predictions" %in% toinvert) invlink_predictions = function(x) lnk_function( x,  inverse=TRUE ) ## preds are on log scale
+    invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
+    invlink_random = function(x) lnk_function( x,  inverse=TRUE )
+    invlink_predictions = function(x) lnk_function( x,  inverse=TRUE )  
  
   } else if ( grepl( ".*poisson", p$carstm_model_family)) {
     lnk_function = inla.link.log
-    if ("fixed_effects" %in% toinvert) invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
-    if ("random_effects" %in% toinvert) invlink_random = function(x) lnk_function( x,  inverse=TRUE )
-    if ("predictions" %in% toinvert)  invlink_predictions = inla.link.identity ## preds are on user scale
+    invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
+    invlink_random = function(x) lnk_function( x,  inverse=TRUE )
+    invlink_predictions = function(x) lnk_function( x,  inverse=TRUE )
    
   } else if ( grepl( ".*binomial", p$carstm_model_family)) {
     lnk_function = inla.link.logit
-    if ("fixed_effects" %in% toinvert) invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
-    if ("random_effects" %in% toinvert) invlink_random = function(x) lnk_function( x,  inverse=TRUE )
-    if ("predictions" %in% toinvert)  invlink_predictions = inla.link.identity ## preds are on user scale
+    invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
+    invlink_random = function(x) lnk_function( x,  inverse=TRUE )
+    invlink_predictions = function(x) lnk_function( x,  inverse=TRUE )
   } 
   
   # on user scale
@@ -162,15 +161,28 @@ carstm_model_inla = function(p, M, sppoly=NULL,
   if (redo_fit) {
 
     ellp[["formula"]] = p$carstm_model_formula
-    ellp[["data"]] = M
     ellp[["family"]] = p$carstm_model_family
+    
+    ellp[["data"]] = M
+    M = NULL
+    
+    if (!is.null(E)) ellp[["E"]] = E
+    E = NULL
+    
+    gc()
 
-    M = NULL; gc()
- 
-    if ( !exists("control.inla", ellp ) ) ellp[["control.inla"]] = list( strategy='adaptive'  )
-    if ( !exists("control.predictor", ellp ) ) ellp[["control.predictor"]] = list(compute=TRUE, link=1 )
-    # if ( !exists("control.results", ellp ) ) ellp[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
+    if ( !exists("inla.mode", ellp ) ) ellp[["inla.mode"]] = "experimental"
+    if ( !exists("control.inla", ellp ) ) ellp[["control.inla"]] = list( strategy='adaptive', link=1  )
+    if ( !exists("control.predictor", ellp ) ) ellp[["control.predictor"]] = list(compute=TRUE  ) #everything on link scale
     if ( !exists("control.compute", ellp ) ) ellp[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
+
+
+    if ( ellp[["inla.mode"]] != "experimental") {
+      # location of this option has moved ... might move again
+      if ( !exists("control.results", ellp ) ) ellp[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
+      ellp[["control.compute"]][["return.marginals.predictor"]] = NULL
+    }
+
 
     # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
     # control.inla = list( strategy='adaptive', int.strategy='eb' )
@@ -190,7 +202,7 @@ carstm_model_inla = function(p, M, sppoly=NULL,
     if (is.null(fit)) warning("model fit error")
     if ("try-error" %in% class(fit) ) warning("model fit error")
     
-    M = ellp[["data"]]  # rename for following
+    M = ellp[["data"]]  # rename for followup
     ellp = NULL; gc()
       
     if (be_verbose)  message( "Saving carstm fit (this can be slow): ", fn_fit )
@@ -557,6 +569,8 @@ carstm_model_inla = function(p, M, sppoly=NULL,
   
     summary_inv_predictions = function(x) inla.zmarginal( x, silent=TRUE  )
     
+    if (!exists("tag", M)) M$tag="predictions" # force predictions for all data
+
     # adjusted by offset
     if (exists("marginals.fitted.values", fit)) {
       

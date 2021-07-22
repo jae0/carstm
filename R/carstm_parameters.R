@@ -1,5 +1,5 @@
 
-carstm_parameters = function( p=NULL, redo=FALSE, ... ) {
+carstm_parameters = function( p=NULL, ... ) {
 
   p = parameters_add(p, list(...)) # add passed args to parameter list, priority to args
 
