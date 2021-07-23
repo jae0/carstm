@@ -172,8 +172,8 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
     gc()
 
     if ( !exists("inla.mode", ellp ) ) ellp[["inla.mode"]] = "experimental"
-    if ( !exists("control.inla", ellp ) ) ellp[["control.inla"]] = list( strategy='adaptive', link=1  )
-    if ( !exists("control.predictor", ellp ) ) ellp[["control.predictor"]] = list(compute=TRUE  ) #everything on link scale
+    if ( !exists("control.inla", ellp ) ) ellp[["control.inla"]] = list( strategy='adaptive' )
+    if ( !exists("control.predictor", ellp ) ) ellp[["control.predictor"]] = list(compute=TRUE, link=1  ) #everything on link scale
     if ( !exists("control.compute", ellp ) ) ellp[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
 
 
