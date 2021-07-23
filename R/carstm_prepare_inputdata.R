@@ -256,7 +256,6 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     APS[[ pT$variabletomodel ]] = aegis_lookup( 
       data_class="temperature", 
       LOCS=APS[ , c("AUID", "timestamp")], 
-      LOCS=sppoly$AUID,
       LOCS_AU=sppoly,
       project_class = "carstm", # lookup from modelled predictions from carstm
       output_format = "areal_units",
