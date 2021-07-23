@@ -1,7 +1,9 @@
 
   carstm_map = function( 
     res=NULL, 
+    toplot=NULL,
     vn=NULL, 
+    vn_label=NULL,
     space = "space",
     time= "time",
     season="season",
@@ -11,7 +13,7 @@
     tmatch=NULL, 
     umatch=NULL, 
     plot_crs=NULL,
-    plot_elements=c( "isobaths", "compass", "scale_bar", "legend" ),
+    plot_elements=c( "isobaths", "compass", "scale_bar" ),
     additional_polygons = NULL,
     aggregate_function=mean,
     probs=c(0,0.975), 
@@ -22,10 +24,13 @@
     depths = c(50, 100, 200, 400),
     digits=3,
     tmap_zoom=6, 
+    id = "space", 
     ...) {
 
 
     if (0) {
+      res = NULL
+      toplot=NULL
       space = "space"
       time= "time"
       season="season"
@@ -45,26 +50,22 @@
       width=9; height=7; bg='white'; pointsize=12; pres=300
       depths = c(50, 100, 200, 400)
       digits=3
+      tmap_zoom=6  
+ 
+      ellps=list()
 
       p = aegis.bathymetry::bathymetry_parameters( project_class="carstm" )  # defaults are hard coded
       res = carstm_model( p=p, DS="carstm_modelled_summary"  ) # to load currently saved results
-      require(fields)
+      # require(fields)
       
-      coastline=aegis.coastline::coastline_db( DS="eastcoast_gadm", project_to=p$aegis_proj4string_planar_km )
-      isobaths=aegis.bathymetry::isobath_db( depths=c(50, 100, 200, 400, 800), project_to=p$aegis_proj4string_planar_km )
-    
       vn = "predictions" 
       vn = c("random", "space", "combined") 
       
-
       carstm_map(  
-          res = res,    
-          vn = vn,
-          breaks = pretty(p$discretization$z),
+          res = res, vn = vn,
+          plot_elements=c( "isobaths", "coastline", "compass", "scale_bar"  ),
           palette = "viridis",
-          title = "Bathymetry predicted",
-          coastline = coastline,
-          isobaths = isobaths 
+          title = "Bathymetry predicted"
       )
 
  
@@ -88,7 +89,6 @@
 
     # tmap plotting options:
     bbox = NULL
-    id = row.names(sppoly)
     breaks = NULL
     style = "cont"; 
     palette =  "YlOrRd"
@@ -97,18 +97,19 @@
     lwd =  0.25 
     border.alpha =  0.75
     alpha =   0.95
-    legend.is.portrait = FALSE   
-    compass_position = c( "right", "bottom" )   
+    legend.is.portrait = TRUE   
+    compass_position = c( 0.925, 0.1 )  # (left-right, top-bottom)  
     compass_north = 0
-    scale_bar_position = c( "left", "top" )
-    legend_position = c("left", "top")
-    scale = 1.0
-    legend_title.size=1.4
-    legend_text.size=1.0
-    legend.width=1
+    scale_bar_position = c( 0.75, "BOTTOM" )
+    if ( map_mode=="view") scale_bar_position= c("left", "bottom" )
+    legend_position = c("left", "top" )
+    scale = 2
+    legend_title.size=1.1
+    legend_text.size=0.9
+    legend.width = ifelse( map_mode=="plot", 0.25, 100 )  # plot_mode uses fractions .. view_mode uses pixels
+    scale_bar_width = ifelse( map_mode=="plot", 0.1, 125 )
 
     if (exists("bbox", ellps) )   bbox = ellps[["bbox"]]
-    if (exists("id", ellps) )   id = ellps[["id"]]
  
     if (exists("breaks", ellps) )   breaks = ellps[["breaks"]]
     if (exists("style", ellps) )   style = ellps[["style"]]
@@ -128,95 +129,133 @@
     if (exists("legend_text.size", ellps) )    legend_text.size = ellps[["legend_text.size"]]
     if (exists("legend.width", ellps) )   legend.width = ellps[["legend.width"]]
 
-    
-    vv = 0
-    if ( exists("sppoly", res)) {
-      if (is.null(sppoly)) sppoly = res[["sppoly"]]
-      toplot = carstm_results_unpack( res, vn ) 
-      vv = which(dimnames(toplot)$stat == stat_var) 
-      vn = paste(vn, collapse="_")
-    }  else {
-      # if xyz is given then then are point data to be aggregated into polygons
-      if (!exists(space, sppoly)) {
-        if (exists("AUID", sppoly)) {
-          sppoly[, space] = as.character(sppoly[, "AUID"])  
-        } else {
-          sppoly[, space] = as.character(1:nrow(sppoly))
+
+    # if toplot not passed, create from res if given
+    if (is.null(toplot)) {
+      
+      if (!is.null(res)) {
+        vv = 0
+        toplot = carstm_results_unpack( res, vn ) 
+        vv = which(dimnames(toplot)$stat == stat_var) 
+        if ( exists("sppoly", res)) {
+          if (is.null(sppoly)) sppoly = res[["sppoly"]]
         }
-      }
-      res = st_as_sf( res, coords= c("lon", "lat"), crs=st_crs( projection_proj4string("lonlat_wgs84") ) )
-      res = st_transform(res, st_crs( sppoly ) )
-      res[[space]] = st_points_in_polygons( pts=res, polys=sppoly[, space], varname=space )
-      toplot = tapply( res[[vn]], res[[space]], aggregate_function, na.rm=TRUE )
+        if (exists(space, res)) {
+          suid = res[[space]]
+          if (is.null(smatch)) smatch = suid 
+          js = match( as.character( sppoly[["AUID"]] ), smatch )  # should match exactly but in case sppoly is a subset 
+        }
+        if (exists(time, res)) {
+          tuid = res[[time]]
+          if (is.null(tmatch)) tmatch = tuid
+          jt = match( tmatch, res[[time]] )  
+        } 
+        if (exists(season, res)) {
+          uuid = res[[season]]
+          if (is.null(umatch)) umatch = uuid
+          ju = match( umatch, res[[season]] )  
+        }
+
+        data_dimensionality = ifelse (is.vector(toplot), 1, length(dim(toplot) ) )
+        if (data_dimensionality==2) {
+          toplot = toplot[ js, vv ]  # year only
+        } else if (data_dimensionality==3) {
+          toplot = toplot[ js, jt, vv ]  # year only
+        } else if (data_dimensionality==4) {
+          toplot = toplot[ js, jt, ju, vv ] # year/subyear
+        }
+      } 
     }
 
-    if (exists(space, res)) {
-      suid = res[[space]]
-      if (is.null(smatch)) smatch = suid 
-      js = match( as.character( sppoly[["AUID"]] ), smatch )  # should match exactly but in case sppoly is a subset 
-    }
-    if (exists(time, res)) {
-      tuid = res[[time]]
-      if (is.null(tmatch)) tmatch = tuid
-      jt = match( tmatch, res[[time]] )  
-    } 
-    if (exists(season, res)) {
-      uuid = res[[season]]
-      if (is.null(umatch)) umatch = uuid
-      ju = match( umatch, res[[season]] )  
-    }
-  
+    # prepare sppoly
+    if (is.null(sppoly)) stop( "sppoly is required")
+
     if (is.null(plot_crs)) plot_crs = st_crs( sppoly )
-
     sppoly = st_transform( sppoly, crs=st_crs(plot_crs) )
 
-    data_dimensionality = ifelse (is.vector(toplot), 1, length(dim(toplot) ) )
-
-    if (data_dimensionality==1) {
-      toplot = toplot[ js ]
-    } else if (data_dimensionality==2) {
-      toplot = toplot[ js, vv ]  # year only
-    } else if (data_dimensionality==3) {
-      toplot = toplot[ js, jt, vv ]  # year only
-    } else if (data_dimensionality==4) {
-      toplot = toplot[ js, jt, ju, vv ] # year/subyear
+    if (!exists(space, sppoly)) {
+      if (exists("AUID", sppoly)) {
+        sppoly[, space] = as.character(sppoly[["AUID"]])  
+      } else {
+        sppoly[, space] = as.character(1:nrow(sppoly))
+      }
     }
+
+
+    # add toplot to sppoly for final plots, but first check in case toplot is xyz data
+    if (!is.null(toplot)) {
+      
+      ndata = ifelse ( is.vector(toplot), length(toplot), nrow(toplot) )
+      if (ndata != nrow(sppoly) ) {
+        # must have lon,lat in toplot
+        toplot = st_as_sf( toplot, coords= c("lon", "lat"), crs=st_crs( projection_proj4string("lonlat_wgs84") ) )
+        toplot = st_transform(toplot, st_crs( sppoly ) )
+        toplot_id = st_points_in_polygons( pts=res, polys=sppoly[, space], varname=space )
+        toplot = tapply( toplot[[vn]], toplot_id, aggregate_function, na.rm=TRUE )
+      }
  
-    if  ( exists("breaks", ellps)) {
-      breaks = ellps[["breaks"]] 
-      er = range(breaks)
-    } else{ 
-      er = quantile( toplot, probs=probs, na.rm=TRUE )
-      # breaks = signif( seq( er[1], er[2], length.out=7), 2) 
-      breaks = pretty( er )
-    }
+      if  ( exists("breaks", ellps)) {
+        breaks = ellps[["breaks"]] 
+        er = range(breaks)
+      } else{ 
+        er = quantile( toplot, probs=probs, na.rm=TRUE )
+        # breaks = signif( seq( er[1], er[2], length.out=7), 2) 
+        breaks = pretty( er )
+      }
+      
+      toplot[ which(toplot < er[1]) ] = er[1] # set levels higher than max datarange to max datarange
+      toplot[ which(toplot > er[2]) ] = er[2] # set levels higher than max datarange to max datarange
+      toplot = round( toplot, digits=digits)
+
+      if (is.vector(toplot) | ( is.array(toplot) && length(dim(toplot) <2 )) ) {
+        vn_label =  paste(vn, collapse="_")
+        sppoly[, vn_label] = toplot
+      } else {
+        vn_label = colnames(toplot) = paste(paste(vn, collapse="_"), colnames(toplot), sep="_")
+        sppoly = cbind(sppoly, toplot )
+      }
+      vn_label = gsub(" ", ".", vn_label)
     
-    toplot[ which(toplot < er[1]) ] = er[1] # set levels higher than max datarange to max datarange
-    toplot[ which(toplot > er[2]) ] = er[2] # set levels higher than max datarange to max datarange
-
-    toplot = round( toplot, digits=digits)
-
-    if (is.vector(toplot) | ( is.array(toplot) && length(dim(toplot) <2 )) ) {
-      plot_names = vn
-      sppoly[, plot_names] = toplot
     } else {
-      plot_names = colnames(toplot) = paste(vn, colnames(toplot), sep="_")
-      sppoly = cbind(sppoly, toplot )
+      # no data sent, assume it is an element of sppoly
+      if (!exists(vn, sppoly)) stop( paste("variable: ", vn, "not found in sppoly ..."))
+
+      if  ( exists("breaks", ellps)) {
+        breaks = ellps[["breaks"]] 
+        er = range(breaks)
+      } else{ 
+        er = range( sppoly[[vn]],   na.rm=TRUE )
+        breaks = pretty( er )
+      }
+
+      if (is.null(vn_label)) vn_label = vn  # this permits direct plotting of sppoly variables (if toplot and res are not sent)
+      sppoly[, vn_label] = round( sppoly[[vn]], digits=digits)
+
     }
-    plot_names = gsub(" ", ".", plot_names)
 
+    if (exists("id", ellps) )   id = ellps[["id"]]
+    # sppoly = st_cast(sppoly, "POLYGON" )
+    sppoly = st_make_valid(sppoly)
 
+    
     tmap_mode( map_mode )
+    
+    tmout = NULL
 
-    # https://leaflet-extras.github.io/leaflet-providers/preview/
-    # OpenTopoMap, Stamen.Watercolor, Stamen.Terrain, Stamen.TonerLite, Esri.OceanBasemap 
-    tmout = 
-      tm_basemap(leaflet::providers$CartoDB.Positron, alpha=0.8) +
-#      tm_basemap(leaflet::providers$Esri.OceanBasemap, alpha=0.9) +
-      tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, alpha=0.8) +
+    if ( map_mode=="view") {
+
+      # https://leaflet-extras.github.io/leaflet-providers/preview/
+      # OpenTopoMap, Stamen.Watercolor, Stamen.Terrain, Stamen.TonerLite, Esri.OceanBasemap 
+      tmout = tmout +
+        tm_basemap(leaflet::providers$CartoDB.Positron, alpha=0.8) +
+  #      tm_basemap(leaflet::providers$Esri.OceanBasemap, alpha=0.9) +
+        tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, alpha=0.8) 
+    }
+
+    tmout = tmout + 
       tm_shape( sppoly, projection=plot_crs ) +
       tm_polygons( 
-        col=plot_names, 
+        col=vn_label, 
         title= title,
         style = style,
         palette = palette,
@@ -230,8 +269,12 @@
         border.alpha =border.alpha,
         alpha =alpha, 
         legend.is.portrait = legend.is.portrait ) +
-      tm_facets(ncol = 2, sync = TRUE) 
-      # tm_facets(as.layers = TRUE) 
+
+    if ( map_mode=="view") {
+      tmout = tmout + 
+        tm_facets(ncol = 2, sync = TRUE) 
+        # tm_facets(as.layers = TRUE) 
+    }
 
     if (!is.null(additional_polygons) ) {
       # e.g. management lines, etc
@@ -281,66 +324,71 @@
     }
 
 
-    if ("compass" %in% plot_elements ) {
-      if (map_mode=="plot"){
+    if (map_mode=="plot"){
+      if ("compass" %in% plot_elements ) {
         tmout = tmout + 
-          tm_compass( position=compass_position) 
+          tm_compass( position=compass_position, size=1) 
       }
     }
 
     if ("scale_bar" %in% plot_elements ) {
       tmout = tmout + 
-        tm_scale_bar( position=scale_bar_position, width=125, text.size=0.7)  
+        tm_scale_bar( position=scale_bar_position, width=scale_bar_width, text.size=0.7)  
     }
 
-    tmout = tmout + 
-        tm_layout( frame=FALSE, scale=scale, title.size=legend_title.size) +
-        tm_view(set.view = tmap_zoom, view.legend.position=legend_position  )
+    if ( map_mode=="plot") {
+      tmout = tmout + 
+        tm_layout( frame=FALSE, legend.position=legend_position, scale=scale ) 
+    }
 
+    if ( map_mode=="view") {
+      tmout = tmout + 
+        tm_view(set.view = tmap_zoom, view.legend.position=legend_position  ) +
+        tm_layout( frame=FALSE ) 
+    }
 
-        # tm_layout( frame=FALSE, title=title ) 
-    
+     
 
     if ( outfilename !="" ) {
 
-      if (outformat=="tmap") {
-        # tmap_save options:
-        twidth=1000
-        theight=800
-        tasp=0
-        if (exists("twidth", ellps) )   twidth = ellps[["twidth"]]
-        if (exists("theight", ellps) )   theight = ellps[["theight"]]
-        if (exists("tasp", ellps) )   tasp = ellps[["tasp"]]
-        tmap_mode("plot")
-        tmap_save( tmout, outfilename, width=twidth, height=theight, asp=tasp )
-        print(outfilename)
-        return(tmout)
-      }
-
-      if (outformat=="mapview") {
-        if (!require(mapview)) install.packages("mapview")
-        if (!require(webshot)) {
-          install.packages("webshot")
-          webshot::install_phantomjs()
+      if ( map_mode=="plot") {
+        if (outformat=="tmap") {
+          # tmap_save options:
+          twidth=1000
+          theight=800
+          tasp=0
+          if (exists("twidth", ellps) )   twidth = ellps[["twidth"]]
+          if (exists("theight", ellps) )   theight = ellps[["theight"]]
+          if (exists("tasp", ellps) )   tasp = ellps[["tasp"]]
+          tmap_save( tmout, outfilename, width=twidth, height=theight, asp=tasp )
+          print(outfilename)
+          return(tmout)
         }
-        require(mapview)
-        mapshot( tmap_leaflet(tmout), file=outfilename )
-        print(outfilename)
-        return(tmout)
-      }
+        if (outformat %in% c("pdf", "svg", "png")){
+          if (outformat=="pdf") pdf( file=outfilename, width=width, height=height, bg=bg, pointsize=pointsize )
+          if (outformat=="svg") svg( filename=outfilename, width=width, height=height, bg=bg, pointsize=pointsize   )
+          if (outformat=="png") png( filename=outfilename, width=3072, height=2304, pointsize=pointsize, res=pres )
+            print(tmout)
+          dev.off()
+          print(outfilename)
+        }
+      } 
 
-      if (outformat %in% c("pdf", "svg", "png")){
-        tmap_mode("plot")
-        if (outformat=="pdf") pdf( file=outfilename, width=width, height=height, bg=bg, pointsize=pointsize )
-        if (outformat=="svg") svg( filename=outfilename, width=width, height=height, bg=bg, pointsize=pointsize   )
-        if (outformat=="png") png( filename=outfilename, width=3072, height=2304, pointsize=pointsize, res=pres )
-          print(tmout)
-        dev.off()
-        print(outfilename)
-      }
-
+      if ( map_mode=="view") {
+        if (outformat=="mapview") {
+          if (!require(mapview)) install.packages("mapview")
+          if (!require(webshot)) {
+            install.packages("webshot")
+            webshot::install_phantomjs()
+          }
+          require(mapview)
+          mapshot( tmap_leaflet(tmout), file=outfilename )
+          print(outfilename)
+          return(tmout)
+        }
+      } 
     }
-    tmap_mode("view")    
+ 
     return(tmout)
   }
 
