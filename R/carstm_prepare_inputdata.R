@@ -317,7 +317,13 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     M$yr_factor = factor(M$yr)
   
     # do not sepraate out as season can be used even if not predicted upon
+    ii = which( M$dyear > 1) 
+    if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next year
+
     M$dyri = discretize_data( M[["dyear"]], p$discretization[["dyear"]] )
+
+    warning ("there are NA's for substrate .. not a problem when it is not used but should check ")
+
     M$season = as.character( M$dyri )  # copy for INLA
   }
 
