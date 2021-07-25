@@ -96,7 +96,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
 
 
-  if (is.null(nposteriors))  nposteriors = ifelse( exists("nposteriors", p), p$nposteriors, 1000 )
+  if (is.null(nposteriors))  nposteriors = ifelse( exists("nposteriors", p), p$nposteriors, 5000 )
 
 
   if (!exists("carstm_model_family", p )) p$carstm_model_family = "gaussian"
@@ -385,7 +385,8 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
           selection=list()
           selection[vnS] = 0  # 0 means everything matching space
           aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
-          g = sapply( aa, function(x) invlink_random(x$latent[iid] + x$latent[bym]) )
+          
+          g = sapply( aa, function(x) {inla.tmarginal( invlink_random, x$latent[iid]) + inla.tmarginal( invlink_random, x$latent[bym] ) } )
           aa = NULL
 
           mq = t( apply( g, 1, quantile, probs =c(0.025, 0.5, 0.975), na.rm =TRUE) )
@@ -492,7 +493,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
             selection=list()
             selection[vnST] = 0  # 0 means everything matching space
             aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )
-            g = sapply( aa, function(x) invlink_random(x$latent[iid] + x$latent[bym]) )
+            g = sapply( aa, function(x) {inla.tmarginal( invlink_random, x$latent[iid]) + inla.tmarginal( invlink_random, x$latent[bym] ) } )
             aa = NULL
 
             mq = t( apply( g, 1, quantile, probs =c(0.025, 0.5, 0.975), na.rm =TRUE) )
@@ -577,7 +578,9 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       if (  p$aegis_dimensionality == "space" ) {
         ipred = which( M$tag=="predictions"  &  M[,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         g = fit$marginals.fitted.values[ipred]   
-        g = lapply( g, invlink_predictions )
+
+        g = inla.tmarginal( invlink_predictions, g)    
+        # g = lapply( g, invlink_predictions )
         if (exists("data_transformation", p)) g = lapply( g, backtransform )
 
         m = list_simplify ( sapply( g, summary_inv_predictions ) )
@@ -597,7 +600,10 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       if ( p$aegis_dimensionality == "space-year" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]] & M[,vnT0] %in% O[[vnT]] )
         g = fit$marginals.fitted.values[ipred]   
-        g = lapply( g, invlink_predictions )
+
+        g = inla.tmarginal( invlink_predictions, g)    
+
+        # g = lapply( g, invlink_predictions )
         if (exists("data_transformation", p)) g = lapply( g, backtransform )
 
         m = list_simplify ( sapply( g, summary_inv_predictions ) )
@@ -619,7 +625,8 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       if ( p$aegis_dimensionality == "space-year-season" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]]  &  M[,vnT0] %in% O[[vnT]] &  M[,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         g = fit$marginals.fitted.values[ipred]   
-        g = lapply( g, invlink_predictions )
+        g = inla.tmarginal( invlink_predictions, g)    
+#        g = lapply( g, invlink_predictions )
         if (exists("data_transformation", p)) g = lapply( g, backtransform )
 
         m = list_simplify ( sapply( g, summary_inv_predictions ) )
