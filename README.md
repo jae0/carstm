@@ -17,7 +17,8 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
 
   # Basic BYM model using INLA directly:
 
-  fm = Y ~ f(region, model="besag",graph.file=g) + f(region, model="iid") + f(x, model="rw2")
+  Germany$region.iid = Germany$region 
+  fm = Y ~ f(region, model="besag",graph.file=g) + f(region.iid, model="iid") + f(x, model="rw2")
   fit =  inla( fm, family="poisson", data=Germany, E=E, verbose=TRUE,
       control.predictor = list( compute=TRUE),
     control.compute = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE ),
