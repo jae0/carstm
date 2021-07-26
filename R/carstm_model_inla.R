@@ -52,8 +52,8 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
   vnT = vnU = vnS = NULL 
   vnY = p$variabletomodel
 
-  vnI = ifelse( exists("vnI", p), p$vnI, "uid" )  # iid of observations
-  if (!exists(vnI, M)) M[,vnI] = 1:nrow(M)
+  # vnI = ifelse( exists("vnI", p), p$vnI, "uid" )  # iid of observations
+  # if (!exists(vnI, M)) M[,vnI] = 1:nrow(M)
 
   # converte space and time to numeric codes for INLA
   if (grepl("space", p$aegis_dimensionality)) {
@@ -313,7 +313,8 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
     summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
     if (exists("marginals.random", fit)) {
       raneff = names( fit$marginals.random )
-      raneff = setdiff( raneff, c(vnS, vnST, vnI) )
+      # raneff = setdiff( raneff, c(vnS, vnST, vnI) )
+      raneff = setdiff( raneff, c(vnS, vnST ) )
       for (re in raneff) {
         g = fit$marginals.random[[re]]
         O[["random"]] [[re]] = list_simplify ( sapply( g, summary_inv_random ) )  [, tokeep, drop =FALSE]

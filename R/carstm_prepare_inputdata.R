@@ -306,7 +306,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
   APS = NULL; gc()
 
-  M$uid = 1:nrow(M)  # seems to require an iid model for each obs for stability .. use this for iid
+  # M$uid = 1:nrow(M)  # seems to require an iid model for each obs for stability .. use this for iid
   M$AUID  = as.character(M$AUID)  # revert to factors -- should always be a character
   M$space = as.character( M$AUID)
  
