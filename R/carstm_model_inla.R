@@ -379,14 +379,13 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
           W = NULL
         }
         m = NULL
-
+   
+      
         if (!is.null(iid)  & !is.null(bym) ) {
           # space == iid + bym combined:
           selection=list()
           selection[vnS] = 0  # 0 means everything matching space
           aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
-          
-
           g = sapply( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
           aa = NULL
 

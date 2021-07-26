@@ -2,6 +2,19 @@
 carstm_model = function( p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_units_fn=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compression_level=6, fn_fit=NULL, fn_res=NULL,
    ... ) {
 
+     if (0) {
+      M=NULL
+      E=NULL
+      sppoly=NULL
+      region.id=NULL
+      areal_units_fn=NULL
+      DS="redo"
+      improve.hyperparam.estimates=FALSE
+      compression_level=6
+      fn_fit=NULL
+      fn_res=NULL
+     }
+     
   # compute and extract in one go esp as inla data files are too large, otherwise
 
   p = parameters_add(p, list(...)) # add passed args to parameter list, priority to args
