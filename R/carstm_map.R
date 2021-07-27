@@ -1,4 +1,6 @@
 
+## TODO:: worth doing evaluations using parallel mode
+
   carstm_map = function( 
     res=NULL, 
     toplot=NULL,

@@ -1,5 +1,4 @@
 
-
 carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
   fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), 
   fn_res=tempfile(pattern="res_", fileext=".Rdata"), 
@@ -219,7 +218,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
   }
 
   # do the computations here as fit can be massive ... best not to copy, etc ..
-  if (be_verbose)  message( "\nComputing summaries (also very slow) ..." )
+  if (be_verbose)  message( "\nComputing summaries and computing from posterior simulations (longer than model fitting depending upon no of posterior sims: 'nposteriors' ) ..." )
 
   
   list_simplify = function(x) as.data.frame( t( as.data.frame( x )))
@@ -238,7 +237,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
   if ( "summary" %in% toget) {
 
-    if (be_verbose)  message("Extracting and formatting parameter summaries"  )
+    if (be_verbose)  message("Extracting from marginals: parameter summaries"  )
 
       O[["summary"]][["direct"]] = summary(fit)
 
@@ -308,7 +307,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
   }
 
   if ("random_other" %in% toget) {
-    if (be_verbose)  message("Extracting and formatting random covariates"  )
+    if (be_verbose)  message("Extracting from marginals: random covariates"  )
 
     summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
     if (exists("marginals.random", fit)) {
@@ -327,7 +326,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
 
   if ("random_spatial" %in% toget) {
-    if (be_verbose)  message("Extracting and formatting random spatial errors"  )
+    if (be_verbose)  message("Extracting from marginals: random spatial errors"  )
 
     # space only
     summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
@@ -429,7 +428,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
   if ("random_spatiotemporal"  %in% toget ) {
 
-    if (be_verbose)  message("Extracting and formatting random spatiotemporal errors"  )
+    if (be_verbose)  message("Extracting from marginals: random spatiotemporal errors"  )
 
     # space-year
     summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
@@ -555,7 +554,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
   if ("predictions"  %in% toget ) {
 
-    if (be_verbose)  message("Extracting and formatting predictions"  )
+    if (be_verbose)  message("Extracting from marginals: predictions"  )
 
     # truncate_upperbound = function( b, upper_limit, eps=1e-12 ) {
     #   k = which( b[,1] > upper_limit )
