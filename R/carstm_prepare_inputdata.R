@@ -1,7 +1,7 @@
 
 carstm_prepare_inputdata = function( p, M, sppoly,
     lookup = c("bathymetry", "substrate", "temperature", "speciescomposition"),
-    APS_data_offset=NULL
+    APS_data_offset=NULL, NA_remove=TRUE
 ) {
  
   setDT(M)
@@ -37,7 +37,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       ) 
     }
 
-    M = M[ is.finite(M[[pB$variabletomodel]] ) , ]
+    if (NA_remove) M = M[ is.finite(M[[pB$variabletomodel]] ) , ]
  
     if ( exists("spatial_domain", p)) {
         ii = geo_subset( spatial_domain=p$spatial_domain, Z=M )
@@ -78,7 +78,29 @@ carstm_prepare_inputdata = function( p, M, sppoly,
           variable_name="substrate.grainsize.mean" 
         )  
       }
-      M = M[ is.finite(M[[pS$variabletomodel] ] ) , ]
+      if (NA_remove) M = M[ is.finite(M[[pS$variabletomodel] ] ) , ]
+
+      if ( p$carstm_inputdata_model_source$substrate %in% c("stmv", "hybrid") ) {
+        pBD = bathymetry_parameters(  spatial_domain=p$spatial_domain, project_class=p$carstm_inputdata_model_source$substrate  )  # yes substrate source coordinate system.. to match substrate source for the data
+        LUB = bathymetry_db( p=pBD, DS="baseline", varnames="all" )
+        iML = match( 
+          array_map( "xy->1", M[, c("plon","plat")], gridparams=p$gridparams ), 
+          array_map( "xy->1", LUB[,c("plon","plat")], gridparams=p$gridparams ) 
+        )
+
+        pSD = substrate_parameters(  spatial_domain=p$spatial_domain, project_class=p$carstm_inputdata_model_source$substrate )  # full default
+        LU = substrate_db( p=pSD, DS="complete", varnames="all" )
+
+        vns = intersect(  c( 
+            "substrate.grainsize", "substrate.grainsize.lb", "substrate.grainsize.ub", 
+            "s.sdTotal", "s.sdSpatial", "s.sdObs", "s.phi", "s.nu", "s.localrange" 
+          ), names(LU) )
+
+        for (vn in vns  ) M[[ vn]] = LU[ iML, vn ]
+        
+        M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
+        LU =  iML = vns = NULL
+      }
     }
 
 
@@ -102,7 +124,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
           year.assessment=p$year.assessment
         )
       }
-      M = M[ is.finite(M[[ pT$variabletomodel]]  ) , ]
+      if (NA_remove) M = M[ is.finite(M[[ pT$variabletomodel]]  ) , ]
       M = M[ which( M[[ pT$variabletomodel]]  < 14 ) , ]  #
     }
 
@@ -128,7 +150,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
           year.assessment=p$year.assessment
         )
       }
-      M = M[ which(is.finite(M[[pPC1$variabletomodel]] )), ]
+      if (NA_remove) M = M[ which(is.finite(M[[pPC1$variabletomodel]] )), ]
 
       pPC2 = speciescomposition_parameters( p=parameters_reset(p), project_class="carstm", variabletomodel="pca2", year.assessment=p$year.assessment )
       if (!(exists(pPC2$variabletomodel, M ))) M[,pPC2$variabletomodel] = NA
@@ -145,7 +167,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
            year.assessment=p$year.assessment
          )
       }
-      M = M[ which(is.finite(M[[pPC2$variabletomodel]] )),]
+      if (NA_remove) M = M[ which(is.finite(M[[pPC2$variabletomodel]] )),]
 
 
       M$plon = M$plat = M$lon = M$lat = NULL
@@ -278,6 +300,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       project_class = "carstm", # lookup from modelled predictions from carstm 
       output_format = "areal_units",
       variable_name=list("predictions"),
+      variabletomodel="pca1" ,
       statvars=c("mean"),
       raster_resolution=min(p$gridparams$res) /2,
       year.assessment=p$year.assessment,
@@ -293,6 +316,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       project_class = "carstm", # lookup from modelled predictions from carstm
       output_format = "areal_units",
       variable_name=list("predictions"),
+      variabletomodel="pca2" ,
       statvars=c("mean"),
       raster_resolution=min(p$gridparams$res) /2,
       year.assessment=p$year.assessment,
@@ -322,7 +346,6 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
     M$dyri = discretize_data( M[["dyear"]], p$discretization[["dyear"]] )
 
-    warning ("there are NA's for substrate .. not a problem when it is not used but should check ")
 
     M$season = as.character( M$dyri )  # copy for INLA
   }
