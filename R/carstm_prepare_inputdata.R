@@ -21,6 +21,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
       
   if ("bathymetry" %in% lookup) {
+    message( "lookup: bathymetry")
     require(aegis.bathymetry)
     pB = bathymetry_parameters( p=parameters_reset(p), project_class="carstm"  )
     if ( !(exists( pB$variabletomodel, M )))  M[[pB$variabletomodel]] = NA
@@ -37,7 +38,6 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       ) 
     }
 
-    if (NA_remove) M = M[ is.finite(M[[pB$variabletomodel]] ) , ]
  
     if ( exists("spatial_domain", p)) {
         ii = geo_subset( spatial_domain=p$spatial_domain, Z=M )
@@ -53,8 +53,12 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       )
       vns = intersect(  c( "z", "dZ", "ddZ", "b.sdSpatial", "b.sdObs", "b.phi", "b.nu", "b.localrange" ), names(LU) )
       for (vn in setdiff( vns, "z") ) M[[ vn]] = LU[ iML, vn ]
-      M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
       LU =  iML = vns = NULL
+    }
+
+    if (NA_remove) {
+      M = M[ is.finite(M[[pB$variabletomodel]] ) , ]
+      M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
     }
 
   }
@@ -64,6 +68,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
 
     if ("substrate" %in% lookup) {
+      message( "lookup: substrate")
       require(aegis.substrate)
       pS = substrate_parameters( p=parameters_reset(p), project_class="carstm"  )
       if (!(exists(pS$variabletomodel, M ))) M[[pS$variabletomodel]] = NA
@@ -78,7 +83,6 @@ carstm_prepare_inputdata = function( p, M, sppoly,
           variable_name="substrate.grainsize.mean" 
         )  
       }
-      if (NA_remove) M = M[ is.finite(M[[pS$variabletomodel] ] ) , ]
 
       if ( p$carstm_inputdata_model_source$substrate %in% c("stmv", "hybrid") ) {
         pBD = bathymetry_parameters(  spatial_domain=p$spatial_domain, project_class=p$carstm_inputdata_model_source$substrate  )  # yes substrate source coordinate system.. to match substrate source for the data
@@ -89,7 +93,7 @@ carstm_prepare_inputdata = function( p, M, sppoly,
         )
 
         pSD = substrate_parameters(  spatial_domain=p$spatial_domain, project_class=p$carstm_inputdata_model_source$substrate )  # full default
-        LU = substrate_db( p=pSD, DS="complete", varnames="all" )
+        LU = substrate_db( p=pSD, DS="complete"  )
 
         vns = intersect(  c( 
             "substrate.grainsize", "substrate.grainsize.lb", "substrate.grainsize.ub", 
@@ -101,6 +105,12 @@ carstm_prepare_inputdata = function( p, M, sppoly,
         M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
         LU =  iML = vns = NULL
       }
+
+      if (NA_remove) {
+        M = M[ is.finite(M[[pS$variabletomodel] ] ) , ]
+        M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
+      } 
+
     }
 
 
@@ -126,6 +136,8 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       }
       if (NA_remove) M = M[ is.finite(M[[ pT$variabletomodel]]  ) , ]
       M = M[ which( M[[ pT$variabletomodel]]  < 14 ) , ]  #
+
+      # to to:  add st,v/hybrid 
     }
 
 
@@ -193,6 +205,8 @@ carstm_prepare_inputdata = function( p, M, sppoly,
         if (exists("tiyr", M )) M$dyear = M$tiyr - M$year 
       }
     }
+
+    # to to:  add st,v/hybrid 
 
 
   # end observations
