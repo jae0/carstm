@@ -307,14 +307,14 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
   }
 
   if ("random_other" %in% toget) {
-    if (be_verbose)  message("Extracting from marginals: random covariates"  )
-
+ 
     summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
     if (exists("marginals.random", fit)) {
       raneff = names( fit$marginals.random )
       # raneff = setdiff( raneff, c(vnS, vnST, vnI) )
       raneff = setdiff( raneff, c(vnS, vnST ) )
       for (re in raneff) {
+        if (be_verbose)  message("Extracting from marginals: random covariate", re  )
         g = fit$marginals.random[[re]]
         O[["random"]] [[re]] = list_simplify ( sapply( g, summary_inv_random ) )  [, tokeep, drop =FALSE]
         O[["random"]] [[re]]$ID = fit$summary.random[[re]]$ID
@@ -326,7 +326,6 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
 
   if ("random_spatial" %in% toget) {
-    if (be_verbose)  message("Extracting from marginals: random spatial errors"  )
 
     # space only
     summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
@@ -334,6 +333,8 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
     if (exists("marginals.random", fit)) {
 
       if ( exists(vnS, fit$marginals.random) ) {
+    
+        if (be_verbose)  message("Extracting from marginals: random spatial errors"  )
 
         O[["random"]] [[vnS]] = list()  # space as a main effect
 
@@ -428,8 +429,6 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
   if ("random_spatiotemporal"  %in% toget ) {
 
-    if (be_verbose)  message("Extracting from marginals: random spatiotemporal errors"  )
-
     # space-year
     summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
 
@@ -438,6 +437,8 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       if (!is.null(vnST)) {
 
         if ( exists( vnST, fit$marginals.random) ) {
+    
+          if (be_verbose)  message("Extracting from marginals: random spatiotemporal errors"  )
 
           O[["random"]] [[vnST]] = list()
 
@@ -554,7 +555,6 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
   if ("predictions"  %in% toget ) {
 
-    if (be_verbose)  message("Extracting from marginals: predictions"  )
 
     # truncate_upperbound = function( b, upper_limit, eps=1e-12 ) {
     #   k = which( b[,1] > upper_limit )
@@ -575,7 +575,9 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
     # adjusted by offset
     if (exists("marginals.fitted.values", fit)) {
-      
+
+      if (be_verbose)  message("Extracting from marginals: predictions"  )
+
       if (  p$aegis_dimensionality == "space" ) {
         ipred = which( M$tag=="predictions"  &  M[,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         g = fit$marginals.fitted.values[ipred]   
