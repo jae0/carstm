@@ -213,12 +213,12 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
   if (is.null(fit)) load( fn_fit )
   
   if (is.null(fit)) {
-    message( "fit file not found:", fn_fit )
+    message( "fit file not found: ", fn_fit )
     stop()
   }
 
   # do the computations here as fit can be massive ... best not to copy, etc ..
-  if (be_verbose)  message( "\nComputing summaries and computing from posterior simulations (longer than model fitting depending upon no of posterior sims: 'nposteriors' ) ..." )
+  if (be_verbose)  message( "\nComputing summaries and computing from posterior simulations (can be longer than model fitting depending upon no of posterior sims: 'nposteriors' ) ..." )
 
   
   list_simplify = function(x) as.data.frame( t( as.data.frame( x )))
@@ -314,7 +314,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       # raneff = setdiff( raneff, c(vnS, vnST, vnI) )
       raneff = setdiff( raneff, c(vnS, vnST ) )
       for (re in raneff) {
-        if (be_verbose)  message("Extracting from marginals: random covariate", re  )
+        if (be_verbose)  message("Extracting from marginals: random covariate ", re  )
         g = fit$marginals.random[[re]]
         O[["random"]] [[re]] = list_simplify ( sapply( g, summary_inv_random ) )  [, tokeep, drop =FALSE]
         O[["random"]] [[re]]$ID = fit$summary.random[[re]]$ID
