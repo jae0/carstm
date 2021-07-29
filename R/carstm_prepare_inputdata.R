@@ -40,8 +40,10 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
  
     if ( exists("spatial_domain", p)) {
+        # need to be careful with extrapolation ...  filter depths
+        if (NA_remove)  M = M[ is.finite(M[[pB$variabletomodel]] ) , ]
         ii = geo_subset( spatial_domain=p$spatial_domain, Z=M )
-        if (length(ii)> 0 ) M = M[ ii , ] # need to be careful with extrapolation ...  filter depths
+        if (length(ii)> 0 ) M = M[ ii , ] 
     }
 
     if ( p$carstm_inputdata_model_source$bathymetry %in% c("stmv", "hybrid") ) {
@@ -54,11 +56,10 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       vns = intersect(  c( "z", "dZ", "ddZ", "b.sdSpatial", "b.sdObs", "b.phi", "b.nu", "b.localrange" ), names(LU) )
       for (vn in setdiff( vns, "z") ) M[[ vn]] = LU[ iML, vn ]
       LU =  iML = vns = NULL
-    }
-
-    if (NA_remove) {
-      M = M[ is.finite(M[[pB$variabletomodel]] ) , ]
-      M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
+      if (NA_remove) {
+        ii = which( is.finite( rowSums(M[, vns, with=FALSE] )  ))
+        if (length(ii) > 0 ) M = M[ ii, ]
+      }
     }
 
   }
@@ -82,6 +83,9 @@ carstm_prepare_inputdata = function( p, M, sppoly,
           DS="aggregated_data", 
           variable_name="substrate.grainsize.mean" 
         )  
+        if (NA_remove) {
+          M = M[ which( is.finite(M[[pS$variabletomodel] ] ) ), ]
+        } 
       }
 
       if ( p$carstm_inputdata_model_source$substrate %in% c("stmv", "hybrid") ) {
@@ -104,12 +108,11 @@ carstm_prepare_inputdata = function( p, M, sppoly,
         
         M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
         LU =  iML = vns = NULL
+        if (NA_remove) {
+          M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
+        } 
       }
 
-      if (NA_remove) {
-        M = M[ is.finite(M[[pS$variabletomodel] ] ) , ]
-        M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
-      } 
 
     }
 
@@ -215,7 +218,6 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
   # ----------
   # generate prediction surface locations (APS) .. use carstm predictions (project_class)
-
   if (grepl("space", p$aegis_dimensionality)) {
 
     region.id = slot( slot(sppoly, "nb"), "region.id" )
@@ -254,6 +256,26 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       raster_resolution=min(p$gridparams$res) /2,
       returntype = "vector"
     ) 
+
+    iM = which(!is.finite( APS[[pB$variabletomodel]] )) 
+    if (length(iM) > 0 ) {
+      # depth is very important
+      # lookup from empirical data and estimate where missing
+
+      APS[[pB$variabletomodel]][iM] = aegis_lookup(  
+        data_class="bathymetry", 
+        LOCS=APS$AUID,
+        LOCS_AU=sppoly,
+        project_class = "core", # lookup from modelled predictions from carstm
+        output_format = "areal_units",
+        DS="aggregated_data", 
+        variable_name="z.mean", 
+        raster_resolution=min(p$gridparams$res) /2,
+        returntype = "vector"
+      ) 
+ 
+    }
+
   }
 
   if ( "substrate" %in% lookup ) {
