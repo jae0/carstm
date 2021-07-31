@@ -37,7 +37,6 @@ carstm_prepare_inputdata = function( p, M, sppoly,
         returntype="vector" 
       ) 
     }
-
  
     if ( exists("spatial_domain", p)) {
         # need to be careful with extrapolation ...  filter depths
@@ -83,10 +82,8 @@ carstm_prepare_inputdata = function( p, M, sppoly,
           DS="aggregated_data", 
           variable_name="substrate.grainsize.mean" 
         )  
-        if (NA_remove) {
-          M = M[ which( is.finite(M[[pS$variabletomodel] ] ) ), ]
-        } 
-      }
+      }   
+      
 
       if ( p$carstm_inputdata_model_source$substrate %in% c("stmv", "hybrid") ) {
         pBD = bathymetry_parameters(  spatial_domain=p$spatial_domain, project_class=p$carstm_inputdata_model_source$substrate  )  # yes substrate source coordinate system.. to match substrate source for the data
@@ -106,14 +103,14 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
         for (vn in vns  ) M[[ vn]] = LU[ iML, vn ]
         
-        M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
-        LU =  iML = vns = NULL
         if (NA_remove) {
-          M = M[ is.finite( rowSums(M[, vns, with=FALSE] )  ), ]
-        } 
+          ii = which( is.finite( rowSums(M[, vns, with=FALSE] )  ))
+          if (length(ii) > 0 ) M = M[ ii, ]
+        }
+        LU =  iML = vns = NULL
+      
       }
-
-
+ 
     }
 
 
@@ -260,16 +257,29 @@ carstm_prepare_inputdata = function( p, M, sppoly,
     iM = which(!is.finite( APS[[pB$variabletomodel]] )) 
     if (length(iM) > 0 ) {
       # depth is very important
-      # lookup from empirical data and estimate where missing
-
+      APS[[pB$variabletomodel]][iM] = aegis_lookup(  
+        data_class="bathymetry", 
+        LOCS=APS$AUID,
+        LOCS_AU=sppoly,
+        project_class = "stmv", # lookup from modelled predictions from carstm
+        output_format = "areal_units",
+        variable_name="z", 
+        raster_resolution=min(p$gridparams$res) /2,
+        returntype = "vector"
+      ) 
+ 
+    }
+    iM = which(!is.finite( APS[[pB$variabletomodel]] )) 
+    if (length(iM) > 0 ) {
+      # depth is very important
       APS[[pB$variabletomodel]][iM] = aegis_lookup(  
         data_class="bathymetry", 
         LOCS=APS$AUID,
         LOCS_AU=sppoly,
         project_class = "core", # lookup from modelled predictions from carstm
         output_format = "areal_units",
-        DS="aggregated_data", 
-        variable_name="z.mean", 
+        DS = "aggregated_data",  # needed for core 
+        variable_name = "z.mean", 
         raster_resolution=min(p$gridparams$res) /2,
         returntype = "vector"
       ) 
@@ -287,13 +297,30 @@ carstm_prepare_inputdata = function( p, M, sppoly,
       LOCS_AU=sppoly,
       project_class = "carstm", # lookup from modelled predictions from carstm
       output_format = "areal_units",
-      variable_name=list("predictions"),
-      statvars=c("mean"),
-      raster_resolution=min(p$gridparams$res) /2,
+      variable_name = list("predictions"),
+      statvars = c("mean"),
+      raster_resolution = min(p$gridparams$res) /2,
       returntype = "vector"
     )  
-  }
 
+    
+    iM = which(!is.finite( APS[[pS$variabletomodel]] )) 
+    if (length(iM) > 0 ) {
+
+      APS[[pS$variabletomodel]][iM] = aegis_lookup(  
+        data_class="substrate", 
+        LOCS=APS$AUID,
+        LOCS_AU=sppoly,
+        project_class = "stmv", # lookup from modelled predictions from carstm
+        output_format = "areal_units",
+        variable_name = "substrate.grainsize", 
+        raster_resolution=min(p$gridparams$res) /2,
+        returntype = "vector"
+      ) 
+
+    }
+  }
+  
   # prediction surface in time
   # to this point APS is static, now add time dynamics (teperature),  expand APS to all time slices
   if ( grepl( "year", p$aegis_dimensionality ) | (grepl( "season", p$aegis_dimensionality )  ) ) {
@@ -384,6 +411,15 @@ carstm_prepare_inputdata = function( p, M, sppoly,
 
 
     M$season = as.character( M$dyri )  # copy for INLA
+  }
+
+
+  if ( "substrate" %in% lookup ) {
+    iM = which(!is.finite( APS[[pS$variabletomodel]] )) 
+    if (length(iM) > 0 ) {
+      
+    }
+
   }
 
   return(M)
