@@ -16,7 +16,7 @@
     umatch=NULL, 
     plot_crs=NULL,
     plot_elements=c( "isobaths", "compass", "scale_bar" ),
-    additional_polygons = NULL,
+    additional_features = NULL,
     aggregate_function=mean,
     probs=c(0,0.975), 
     outformat="mapview",
@@ -278,36 +278,29 @@
         # tm_facets(as.layers = TRUE) 
     }
 
-    if (!is.null(additional_polygons) ) {
+    if (!is.null(additional_features) ) {
       # e.g. management lines, etc
-      for (poly in additional_polygons) {
-        if (any( st_is(poly, c("MULTILINESTRING", "LINESTRING") ) ) ) {
-          tmout = tmout + 
-            tm_shape( poly, projection=plot_crs ) +
-            tm_lines( col="grey40", alpha=0.5, lwd=2)  
-        }
-        if (all( (st_is(poly, c("MULTIPOLYGON", "POLYGON"))) )) {
-          tmout = tmout + 
-            tm_shape( poly, projection=plot_crs ) +
-            tm_polygons( col="grey80", alpha=0.5 )    
-        }
-      }
+      tmout = tmout + additional_features 
     }
 
     if ("rnaturalearth_countries" %in% plot_elements ) {
-        if (!require("rnaturalearth")) {
-          install.packages("rnaturalearth")
+        if (!require("rnaturalearth"))  install.packages("rnaturalearth")
+        if (!require("rnaturalearthdata"))  install.packages("rnaturalearthdata")
           if (0) {
             # or install directly
-            devtools::install_github("ropensci/rnaturalearth")
-            devtools::install_github("ropensci/rnaturalearthdata")
-            install.packages("rnaturalearthhires",  repos = "http://packages.ropensci.org", type = "source")
+            devtools::install_github("ropenscilabs/rnaturalearth")
+            devtools::install_github("ropenscilabs/rnaturalearthdata")
+            install.packages("rnaturalearthhires",
+                 repos = "http://packages.ropensci.org",
+                 type = "source")
           }
-        }              
+
       require("rnaturalearth")
+      require("rnaturalearthhires")
+      require("rnaturalearthdata")
       world = ne_countries(type = 'countries', scale = 'large', returnclass="sf")
       tmout = tmout + 
-        tm_shape( plot_elements, projection=plot_crs ) + 
+        tm_shape( world, projection=plot_crs ) + 
         tm_borders( col="gray", alpha=0.75)  
     }
 
