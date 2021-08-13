@@ -60,6 +60,13 @@ carstm_hyperparameters = function( reference_sd, alpha=0.5, reference_mean=0 ) {
       )
     ),
 
+    besag = list(
+      prec = list(
+        prior = "pc.prec",
+        param = c(reference_sd, alpha)
+      )
+    ),
+
     # param=c(u, alpha); u=phi (proportion spatial); alpha=prob
     bym2 = list(
       prec = list(
