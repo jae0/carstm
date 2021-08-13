@@ -23,6 +23,7 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   fit =  inla( fm, family="poisson", data=Germany, E=E, verbose=TRUE,
       control.predictor = list( compute=TRUE),
     control.compute = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE ),
+    inla.mode="classic"
  )
   summary(fit)
 
@@ -71,8 +72,9 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   require(carstm)  # carstm options are sent via one controlling parameter list  
   
   Germany$tag = "predictions"  # predict on all locations
-  Germany$log_E = log( Germany$E )  # offset on log scale
+  
   Germany$region = as.character(Germany$region)
+  Germany$region.iid = Germany$region
 
   sppoly = Germany  # construct "sppoly" with required attributes (though it is not a polygon)
   attributes(sppoly)[["areal_units_fn"]] = g  
@@ -84,12 +86,16 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
     carstm_model_label = "testlabel",
     variabletomodel = "Y",
     vnS = "region", 
+    vnSI="region.iid",
+    vnO = "E",
     aegis_dimensionality = "space",   # a pure space model
     carstm_modelengine = "inla",
-    carstm_model_formula = Y ~ offset(log_E) +  f(region, model="bym2", graph.file=g)  + f(x, model="rw2"),
+    carstm_model_formula = Y ~  1+ offset( E ) +  f(region, model="besag", graph.file=g ) +  f(region.iid, model="iid", graph.file=g) + f(x, model="rw2")  ,
     carstm_model_family = "poisson",
     nposteriors=5000
   ) 
+
+  # note offset is not logged ... link function handles it 
 
   fn_fit = tempfile( pattern="fit", tmpdir=p$modeldir )
   fn_res = tempfile( pattern="res", tmpdir=p$modeldir )
@@ -120,6 +126,8 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   }
 
   plot(fit$summary.random$region$mean ~ fit3$summary.random$region$mean[1:544] )
+  
+  plot(res$predictions[,"mean"] ~ fit$summary.fitted.values[,"mean"] )
 
   # random effects
   dev.new()
@@ -177,11 +185,13 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
 
   # carstm_maps of some of the results  .. can't map unitl polygons are coverted to sf format (TODO)
   tmout = carstm_map(  res=res, vn=c( "predictions" ), 
+    space="region",
     plot_elements=c( "compass", "scale_bar", "legend" ),
     main=paste( "Predictions")  
   )
 
-  tmout = carstm_map(  res=res, vn=c( "random", "spatial", "combined" ), 
+  tmout = carstm_map(  res=res, vn=c( "random", "region", "combined" ), 
+    space="region",
     plot_elements=c( "compass", "scale_bar", "legend" ),
     main=paste( "Spatial effects")  
   )

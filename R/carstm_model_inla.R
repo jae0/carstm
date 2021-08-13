@@ -10,11 +10,32 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
   ellp = list(...)
 
+
+  if (0) {
+    # for debugging
+    E=NULL 
+    sppoly=NULL
+    region.id=NULL
+    fn_fit=tempfile(pattern="fit_", fileext=".Rdata")
+    fn_res=tempfile(pattern="res_", fileext=".Rdata")
+    compression_level=1
+    redo_fit = TRUE
+    toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions")
+    exceedance_threshold=NULL
+    deceedance_threshold=NULL
+    nposteriors=NULL
+    improve.hyperparam.estimates=NULL
+
+  }
+
+
   be_verbose = FALSE
   if ( exists("verbose", ellp ) ) if ( ellp[["verbose"]] )   be_verbose = TRUE
 
+
   # outputs
   O = list()
+  O[["formula"]] = p$carstm_model_formula
   O[["summary"]] = list()
   O[["random"]] = list()
 
@@ -49,12 +70,24 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
   vnST = vnTS = NULL  # this is also used as a flag for random st effects extraction
 
   vnT = vnU = vnS = NULL 
+
   vnY = p$variabletomodel
+
+  O[["formula_parsed"]] = fm = carstm_parse_formula(p$carstm_model_formula )
+ 
+  if ( fm$dependent_variable != vnY){
+    message("Possible parsing issue. Dependent variable in params is specified as: ",  vnY )
+    message("But formula is using: ", fm$dependent_variable )
+    stop()
+  } 
 
   # vnI = ifelse( exists("vnI", p), p$vnI, "uid" )  # iid of observations
   # if (!exists(vnI, M)) M[,vnI] = 1:nrow(M)
 
-  # converte space and time to numeric codes for INLA
+  vnSI = ifelse( exists("vnSI", p), p$vnSI, "space_iid" )
+  vnSTI = ifelse( exists("vnSTI", p), p$vnSTI, "space_time_iid" )
+
+  # convert space and time to numeric codes for INLA
   if (grepl("space", p$aegis_dimensionality)) {
     # labels
     vnS = ifelse( exists("vnS", p), p$vnS, "space" )
@@ -91,6 +124,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       M[,vnU] = match( M[,vnU0], O[[vnU]] )  # convert to numeric (ie. a numeric factor)
     }
 
+
   }
 
 
@@ -117,7 +151,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
     invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
     invlink_random = function(x) lnk_function( x,  inverse=TRUE )
     invlink_predictions = function(x) lnk_function( x,  inverse=TRUE )
-   
+
   } else if ( grepl( ".*binomial", p$carstm_model_family)) {
     lnk_function = inla.link.logit
     invlink_fixed = function(x) lnk_function( x,  inverse=TRUE )
@@ -130,29 +164,59 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
   
   mq = quantile( M[ ii, vnY ], probs=c(0.025, 0.5, 0.975) )
 
-  O[["data_range"]] = c( mean=mean(M[ ii, vnY ]), sd=sd(M[ ii, vnY ]), min=min(M[ ii, vnY ]), max=max(M[ ii, vnY ]),  
-      lb=mq[1], median=mq[2], ub=mq[3]  )  # on data /user scale not internal link
+  O[["data_range"]] = c( 
+    mean=mean(M[ ii, vnY ]), 
+    sd=sd(M[ ii, vnY ]), 
+    min=min(M[ ii, vnY ]), 
+    max=max(M[ ii, vnY ]),  
+    lb=mq[1], 
+    median=mq[2], 
+    ub=mq[3]  
+  )  # on data /user scale not internal link
 
   # prefilter/transformation (e.g. translation to make all positive)
   if (exists("data_transformation", p)) M[, vnY]  = p$data_transformation$forward( M[, vnY] ) 
 
   # get hyper param scalings
-  j = which( is.finite(M[,vnY]) )
-  m = M[ j, vnY ]
 
-  vnO = ifelse( exists("vnO", p), p$vnO, "data_offset" )  # input data is expected to be on user scale
-  if (any( grepl( vnO, p$carstm_model_formula )))  {
-    if (exists( vnO, M)) m = m / M[ j, vnO ]
+  # temp Y var on link scale:
+  yl = lnk_function( M[, vnY ] )   # necessary in case of log(0)
 
-  }
+  # offsets need to be close to 1 in user scale ( that is log(1)==0 in internal scale ) in experimental mode .. rescale  
+  offset_scale = offset_scale_revert = NULL  
 
-  # on link scale:
-  ml = lnk_function( m ) # necessary in case of log(0)
-  ll = which(is.finite(ml))
-  H = carstm_hyperparameters( sd(ml[ll] ), alpha=0.5, median(ml[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped
-   
-  
-  m = ml = ii = ll = j = NULL
+  if ( !is.null(fm$offset_variable) )  {
+
+    vnO = ifelse( exists("vnO", p), p$vnO, "data_offset" )  # input data is expected to be on user scale
+    if ( fm$offset_variable != vnO ){
+      message("Possible parsing issue. Offset variable in params is specified as: ",  vnO )
+      message("But formula is using: ", fm$offset_variable )
+      stop()
+    } 
+
+    # link function applied to offsets here .. do not need to send log() 
+    if (grepl("log", vnO)) message("Probably do not want to transform the offset .. it is done internally in carstm, unlike glm, inla, etc")
+
+    obs = 1:nrow(M)
+    if (exists("tag", M)) {
+      obso = which(M$tag=="observations")
+      if (length(obso) > 3) obs = obso
+      obso = NULL
+    }   
+    
+    ol = lnk_function( M[, vnO ])
+    offset_scale = median( ol[obs] , na.rm=TRUE )  # required to stabilize optimization
+    obs = NULL
+    ol = ol - offset_scale  # apply to all and overwrite, certing upon 0 (in user space 1)
+    M[ , vnO ] = ol 
+    offset_scale_revert = function(x) { x - offset_scale }  # used for Y value and so opposite sign of "-" but applied to numerator is returns it to "-"
+    yl = yl - ol
+  } 
+
+  ll = which(is.finite(yl))
+  H = carstm_hyperparameters( sd(yl[ll] ), alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped
+
+  m = yl = ii = ll = fy = ol = NULL
   gc()
 
   fit  = NULL
@@ -245,9 +309,16 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       # back-transform from marginals
 
       if (exists( "marginals.fixed", fit)) {
+        V = fit$marginals.fixed
+
+        if (!is.null(offset_scale_revert)) {
+          fi = which( grepl("Intercept", names(V) ))
+          if (length(fi)>0) V[[fi]] = inla.tmarginal( offset_scale_revert, V[[fi]]) 
+        }
+
         summary_inv_fixed = function(x) inla.zmarginal( inla.tmarginal( invlink_fixed, x) , silent=TRUE  )
         W = NULL
-        W = cbind ( t (sapply( fit$marginals.fixed, FUN=summary_inv_fixed ) ) )  # 
+        W = cbind ( t (sapply( V, FUN=summary_inv_fixed ) ) )  # 
         O[["summary"]][["fixed_effects"]] = W [, tokeep, drop =FALSE]
         W = NULL
       }
@@ -304,15 +375,16 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
     j = NULL
     gc()
+
+    print(  O[["summary"]] )
+
   }
 
-  if ("random_other" %in% toget) {
- 
-    summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
-    if (exists("marginals.random", fit)) {
-      raneff = names( fit$marginals.random )
-      # raneff = setdiff( raneff, c(vnS, vnST, vnI) )
-      raneff = setdiff( raneff, c(vnS, vnST ) )
+  if (exists("marginals.random", fit)) {
+  
+    if ("random_other" %in% toget) {
+      summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
+      raneff = setdiff( names( fit$marginals.random ), c(vnS, vnST, vnSI, vnSTI ) )
       for (re in raneff) {
         if (be_verbose)  message("Extracting from marginals: random covariate ", re  )
         g = fit$marginals.random[[re]]
@@ -322,160 +394,214 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       g = raneff = NULL
     }
     gc()
-  }
 
 
-  if ("random_spatial" %in% toget) {
 
-    # space only
-    summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
+    if ("random_spatial" %in% toget) {
+ 
+      # space only
+      if (be_verbose)  message("Extracting from marginals: random spatial errors"  )
+      summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
 
-    if (exists("marginals.random", fit)) {
+      if (!is.null(vnS)) {
+        if ( exists(vnS, fit$marginals.random) ) {
+          O[["random"]] [[vnS]] = list()  # space as a main effect
+          bym = iid = NULL
 
-      if ( exists(vnS, fit$marginals.random) ) {
-    
-        if (be_verbose)  message("Extracting from marginals: random spatial errors"  )
+ 
+          if (!is.null(vnSI)) {
+             i_si = which(fm$random_effects$vn == vnSI)
+            if (length(i_si) > 0) {  
 
-        O[["random"]] [[vnS]] = list()  # space as a main effect
+              model_name = fm$random_effects$model[ i_si ]  # should be iid
 
-        n_S = length(fit$marginals.random[[vnS]])
-        iid = NULL
-        bym = NULL
-        if ( n_S == nAUID) {
-          # single spatial effect (eg besag)
-          Z = expand.grid( space=O[[vnS]], type = c("iid"), stringsAsFactors =FALSE )
-          iid =  which(Z$type=="iid")
-        }
+              # single spatial effect (eg besag) .. indexing not needed but here in case more complex models ..
+              Z = expand.grid( space=O[[vnSI]], type=model_name, stringsAsFactors =FALSE )
+              iid =  which(Z$type==model_name)
+              jjj = iid
 
-        if ( n_S == nAUID*2) {
-          # bym2 effect: bym and iid
-          Z = expand.grid( space=O[[vnS]], type = c("iid", "bym"), stringsAsFactors =FALSE )
-          bym = which(Z$type=="bym")
-          iid = which(Z$type=="iid")
-        }
+              m = list_simplify ( sapply( fit$marginals.random[[vnSI]], summary_inv_random ) )
 
-        # m = list_simplify ( sapply( fit$marginals.random[[vnS]], inla.zmarginal, silent=TRUE ) )
-        m = list_simplify ( sapply( fit$marginals.random[[vnS]], summary_inv_random ) )
-
-        if (!is.null(iid)) {
-          #  iid main effects
-          W = array( NA,  dim=c( length( O[[vnS]]), length(names(m)) ), dimnames=list( space=O[[vnS]], stat=names(m) ) )
-          names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
-          for (k in 1:length(names(m))) {
-            W[,k] = reformat_to_array( input = unlist(m[iid,k]), matchfrom = list( space=Z[["space"]][iid] ), matchto = list( space=O[[vnS]] ) )
+              #  spatial effect ... besag, etc main effects
+              W = array( NA,  dim=c( length( O[[vnS]]), length(names(m)) ), dimnames=list( space=O[[vnS]], stat=names(m) ) )
+              names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
+              for (k in 1:length(names(m))) {
+                W[,k] = reformat_to_array( input = unlist(m[iid,k]), matchfrom = list( space=Z[["space"]][iid] ), matchto = list( space=O[[vnS]] ) )
+              }
+              O[["random"]] [[vnS]] [[model_name]] = W [, tokeep, drop =FALSE]
+              W = NULL
+              iid = NULL
+            }
           }
-          O[["random"]] [[vnS]] [["iid"]] = W [, tokeep, drop =FALSE]
-          W = NULL
+
+          i_s = which(fm$random_effects$vn == vnS)
+          if (length(i_s) > 0) {
+            model_name = fm$random_effects$model[ i_s ]
           
-        }
+            if ( model_name %in% c("bym", "bym2") ) {
+              # bym2 effect: bym and iid
+              Z = expand.grid( space=O[[vnS]], type = c("iid", model_name), stringsAsFactors =FALSE )
+              bym = which(Z$type==model_name)
+              iid = which(Z$type=="iid")
+              jjj =iid
+            } else {
+              # single spatial effect (eg besag, etc)
+              Z = expand.grid( space=O[[vnS]], type=model_name, stringsAsFactors =FALSE )
+              bym =  which(Z$type==model_name)
+              iid = NULL
+              jjj = bym
+            }
 
-        if (!is.null(bym)) {
-          #  spatial main effects
-          W = array( NA, dim=c( length( O[[vnS]]), length(names(m)) ), dimnames=list( space=O[[vnS]], stat=names(m) ) )
-          names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
-          for (k in 1:length(names(m))) {
-            W[,k] = reformat_to_array(  input = unlist(m[bym,k]), matchfrom = list( space=Z[["space"]][bym]  ), matchto = list( space=O[[vnS]] ) )
+            m = list_simplify ( sapply( fit$marginals.random[[vnS]], summary_inv_random ) )
+
+            #  spatial effect ... besag, etc main effects
+            W = array( NA,  dim=c( length( O[[vnS]]), length(names(m)) ), dimnames=list( space=O[[vnS]], stat=names(m) ) )
+            names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
+            for (k in 1:length(names(m))) {
+              W[,k] = reformat_to_array( input = unlist(m[bym,k]), matchfrom = list( space=Z[["space"]][bym] ), matchto = list( space=O[[vnS]] ) )
+            }
+            O[["random"]] [[vnS]] [[model_name]] = W [, tokeep, drop =FALSE]
+            W = NULL
+
+            if (!is.null(iid)) {
+              #  iid main effects
+              W = array( NA,  dim=c( length( O[[vnS]]), length(names(m)) ), dimnames=list( space=O[[vnS]], stat=names(m) ) )
+              names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
+              for (k in 1:length(names(m))) {
+                W[,k] = reformat_to_array( input = unlist(m[iid,k]), matchfrom = list( space=Z[["space"]][iid] ), matchto = list( space=O[[vnS]] ) )
+              }
+              O[["random"]] [[vnS]] [["iid"]] = W [, tokeep, drop =FALSE]
+              W = NULL
+              
+            }
+            m = NULL
+
+            if ( (length(i_si) > 0) & (length(i_s) > 0)) {
+              # sep besag +iid  
+                selection=list()
+                selection[vnSI] = 0  # 0 means everything matching space
+                selection[vnS] = 0  # 0 means everything matching space
+                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
+                aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
+                iid = which(aa_rn==vnSI)
+                bym = which(aa_rn==vnS)
+                g = sapply( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
+            } else if ( (length(i_si) > 0) & (length(i_s) == 0)) {
+              # iid  
+                selection=list()
+                selection[vnSI] = 0  # 0 means everything matching space
+                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
+                aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
+                iid = which(aa_rn==vnSI)
+                g = sapply( aa, function(x) {invlink_random(x$latent[iid] ) } )
+            } else {
+                selection=list()
+                selection[vnS] = 0  # 0 means everything matching space
+                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
+                if ( model_name %in% c("bym", "bym2") ) {
+                  g = sapply( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
+                } else {
+                  aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
+                  bym = which(aa_rn==vnS)
+                  g = sapply( aa, function(x) {invlink_random(x$latent[bym] ) } )
+                }
+            }
+            aa = NULL
+
+            mq = t( apply( g, 1, quantile, probs =c(0.025, 0.5, 0.975), na.rm =TRUE) )
+            mm = apply( g, 1, mean, na.rm =TRUE)
+            ms = apply( g, 1, sd, na.rm =TRUE)
+            W = cbind(mm, ms, mq)
+            mq = mm = ms = NULL
+
+            attr(W, "dimnames") = list( space=O[[vnS]], stat=tokeep  )
+            O[["random"]] [[vnS]] [["combined"]] = W
+            W = NULL
+
+            if (!is.null(exceedance_threshold)) {
+              m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold) ) ) / nposteriors
+              W = reformat_to_array( input = m, matchfrom = list( space=Z[["space"]][jjj] ), matchto = list( space=O[[vnS]] ) )
+              names(dimnames(W))[1] = vnS
+              dimnames( W )[[vnS]] = O[[vnS]]
+              O[["random"]] [[vnS]] [["exceedance"]] = W
+              W = m = NULL
+            }
+
+            if (!is.null(deceedance_threshold)) {
+              m = apply ( g, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / nposteriors
+              W = reformat_to_array( input = m, matchfrom = list( space=Z[["space"]][jjj] ), matchto = list( space=O[[vnS]] )  )
+              names(dimnames(W))[1] = vnS
+              dimnames( W )[[vnS]] = O[[vnS]]
+              O[["random"]] [[vnS]] [["deceedance"]] = W
+              W = m = NULL
+            }
           }
-          O[["random"]] [[vnS]] [["bym"]] = W [, tokeep, drop =FALSE]
-          W = NULL
+
+          Z = g = NULL
+          gc()
+
         }
-        m = NULL
-   
-      
-        if (!is.null(iid)  & !is.null(bym) ) {
-          # space == iid + bym combined:
-          selection=list()
-          selection[vnS] = 0  # 0 means everything matching space
-          aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
-          g = sapply( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
-          aa = NULL
-
-          mq = t( apply( g, 1, quantile, probs =c(0.025, 0.5, 0.975), na.rm =TRUE) )
-          mm = apply( g, 1, mean, na.rm =TRUE)
-          ms = apply( g, 1, sd, na.rm =TRUE)
-          W = cbind(mm, ms, mq)
-          mq = mm = ms = NULL
-
-          attr(W, "dimnames") = list( space=O[[vnS]], stat=tokeep  )
-          O[["random"]] [[vnS]] [["combined"]] = W
-          W = NULL
-        }
-
-        if (!is.null(exceedance_threshold)) {
-          m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold) ) ) / nposteriors
-          W = reformat_to_array( input = m, matchfrom = list( space=Z[["space"]][iid] ), matchto = list( space=O[[vnS]] ) )
-          names(dimnames(W))[1] = vnS
-          dimnames( W )[[vnS]] = O[[vnS]]
-          O[["random"]] [[vnS]] [["exceedance"]] = W
-          W = m = NULL
-        }
-
-        if (!is.null(deceedance_threshold)) {
-          m = apply ( g, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / nposteriors
-          W = reformat_to_array( input = m, matchfrom = list( space=Z[["space"]][iid] ), matchto = list( space=O[[vnS]] )  )
-          names(dimnames(W))[1] = vnS
-          dimnames( W )[[vnS]] = O[[vnS]]
-          O[["random"]] [[vnS]] [["deceedance"]] = W
-          W = m = NULL
-        }
-
       }
     }
-    Z = g = NULL
-    gc()
-
-  }
 
 
-  if ("random_spatiotemporal"  %in% toget ) {
+    if ("random_spatiotemporal"  %in% toget ) {
 
-    # space-year
-    summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
-
-    if (exists("marginals.random", fit)) {
+      # space-year
+      if (be_verbose)  message("Extracting from marginals: random spatiotemporal errors"  )
+      summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink_random, x) , silent=TRUE  )
 
       if (!is.null(vnST)) {
-
         if ( exists( vnST, fit$marginals.random) ) {
-    
-          if (be_verbose)  message("Extracting from marginals: random spatiotemporal errors"  )
-
           O[["random"]] [[vnST]] = list()
+          bym = iid = NULL
+    
+          if (!is.null(vnSTI)) {
+            i_sti = which(fm$random_effects$vn == vnSTI)
 
-          n_ST = length(fit$marginals.random[[vnST]])
-          iid = NULL
-          bym = NULL
+            if (length(i_sti) > 0) {  
 
-          if ( n_ST == nAUID* p$ny) {
-            # besag effect: with annual results
-            Z = expand.grid( space=O[[vnS]], type = c("iid"), time=O[[vnT]], stringsAsFactors =FALSE )
-            iid =  which(Z$type=="iid")
-          }
+              model_name = fm$random_effects$model[ i_sti ]  # should be iid
 
-          if ( n_ST == nAUID*2 * p$ny) {
-            # bym2 effect: bym and iid with annual results
-            Z = expand.grid( space=O[[vnS]], type = c("iid", "bym"), time=O[[vnT]], stringsAsFactors =FALSE )
-            bym = which(Z$type=="bym")
-            iid = which(Z$type=="iid")
-          }
+              Z = expand.grid( space=O[[vnS]], type=model_name, time=O[[vnT]], stringsAsFactors =FALSE )
+              iid =  which(Z$type==model_name)
+              jjj = iid
 
-          g = fit$marginals.random[[vnST]]
-          # m = list_simplify ( sapply( g, inla.zmarginal, silent=TRUE ) )
-          m = list_simplify ( sapply( g, summary_inv_random ) )
+              m = list_simplify ( sapply( fit$marginals.random[[vnSTI]], summary_inv_random ) )
 
-          if (!is.null(iid)) {
-            #  spatiotemporal interaction effects  iid
-            W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
-            names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
-            names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
-            for (k in 1:length(names(m))) {
-              W[,,k] = reformat_to_array(  input = unlist(m[iid,k]), matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  ) )
+              #  spatiotemporal interaction effects  iid
+              W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
+              names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
+              names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
+              for (k in 1:length(names(m))) {
+                W[,,k] = reformat_to_array(  input = unlist(m[iid,k]), matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  ) )
+              }
+              O[["random"]] [[vnST]] [[model_name]] = W [,, tokeep, drop =FALSE]
+              W = NULL
+              iid = NULL
             }
-            O[["random"]] [[vnST]] [["iid"]] = W [,, tokeep, drop =FALSE]
-            W = NULL
           }
 
-          if (!is.null(bym)) {
+          i_st = which(fm$random_effects$vn == vnST)
+          if (length(i_st) > 0) {
+            model_name = fm$random_effects$model[ i_st ]
+
+            if ( model_name %in% c("bym", "bym2") ) {
+              # bym2 effect: bym and iid with annual results
+              Z = expand.grid( space=O[[vnS]], type = c("iid", model_name), time=O[[vnT]], stringsAsFactors =FALSE )
+              bym = which(Z$type==model_name)
+              iid = which(Z$type=="iid")
+              jjj = iid  
+            } else {
+              # besag effect: with annual results
+              Z = expand.grid( space=O[[vnS]], type =model_name, time=O[[vnT]], stringsAsFactors =FALSE )
+              bym =  which(Z$type==model_name)
+              iid = NULL
+              jjj = bym
+            }
+
+            m = list_simplify ( sapply( fit$marginals.random[[vnST]], summary_inv_random ) )
+
             #  spatiotemporal interaction effects  bym
             W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
             names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
@@ -484,17 +610,53 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
             for (k in 1:length(names(m))) {
               W[,,k] = reformat_to_array(  input = unlist(m[bym,k]), matchfrom = list( space=Z[["space"]][bym],  time=Z[["time"]][bym]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  ) )
             }
-            O[["random"]] [[vnST]] [["bym"]] = W [,, tokeep, drop =FALSE]
+            O[["random"]] [[vnST]] [[model_name]] = W [,, tokeep, drop =FALSE]
             W = NULL
-          }
-          m = g = NULL
 
-          if (!is.null(iid)  & !is.null(bym) ) {
-            # space == iid + bym combined:
-            selection=list()
-            selection[vnST] = 0  # 0 means everything matching space
-            aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )
-            g = sapply( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
+            if (!is.null(iid)) {
+              #  spatiotemporal interaction effects  iid
+              W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
+              names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
+              names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
+              for (k in 1:length(names(m))) {
+                W[,,k] = reformat_to_array(  input = unlist(m[iid,k]), matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  ) )
+              }
+              O[["random"]] [[vnST]] [["iid"]] = W [,, tokeep, drop =FALSE]
+              W = NULL
+            }
+            m = NULL
+
+            if ( (length(i_sti) > 0) & (length(i_st) > 0)) {
+              # sep besag +iid  
+                selection=list()
+                selection[vnSTI] = 0  # 0 means everything matching space
+                selection[vnST] = 0  # 0 means everything matching space
+                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
+                aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
+                iid = which(aa_rn==vnSTI)
+                bym = which(aa_rn==vnST)
+                g = sapply( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
+            } else if ( (length(i_sti) > 0) & (length(i_st) == 0)) {
+              # iid  
+                selection=list()
+                selection[vnSTI] = 0  # 0 means everything matching space
+                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
+                aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
+                iid = which(aa_rn==vnSTI)
+                g = sapply( aa, function(x) {invlink_random(x$latent[iid] ) } )
+            } else {
+              # besag  
+                selection=list()
+                selection[vnST] = 0  # 0 means everything matching space
+                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
+                if ( model_name %in% c("bym", "bym2") ) {
+                  g = sapply( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
+                } else {
+                  aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
+                  bym = which(aa_rn==vnST)
+                  g = sapply( aa, function(x) {invlink_random(x$latent[bym] ) } )
+                }
+            } 
             aa = NULL
 
             mq = t( apply( g, 1, quantile, probs =c(0.025, 0.5, 0.975), na.rm =TRUE) )
@@ -505,7 +667,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
             names(m) = tokeep
             mm = ms = mq = NULL
             
-            W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
+            W = array( NA, dim=c( length( O[[vnST]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
             names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
             names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
 
@@ -516,11 +678,11 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
             W = NULL
           }
 
-
+          
           if (!is.null(exceedance_threshold)) {
             m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold) ) ) / nposteriors
             W = reformat_to_array(
-              input = m, matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  )
+              input = m, matchfrom = list( space=Z[["space"]][jjj],  time=Z[["time"]][jjj]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  )
             )
             m = NULL
             names(dimnames(W))[1] = vnS
@@ -534,7 +696,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
           if (!is.null(deceedance_threshold)) {
             m = apply ( g, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / nposteriors
             W = reformat_to_array(
-              input = m, matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  )
+              input = m, matchfrom = list( space=Z[["space"]][jjj],  time=Z[["time"]][jjj]  ), matchto = list( space=O[[vnS]], time=O[[vnT]]  )
             )
             m = NULL
             names(dimnames(W))[1] = vnS
@@ -544,13 +706,15 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
 
             O[["random"]] [[vnST]] [["deceedance"]] = W
             W = NULL
-          }
-        }  # ned space-year
+          }  
+          # ned space-year
+        }
       }
     }
     Z = g = NULL
     gc()
-  }
+    
+  }  # end random effects
 
 
   if ("predictions"  %in% toget ) {
@@ -568,7 +732,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       }
     } 
 
-  
+
     summary_inv_predictions = function(x) inla.zmarginal( x, silent=TRUE  )
     
     if (!exists("tag", M)) M$tag="predictions" # force predictions for all data
@@ -581,6 +745,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       if (  p$aegis_dimensionality == "space" ) {
         ipred = which( M$tag=="predictions"  &  M[,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         g = fit$marginals.fitted.values[ipred]   
+        if ( !is.null(offset_scale) ) g = lapply( g, function(u) {inla.tmarginal( offset_scale_revert, u) } )    
 
         g = lapply( g, function(u) {inla.tmarginal( invlink_predictions, u) } )    
         if (exists("data_transformation", p)) g = lapply( g, backtransform )
@@ -602,6 +767,7 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       if ( p$aegis_dimensionality == "space-year" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]] & M[,vnT0] %in% O[[vnT]] )
         g = fit$marginals.fitted.values[ipred]   
+        if ( !is.null(offset_scale) ) g = lapply( g, function(u) {inla.tmarginal( offset_scale_revert, u) } )    
 
         g = lapply( g, function(u) {inla.tmarginal( invlink_predictions, u) } )    
 
@@ -626,6 +792,8 @@ carstm_model_inla = function(p, M, E=NULL, sppoly=NULL, region.id=NULL,
       if ( p$aegis_dimensionality == "space-year-season" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]]  &  M[,vnT0] %in% O[[vnT]] &  M[,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         g = fit$marginals.fitted.values[ipred]   
+        if ( !is.null(offset_scale) ) g = lapply( g, function(u) {inla.tmarginal( offset_scale_revert, u) } )    
+ 
         g = lapply( g, function(u) {inla.tmarginal( invlink_predictions, u) } )    
 
         if (exists("data_transformation", p)) g = lapply( g, backtransform )
