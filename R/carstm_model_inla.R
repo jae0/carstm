@@ -636,7 +636,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
               aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
               iid = which(aa_rn==vnSTI)
               g = sapply( aa, function(x) {invlink_random(x$latent[iid] ) } )
-          } else ( !exists(vnSTI, fit$marginals.random ) & exists(vnST, fit$marginals.random )){
+          } else if ( !exists(vnSTI, fit$marginals.random ) & exists(vnST, fit$marginals.random ) ) {
             # besag  only or bym/bym2
               selection=list()
               selection[vnST] = 0  # 0 means everything matching space
@@ -670,33 +670,35 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
           W = NULL
         }
 
-            
-            if (!is.null(exceedance_threshold)) {
-              m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold) ) ) / nposteriors
-              W = reformat_to_array( input=m, matchfrom=matchfrom0,  matchto=matchto )
-              m = NULL
-              names(dimnames(W))[1] = vnS
-              names(dimnames(W))[2] = vnT
-              dimnames( W )[[vnS]] = O[[vnS]]
-              dimnames( W )[[vnT]] = O[[vnT]]
-              O[["random"]] [[vnST]] [["exceedance"]] = W
-              W = NULL
-            }
 
-            if (!is.null(deceedance_threshold)) {
-              m = apply ( g, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / nposteriors
-              W = reformat_to_array( input = m, matchfrom=matchfrom0,  matchto=matchto )
-              m = NULL
-              names(dimnames(W))[1] = vnS
-              names(dimnames(W))[2] = vnT
-              dimnames( W )[[vnS]] = O[[vnS]]
-              dimnames( W )[[vnT]] = O[[vnT]]
-
-              O[["random"]] [[vnST]] [["deceedance"]] = W
-              W = NULL
-            }  
-            # ned space-year
+        if ( !is.null(exceedance_threshold)  | !is.null(deceedance_threshold) ) {
+      
+          if (!is.null(exceedance_threshold)) {
+            m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold) ) ) / nposteriors
+            W = reformat_to_array( input=m, matchfrom=matchfrom0,  matchto=matchto )
+            m = NULL
+            names(dimnames(W))[1] = vnS
+            names(dimnames(W))[2] = vnT
+            dimnames( W )[[vnS]] = O[[vnS]]
+            dimnames( W )[[vnT]] = O[[vnT]]
+            O[["random"]] [[vnST]] [["exceedance"]] = W
+            W = NULL
           }
+
+          if (!is.null(deceedance_threshold)) {
+            m = apply ( g, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / nposteriors
+            W = reformat_to_array( input = m, matchfrom=matchfrom0,  matchto=matchto )
+            m = NULL
+            names(dimnames(W))[1] = vnS
+            names(dimnames(W))[2] = vnT
+            dimnames( W )[[vnS]] = O[[vnS]]
+            dimnames( W )[[vnT]] = O[[vnT]]
+
+            O[["random"]] [[vnST]] [["deceedance"]] = W
+            W = NULL
+          }  
+          # ned space-year
+        }
         
         Z = g = NULL
         gc()
