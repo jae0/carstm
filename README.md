@@ -81,7 +81,6 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   attributes(sppoly)[["nb"]] = inla.read.graph(g) 
 
   p = list(
-    project_name = "test",  # basic run
     modeldir = tempdir(),
     carstm_model_label = "testlabel",
     variabletomodel = "Y",

@@ -11,6 +11,9 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
 
   ellp = list(...)
 
+  # local functions
+  apply_generic = mclapply # drop-in for lapply
+  apply_simplify = function(...)  simplify2array(mclapply(...))  # drop in for sapply
 
   if (0) {
     # for debugging
@@ -323,7 +326,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
 
       summary_inv_fixed = function(x) inla.zmarginal( inla.tmarginal( invlink_fixed, x) , silent=TRUE  )
       W = NULL
-      W = cbind ( t (sapply( V, FUN=summary_inv_fixed ) ) )  # 
+      W = cbind ( t (apply_simplify( V, FUN=summary_inv_fixed ) ) )  # 
       O[["summary"]][["fixed_effects"]] = W [, tokeep, drop =FALSE]
       W = NULL
     }
@@ -336,8 +339,8 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
       # summary_inv_prec_1024 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x, n=1024L) , silent=TRUE  )
       # summary_inv_prec_512 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x, n=512L) , silent=TRUE  )
 
-      precs = try( list_simplify( sapply( fit$marginals.hyperpar[j], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
-      if (inherits(precs, "try-error")) precs = try( list_simplify( sapply( fit$marginals.hyperpar[j], FUN=summary_inv_prec_1024 ) ), silent=TRUE )
+      precs = try( list_simplify( apply_simplify( fit$marginals.hyperpar[j], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
+      if (inherits(precs, "try-error")) precs = try( list_simplify( apply_simplify( fit$marginals.hyperpar[j], FUN=summary_inv_prec_1024 ) ), silent=TRUE )
       if (inherits(precs, "try-error")) {
         if (be_verbose)  message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
         precs = fit$summary.hyperpar[j,1:5]
@@ -358,11 +361,11 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
 
     j = grep( ".*Rho.*", rownames(fit$summary.hyperpar), value=TRUE )
     if (length(j) > 0) {
-      rhos = try( list_simplify( sapply( fit$marginals.hyperpar[j], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
+      rhos = try( list_simplify( apply_simplify( fit$marginals.hyperpar[j], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
       if (inherits(precs, "try-error")) {
         if (be_verbose)  message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
       } else {
-        #  rhos[,"mode"] = sapply( fit$marginals.hyperpar[j], FUN=function(x) inla.mmarginal( x ))
+        #  rhos[,"mode"] = apply_simplify( fit$marginals.hyperpar[j], FUN=function(x) inla.mmarginal( x ))
         O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], rhos[, tokeep, drop =FALSE] )
         rhos = NULL
       }
@@ -395,7 +398,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
         for (re in raneff) {
           if (be_verbose)  message("Extracting from marginals: random covariate ", re  )
           g = fit$marginals.random[[re]]
-          O[["random"]] [[re]] = list_simplify ( sapply( g, summary_inv_random ) )  [, tokeep, drop =FALSE]
+          O[["random"]] [[re]] = list_simplify ( apply_simplify( g, summary_inv_random ) )  [, tokeep, drop =FALSE]
           O[["random"]] [[re]]$ID = fit$summary.random[[re]]$ID
         }
         g = raneff = NULL
@@ -419,7 +422,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
           iid =  which(Z$type==model_name)
           matchfrom0 = list( space=Z[["space"]][iid] )
 
-          m = list_simplify ( sapply( fit$marginals.random[[vnSI]], summary_inv_random ) )
+          m = list_simplify ( apply_simplify( fit$marginals.random[[vnSI]], summary_inv_random ) )
 
           #  spatial effect ... besag, etc main effects
           W = array( NA,  dim=c( length( O[[vnS]]), length(names(m)) ), dimnames=list( space=O[[vnS]], stat=names(m) ) )
@@ -448,7 +451,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
             matchfrom0 = list( space=Z[["space"]][bym] )
           }
 
-          m = list_simplify ( sapply( fit$marginals.random[[vnS]], summary_inv_random ) )
+          m = list_simplify ( apply_simplify( fit$marginals.random[[vnS]], summary_inv_random ) )
 
           #  spatial effect ... besag, etc main effects
           W = array( NA,  dim=c( length( O[[vnS]]), length(names(m)) ), dimnames=list( space=O[[vnS]], stat=names(m) ) )
@@ -484,7 +487,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
           aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
           iid = which(aa_rn==vnSI)
           bym = which(aa_rn==vnS)
-          g = sapply( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
+          g = apply_simplify( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
         } else if ( exists(vnSI, fit$marginals.random ) & ! exists(vnS, fit$marginals.random ) )  {
           # iid  only
           selection=list()
@@ -492,18 +495,18 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
           aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
           aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
           iid = which(aa_rn==vnSI)
-          g = sapply( aa, function(x) {invlink_random(x$latent[iid] ) } )
+          g = apply_simplify( aa, function(x) {invlink_random(x$latent[iid] ) } )
         } else if ( ! exists(vnSI, fit$marginals.random ) & exists(vnS, fit$marginals.random ) ) {
           # besag only or bym/bym2
           selection=list()
           selection[vnS] = 0  # 0 means everything matching space
           aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
           if ( model_name %in% c("bym", "bym2") ) {
-            g = sapply( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
+            g = apply_simplify( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
           } else {
             aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
             bym = which(aa_rn==vnS)
-            g = sapply( aa, function(x) {invlink_random(x$latent[bym] ) } )
+            g = apply_simplify( aa, function(x) {invlink_random(x$latent[bym] ) } )
           }
         }
         aa = NULL
@@ -559,7 +562,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
           iid =  which(Z$type==model_name)
           matchfrom0 = list( space=Z[["space"]][iid], time=Z[["time"]][iid]  )
 
-          m = list_simplify ( sapply( fit$marginals.random[[vnSTI]], summary_inv_random ) )
+          m = list_simplify ( apply_simplify( fit$marginals.random[[vnSTI]], summary_inv_random ) )
 
           #  spatiotemporal interaction effects  iid
           W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
@@ -591,7 +594,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
             matchfrom0 = list( space=Z[["space"]][bym], time=Z[["time"]][bym]  )
           }
 
-          m = list_simplify ( sapply( fit$marginals.random[[vnST]], summary_inv_random ) )
+          m = list_simplify ( apply_simplify( fit$marginals.random[[vnST]], summary_inv_random ) )
 
           #  spatiotemporal interaction effects  bym
           W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
@@ -627,7 +630,8 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
               aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
               iid = which(aa_rn==vnSTI)
               bym = which(aa_rn==vnST)
-              g = sapply( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
+              g = apply_simplify( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
+              matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  )
           } else if (exists(vnSTI, fit$marginals.random ) & ! exists(vnST, fit$marginals.random )) {
             # iid  
               selection=list()
@@ -635,18 +639,21 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
               aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
               aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
               iid = which(aa_rn==vnSTI)
-              g = sapply( aa, function(x) {invlink_random(x$latent[iid] ) } )
+              g = apply_simplify( aa, function(x) {invlink_random(x$latent[iid] ) } )
+              matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  )
           } else if ( !exists(vnSTI, fit$marginals.random ) & exists(vnST, fit$marginals.random ) ) {
             # besag  only or bym/bym2
               selection=list()
               selection[vnST] = 0  # 0 means everything matching space
               aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
               if ( model_name %in% c("bym", "bym2") ) {
-                g = sapply( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
+                g = apply_simplify( aa, function(x) {invlink_random(x$latent[iid] + x$latent[bym] ) } )
+                matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  )
               } else {
                 aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
                 bym = which(aa_rn==vnST)
-                g = sapply( aa, function(x) {invlink_random(x$latent[bym] ) } )
+                g = apply_simplify( aa, function(x) {invlink_random(x$latent[bym] ) } )
+                matchfrom = list( space=Z[["space"]][bym],  time=Z[["time"]][bym]  )
               }
           } 
           aa = NULL
@@ -662,7 +669,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
           W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
           names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
           names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
-          matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  )
+          
           for (k in 1:length(names(m))) {
             W[,,k] = reformat_to_array(  input = m[,k], matchfrom=matchfrom, matchto=matchto )
           }
@@ -737,12 +744,12 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
       if (  p$aegis_dimensionality == "space" ) {
         ipred = which( M$tag=="predictions"  &  M[,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         g = fit$marginals.fitted.values[ipred]   
-        if ( exists("offset_scale_revert", O) ) g = lapply( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
+        if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
 
-        g = lapply( g, function(u) {inla.tmarginal( invlink_predictions, u) } )    
-        if (exists("data_transformation", p)) g = lapply( g, backtransform )
+        g = apply_generic( g, function(u) {inla.tmarginal( invlink_predictions, u) } )    
+        if (exists("data_transformation", p)) g = apply_generic( g, backtransform )
 
-        m = list_simplify ( sapply( g, summary_inv_predictions ) )
+        m = list_simplify ( apply_simplify( g, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]),  length(names(m)) ),  dimnames=list( space=O[[vnS]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         
@@ -759,13 +766,13 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
       if ( p$aegis_dimensionality == "space-year" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]] & M[,vnT0] %in% O[[vnT]] )
         g = fit$marginals.fitted.values[ipred]   
-        if ( exists("offset_scale_revert", O) ) g = lapply( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
+        if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
 
-        g = lapply( g, function(u) {inla.tmarginal( invlink_predictions, u) } )    
+        g = apply_generic( g, function(u) {inla.tmarginal( invlink_predictions, u) } )    
 
-        if (exists("data_transformation", p)) g = lapply( g, backtransform )
+        if (exists("data_transformation", p)) g = apply_generic( g, backtransform )
 
-        m = list_simplify ( sapply( g, summary_inv_predictions ) )
+        m = list_simplify ( apply_simplify( g, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
@@ -784,13 +791,13 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
       if ( p$aegis_dimensionality == "space-year-season" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]]  &  M[,vnT0] %in% O[[vnT]] &  M[,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         g = fit$marginals.fitted.values[ipred]   
-        if ( exists("offset_scale_revert", O) ) g = lapply( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
+        if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
  
-        g = lapply( g, function(u) {inla.tmarginal( invlink_predictions, u) } )    
+        g = apply_generic( g, function(u) {inla.tmarginal( invlink_predictions, u) } )    
 
-        if (exists("data_transformation", p)) g = lapply( g, backtransform )
+        if (exists("data_transformation", p)) g = apply_generic( g, backtransform )
 
-        m = list_simplify ( sapply( g, summary_inv_predictions ) )
+        m = list_simplify ( apply_simplify( g, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], season=O[[vnU]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
@@ -807,7 +814,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
       }
 
       if (!is.null(exceedance_threshold)) {
-        m = list_simplify ( sapply( g, FUN=exceedance_prob, threshold=exceedance_threshold ) )
+        m = list_simplify ( apply_simplify( g, FUN=exceedance_prob, threshold=exceedance_threshold ) )
         W = reformat_to_array(  input = unlist(m ), matchfrom = matchfrom, matchto = matchto )
         names(dimnames(W))[1] = vnS
         dimnames( W )[[vnS]] = O[[vnS]]
@@ -825,7 +832,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
       }
 
       if (!is.null(deceedance_threshold)) {
-        m = list_simplify ( sapply( g, FUN=deceedance_prob, threshold=deceedance_threshold ) )
+        m = list_simplify ( apply_simplify( g, FUN=deceedance_prob, threshold=deceedance_threshold ) )
         W = reformat_to_array(  input = unlist(m ), matchfrom = matchfrom, matchto = matchto )
         names(dimnames(W))[1] = vnS
         dimnames( W )[[vnS]] = O[[vnS]]

@@ -1,5 +1,5 @@
 
-carstm_model = function( p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_units_fn=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compression_level=6, fn_fit=NULL, fn_res=NULL,
+carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_units_fn=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compression_level=6, fn_fit=NULL, fn_res=NULL,
    ... ) {
 
      if (0) {
@@ -10,6 +10,7 @@ carstm_model = function( p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_u
       areal_units_fn=NULL
       DS="redo"
       improve.hyperparam.estimates=FALSE
+      carstm_modelengine = "inla"
       compression_level=6
       fn_fit=NULL
       fn_res=NULL
@@ -18,6 +19,13 @@ carstm_model = function( p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_u
   # compute and extract in one go esp as inla data files are too large, otherwise
 
   p = parameters_add(p, list(...)) # add passed args to parameter list, priority to args
+
+  p = parameters_add_without_overwriting( p,
+    areal_units_type = "lattice", #
+    areal_units_overlay = "none", #
+    carstm_model_label = "default",
+    carstm_modelengine ="inla" # glm and gam also possible ... though not very useful
+  )
 
   if (is.null(sppoly)) {
     message("Loading sppoly from file ..." )
@@ -29,6 +37,8 @@ carstm_model = function( p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_u
     if (is.null(areal_units_fn))  areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
   }
   
+  if (exists("carstm_modelengine", p)) carstm_modelengine = p$carstm_modelengine
+
   if (!is.null(areal_units_fn)) {
     if (is.null(fn_fit)) fn_fit = carstm_filenames( p=p, returntype="carstm_modelled_fit", areal_units_fn=areal_units_fn )
     if (is.null(fn_res)) fn_res = carstm_filenames( p=p, returntype="carstm_modelled_summary", areal_units_fn=areal_units_fn )
@@ -58,23 +68,28 @@ carstm_model = function( p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_u
   outputdir = dirname(fn_fit)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
   
-   
-  if ( grepl("glm", p$carstm_modelengine) ) {
+  
+
+  if ( grepl("glm", carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
     O = carstm_model_glm( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compression_level=compression_level, ... ) 
   }
 
-  if ( grepl("gam", p$carstm_modelengine) ) {
+  if ( grepl("gam", carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
     O = carstm_model_gam( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compression_level=compression_level, ... ) 
   }
 
-  if (grepl("bayesx", p$carstm_modelengine) ) {
+  if (grepl("bayesx", carstm_modelengine) ) {
+    # might be useful..
+  }
+
+  if (grepl("diseasemapping", carstm_modelengine) ) {
     # might be useful..
   }
 
 
-  if ( grepl("inla", p$carstm_modelengine) ) {
+  if ( grepl("inla", carstm_modelengine) ) {
     O = carstm_model_inla( p=p, M=M, E=E, sppoly=sppoly, region.id=region.id, fn_fit=fn_fit, fn_res=fn_res, compression_level=compression_level, ... ) 
       #  print(O[["summary"]])
   }
