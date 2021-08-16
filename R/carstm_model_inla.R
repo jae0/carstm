@@ -2,6 +2,7 @@
 carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
   fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), 
   fn_res=tempfile(pattern="res_", fileext=".Rdata"), 
+  num.threads="1:1",
   compression_level=1,
   redo_fit = TRUE,
   update_results = FALSE,
@@ -11,12 +12,17 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
 
   ellp = list(...)
 
+  inla.setOption(num.threads=num.threads)
+
+  num.cores =  as.numeric( unlist(strsplit(num.threads, ":") )[1] )
+  
   # local functions
-  apply_generic = mclapply # drop-in for lapply
-  apply_simplify = function(...)  simplify2array(mclapply(...))  # drop in for sapply
+  apply_generic = function(...)  mclapply(...,   mc.cores=num.cores ) # drop-in for lapply
+  apply_simplify = function(...) simplify2array(mclapply(...,  mc.cores=num.cores ))  # drop in for sapply
 
   if (0) {
     # for debugging
+    ellp = list()
     E=NULL 
     sppoly=NULL
     region.id=NULL
@@ -66,7 +72,9 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
   if ( exists("verbose", ellp ) ) if ( ellp[["verbose"]] )   be_verbose = TRUE
 
   # outputs
+  O = NULL
   if ( update_results) try( load(fn_res) )
+  if ( inherits(O, "try-error")) O = list()
   if ( is.null(O)) O = list()
   
   if (is.null(nposteriors))  nposteriors = ifelse( exists("nposteriors", p), p$nposteriors, 5000 )
@@ -143,6 +151,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
   nAUID = length(region.id)
   O[[vnS]] = as.character( region.id )  # this sequence is a master key as index matches nb matrix values
 
+  fit  = NULL
 
   if (redo_fit) {
 
@@ -227,7 +236,6 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
     m = yl = ii = ll = fy = ol = NULL
     gc()
 
-    fit  = NULL
     
 
     ellp[["formula"]] = p$carstm_model_formula
@@ -256,7 +264,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
 
     # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
     # control.inla = list( strategy='adaptive', int.strategy='eb' )
-
+ 
     fit = try( do.call( inla, ellp ) )      
 
     if (inherits(fit, "try-error" )) {
@@ -792,6 +800,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]]  &  M[,vnT0] %in% O[[vnT]] &  M[,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         g = fit$marginals.fitted.values[ipred]   
         if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
+ 
  
         g = apply_generic( g, function(u) {inla.tmarginal( invlink_predictions, u) } )    
 

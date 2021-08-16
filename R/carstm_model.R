@@ -1,5 +1,5 @@
 
-carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_units_fn=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compression_level=6, fn_fit=NULL, fn_res=NULL,
+carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_units_fn=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compression_level=6, fn_fit=NULL, fn_res=NULL, num.threads="1:1", 
    ... ) {
 
      if (0) {
@@ -90,7 +90,7 @@ carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, 
 
 
   if ( grepl("inla", carstm_modelengine) ) {
-    O = carstm_model_inla( p=p, M=M, E=E, sppoly=sppoly, region.id=region.id, fn_fit=fn_fit, fn_res=fn_res, compression_level=compression_level, ... ) 
+    O = carstm_model_inla( p=p, M=M, E=E, sppoly=sppoly, region.id=region.id, fn_fit=fn_fit, fn_res=fn_res, compression_level=compression_level, num.threads=num.threads, ... ) 
       #  print(O[["summary"]])
   }
    
