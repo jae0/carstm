@@ -370,7 +370,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
     j = grep( ".*Rho.*", rownames(fit$summary.hyperpar), value=TRUE )
     if (length(j) > 0) {
       rhos = try( list_simplify( apply_simplify( fit$marginals.hyperpar[j], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
-      if (inherits(precs, "try-error")) {
+      if (any( inherits(rhos, "try-error"))) {
         if (be_verbose)  message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
       } else {
         #  rhos[,"mode"] = apply_simplify( fit$marginals.hyperpar[j], FUN=function(x) inla.mmarginal( x ))
