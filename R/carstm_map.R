@@ -23,6 +23,8 @@
     outfilename="",
     map_mode="view",
     width=9, height=7, bg='white', pointsize=12, pres=300,
+    vwidth = 1600,  # in points
+    vheight=1200,
     depths = c(50, 100, 200, 400),
     digits=3,
     tmap_zoom=6, 
@@ -362,7 +364,7 @@
         if (outformat %in% c("pdf", "svg", "png")){
           if (outformat=="pdf") pdf( file=outfilename, width=width, height=height, bg=bg, pointsize=pointsize )
           if (outformat=="svg") svg( filename=outfilename, width=width, height=height, bg=bg, pointsize=pointsize   )
-          if (outformat=="png") png( filename=outfilename, width=3072, height=2304, pointsize=pointsize, res=pres )
+          if (outformat=="png") png( filename=outfilename, width=vwidth, height=vheight, pointsize=pointsize, res=pres )
             print(tmout)
           dev.off()
           print(outfilename)
@@ -371,13 +373,14 @@
 
       if ( map_mode=="view") {
         if (outformat=="mapview") {
+
           if (!require(mapview)) install.packages("mapview")
           if (!require(webshot)) {
             install.packages("webshot")
             webshot::install_phantomjs()
           }
           require(mapview)
-          mapshot( tmap_leaflet(tmout), file=outfilename )
+          mapshot( tmap_leaflet(tmout), file=outfilename, vwidth = vwidth, vheight = vheight )
           print(outfilename)
           return(tmout)
         }

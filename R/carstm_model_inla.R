@@ -1,9 +1,9 @@
 
 carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
   fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), 
-  fn_res=tempfile(pattern="res_", fileext=".Rdata"), 
+  fn_res=NULL, 
   num.threads="1:1",
-  compression_level=1,
+  compress=TRUE,
   redo_fit = TRUE,
   update_results = FALSE,
   toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), 
@@ -11,6 +11,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
   improve.hyperparam.estimates=NULL,  ... ) {
 
   ellp = list(...)
+
 
   inla.setOption(num.threads=num.threads)
 
@@ -20,6 +21,8 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
   apply_generic = function(...)  mclapply(...,   mc.cores=num.cores ) # drop-in for lapply
   apply_simplify = function(...) simplify2array(mclapply(...,  mc.cores=num.cores ))  # drop in for sapply
 
+  fit  = NULL
+
   if (0) {
     # for debugging
     ellp = list()
@@ -28,7 +31,8 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
     region.id=NULL
     fn_fit=tempfile(pattern="fit_", fileext=".Rdata")
     fn_res=tempfile(pattern="res_", fileext=".Rdata")
-    compression_level=1
+    num.threads="1:1"
+    compress="gzip"
     redo_fit = TRUE
     update_results = FALSE
     toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions")
@@ -73,7 +77,16 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
 
   # outputs
   O = NULL
-  if ( update_results) try( load(fn_res) )
+  if ( update_results) {
+    if (!is.null(fn_res)) {
+      try( load(fn_res) )
+    } else {
+      try( load(fn_fit) )
+      if (!is.null(fit) ) {
+        if (exists("res", fit)) O = fit$res
+      } 
+    }
+  } 
   if ( inherits(O, "try-error")) O = list()
   if ( is.null(O)) O = list()
   
@@ -151,91 +164,90 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
   nAUID = length(region.id)
   O[[vnS]] = as.character( region.id )  # this sequence is a master key as index matches nb matrix values
 
-  fit  = NULL
-
-  if (redo_fit) {
 
 
-    # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("region.id")
-    # convert space and time to numeric codes for INLA
-    if (grepl("space", p$aegis_dimensionality)) {
-      M[,vnS0] = as.character( M[,vnS] ) # local copy
-      M[,vnS] = match( M[,vnS0], O[[vnS]] )  # overwrite with numeric values that must match index of neighbourhood matrix
+  # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("region.id")
+  # convert space and time to numeric codes for INLA
+  if (grepl("space", p$aegis_dimensionality)) {
+    M[,vnS0] = as.character( M[,vnS] ) # local copy
+    M[,vnS] = match( M[,vnS0], O[[vnS]] )  # overwrite with numeric values that must match index of neighbourhood matrix
+  }
+
+  if ( grepl("year", p$aegis_dimensionality) | grepl("season", p$aegis_dimensionality) ) {
+    if (any( grepl( vnT, p$carstm_model_formula )))  {
+      O[[vnT]] = as.character( p$yrs )
+      M[,vnT0] = as.character( M[,vnT] ) # a copy for internal matching 
+      M[,vnT] = match( M[,vnT0], O[[vnT]] ) # convert to numeric (ie. a numeric factor)
     }
-
-    if ( grepl("year", p$aegis_dimensionality) | grepl("season", p$aegis_dimensionality) ) {
-      if (any( grepl( vnT, p$carstm_model_formula )))  {
-        O[[vnT]] = as.character( p$yrs )
-        M[,vnT0] = as.character( M[,vnT] ) # a copy for internal matching 
-        M[,vnT] = match( M[,vnT0], O[[vnT]] ) # convert to numeric (ie. a numeric factor)
-      }
-      # internal vars, for inla
-      if (any( grepl( vnST, p$carstm_model_formula )))  M[,vnST] = M[,vnS]
-      if (any( grepl( vnST, p$carstm_model_formula )))  M[,vnTS] = M[,vnT]
-      # sub-annual time
-      if (any( grepl( vnU, p$carstm_model_formula )))  {
-        O[[vnU]] = as.character( p$dyears + diff(p$dyears)[1]/2)
-        M[,vnU0] = as.character( M[,vnU] )  # a copy for internal matching 
-        M[,vnU] = match( M[,vnU0], O[[vnU]] )  # convert to numeric (ie. a numeric factor)
-      }
+    # internal vars, for inla
+    if (any( grepl( vnST, p$carstm_model_formula )))  M[,vnST] = M[,vnS]
+    if (any( grepl( vnST, p$carstm_model_formula )))  M[,vnTS] = M[,vnT]
+    # sub-annual time
+    if (any( grepl( vnU, p$carstm_model_formula )))  {
+      O[[vnU]] = as.character( p$dyears + diff(p$dyears)[1]/2)
+      M[,vnU0] = as.character( M[,vnU] )  # a copy for internal matching 
+      M[,vnU] = match( M[,vnU0], O[[vnU]] )  # convert to numeric (ie. a numeric factor)
     }
+  }
 
-    # on user scale
-    ii = which(is.finite(M[ , vnY ]))
-    
-    mq = quantile( M[ ii, vnY ], probs=c(0.025, 0.5, 0.975) )
+  # on user scale
+  ii = which(is.finite(M[ , vnY ]))
+  
+  mq = quantile( M[ ii, vnY ], probs=c(0.025, 0.5, 0.975) )
 
-    O[["data_range"]] = c( 
-      mean=mean(M[ ii, vnY ]), 
-      sd=sd(M[ ii, vnY ]), 
-      min=min(M[ ii, vnY ]), 
-      max=max(M[ ii, vnY ]),  
-      lb=mq[1], 
-      median=mq[2], 
-      ub=mq[3]  
-    )  # on data /user scale not internal link
+  O[["data_range"]] = c( 
+    mean=mean(M[ ii, vnY ]), 
+    sd=sd(M[ ii, vnY ]), 
+    min=min(M[ ii, vnY ]), 
+    max=max(M[ ii, vnY ]),  
+    lb=mq[1], 
+    median=mq[2], 
+    ub=mq[3]  
+  )  # on data /user scale not internal link
 
-    # prefilter/transformation (e.g. translation to make all positive)
-    if (exists("data_transformation", p)) M[, vnY]  = p$data_transformation$forward( M[, vnY] ) 
+  # prefilter/transformation (e.g. translation to make all positive)
+  if (exists("data_transformation", p)) M[, vnY]  = p$data_transformation$forward( M[, vnY] ) 
 
-    # get hyper param scalings
+  # get hyper param scalings
 
-    # temp Y var on link scale:
-    yl = lnk_function( M[, vnY ] )   # necessary in case of log(0)
+  # temp Y var on link scale:
+  yl = lnk_function( M[, vnY ] )   # necessary in case of log(0)
 
-    # offsets need to be close to 1 in user scale ( that is log(1)==0 in internal scale ) in experimental mode .. rescale  
-    if ( !is.null(fm$offset_variable) )  {
-      if ( fm$offset_variable != vnO ){
-        message("Possible parsing issue. Offset variable in params is specified as: ",  vnO )
-        message("But formula is using: ", fm$offset_variable )
-        stop()
-      } 
-
-      # link function applied to offsets here .. do not need to send log() 
-      if (grepl("log", vnO)) message("Probably do not want to transform the offset .. it is done internally in carstm, unlike glm, inla, etc")
-
-      obs = 1:nrow(M)
-      if (exists("tag", M)) {
-        obso = which(M$tag=="observations")
-        if (length(obso) > 3) obs = obso
-        obso = NULL
-      }   
-      
-      ol = lnk_function( M[, vnO ])
-      O$offset_scale = median( ol[obs] , na.rm=TRUE )  # required to stabilize optimization
-      obs = NULL
-      ol = ol - O$offset_scale  # apply to all and overwrite, certing upon 0 (in user space 1)
-      M[ , vnO ] = ol 
-      O$offset_scale_revert = function(x) { x - O$offset_scale }  # used for Y value and so opposite sign of "-" but applied to numerator is returns it to "-"
-      yl = yl - ol
+  # offsets need to be close to 1 in user scale ( that is log(1)==0 in internal scale ) in experimental mode .. rescale  
+  if ( !is.null(fm$offset_variable) )  {
+    if ( fm$offset_variable != vnO ){
+      message("Possible parsing issue. Offset variable in params is specified as: ",  vnO )
+      message("But formula is using: ", fm$offset_variable )
+      stop()
     } 
 
-    ll = which(is.finite(yl))
-    H = carstm_hyperparameters( sd(yl[ll] ), alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped
+    # link function applied to offsets here .. do not need to send log() 
+    if (grepl("log", vnO)) message("Probably do not want to transform the offset .. it is done internally in carstm, unlike glm, inla, etc")
 
-    m = yl = ii = ll = fy = ol = NULL
-    gc()
+    obs = 1:nrow(M)
+    if (exists("tag", M)) {
+      obso = which(M$tag=="observations")
+      if (length(obso) > 3) obs = obso
+      obso = NULL
+    }   
+    
+    ol = lnk_function( M[, vnO ])
+    O$offset_scale = median( ol[obs] , na.rm=TRUE )  # required to stabilize optimization
+    obs = NULL
+    ol = ol - O$offset_scale  # apply to all and overwrite, certing upon 0 (in user space 1)
+    M[ , vnO ] = ol 
+    O$offset_scale_revert = function(x) { x - O$offset_scale }  # used for Y value and so opposite sign of "-" but applied to numerator is returns it to "-"
+    yl = yl - ol
+  } 
 
+  ll = which(is.finite(yl))
+  H = carstm_hyperparameters( sd(yl[ll] ), alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped
+
+  m = yl = ii = ll = fy = ol = NULL
+  gc()
+
+
+  if (redo_fit) {
     
 
     ellp[["formula"]] = p$carstm_model_formula
@@ -285,7 +297,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
       
     if (be_verbose)  message( "Saving carstm fit (this can be slow): ", fn_fit )
 
-    save( fit, file=fn_fit, compression_level=compression_level )
+    save( fit, file=fn_fit, compress=compress )
 
   }
 
@@ -348,8 +360,8 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
       # summary_inv_prec_512 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x, n=512L) , silent=TRUE  )
 
       precs = try( list_simplify( apply_simplify( fit$marginals.hyperpar[j], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
-      if (inherits(precs, "try-error")) precs = try( list_simplify( apply_simplify( fit$marginals.hyperpar[j], FUN=summary_inv_prec_1024 ) ), silent=TRUE )
-      if (inherits(precs, "try-error")) {
+      if (any( inherits(precs, "try-error"))) precs = try( list_simplify( apply_simplify( fit$marginals.hyperpar[j], FUN=summary_inv_prec_1024 ) ), silent=TRUE )
+      if (any( inherits(precs, "try-error")))  {
         if (be_verbose)  message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
         precs = fit$summary.hyperpar[j,1:5]
         precs[,c(1,3:5)] = 1/sqrt( precs[,c(1,3:5)] )
@@ -387,6 +399,24 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
       O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], phis[, tokeep, drop =FALSE] )
       phis = NULL
     }
+
+    # update lambda's
+    j = grep( "^Lambda.*", rownames(fit$summary.hyperpar), value=TRUE )
+    if (length(j) > 0) {
+      lmbs = fit$summary.hyperpar[j, ,drop=FALSE]
+      colnames(lmbs) = c( tokeep, "mode")
+      O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], lmbs[, tokeep, drop =FALSE] )
+      lmbs = NULL
+    }
+
+    if (nrow( O[["summary"]][["random_effects"]]) != length( fit$summary.hyperpar ) ) {
+      message("Mismatch in no. of terms: need to be add functionality to the summarize random_effects ..")
+      names( fit$summary.hyperpar)
+      rownames(  O[["summary"]][["random_effects"]] ) 
+      stop()
+    }
+
+    # add any others here
 
     j = NULL
     gc()
@@ -771,6 +801,7 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
         W = m = NULL
       }
 
+
       if ( p$aegis_dimensionality == "space-year" ) {
         ipred = which( M$tag=="predictions" & M[,vnS0] %in% O[[vnS]] & M[,vnT0] %in% O[[vnT]] )
         g = fit$marginals.fitted.values[ipred]   
@@ -859,15 +890,19 @@ carstm_model_inla = function(p, M=NULL, E=NULL, sppoly=NULL, region.id=NULL,
       }
     }
   }
-  
-  fit = NULL
-  gc()
+
 
   # copy data in case needed for plotting ..
   if (!is.null(M)) O[["M"]] = M
   if (!is.null(sppoly)) O[["sppoly"]] = sppoly
 
-  save( O, file=fn_res, compression_level=compression_level )
+  if ( is.null(fn_res) ) {
+    fit$res = O
+  } else {
+    save( O, file=fn_res, compress=compress )
+  }
+
+  save( fit, file=fn_fit, compress=compress )
 
   if (be_verbose)  message( "Carstm summary saved as: ", fn_res )
 

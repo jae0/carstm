@@ -89,10 +89,29 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
     vnO = "E",
     aegis_dimensionality = "space",   # a pure space model
     carstm_modelengine = "inla",
-    carstm_model_formula = Y ~  1+ offset( E ) +  f(region, model="besag", graph.file=g ) +  f(region.iid, model="iid", graph.file=g) + f(x, model="rw2")  ,
     carstm_model_family = "poisson",
     nposteriors=5000
   ) 
+
+  p$carstm_model_formula = Y ~  1 + offset( E ) 
+    + f(region, model="besag", graph.file=g, scale.model=TRUE ) 
+    + f(region.iid, model="iid", scale.model=TRUE) 
+    + f(x, model="rw2", scale.model=TRUE)  
+
+  
+  p$carstm_model_formula = Y ~  1 + offset( E ) 
+    + f(region, model="bym2", graph.file=g, scale.model=TRUE ) 
+    + f(region.iid, model="iid", scale.model=TRUE) 
+    + f(x, model="rw2", scale.model=TRUE)  
+
+  # Leroux model
+  p$carstm_model_formula = Y ~  1 + offset( E ) 
+    + f(region, model="besagproper2", graph.file=g, scale.model=TRUE ) 
+    + f(region.iid, model="iid", scale.model=TRUE) 
+    + f(x, model="rw2", scale.model=TRUE)  
+
+
+  , scale.model=TRUE
 
   # note offset is not logged ... link function handles it 
 

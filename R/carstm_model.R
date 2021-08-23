@@ -1,5 +1,5 @@
 
-carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_units_fn=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compression_level=6, fn_fit=NULL, fn_res=NULL, num.threads="1:1", 
+carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_units_fn=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compress=TRUE, fn_fit=NULL, fn_res=NULL, num.threads="1:1", 
    ... ) {
 
      if (0) {
@@ -11,7 +11,7 @@ carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, 
       DS="redo"
       improve.hyperparam.estimates=FALSE
       carstm_modelengine = "inla"
-      compression_level=6
+      compress=TRUE
       fn_fit=NULL
       fn_res=NULL
      }
@@ -72,12 +72,12 @@ carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, 
 
   if ( grepl("glm", carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
-    O = carstm_model_glm( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compression_level=compression_level, ... ) 
+    O = carstm_model_glm( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, ... ) 
   }
 
   if ( grepl("gam", carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
-    O = carstm_model_gam( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compression_level=compression_level, ... ) 
+    O = carstm_model_gam( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, ... ) 
   }
 
   if (grepl("bayesx", carstm_modelengine) ) {
@@ -90,7 +90,7 @@ carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, 
 
 
   if ( grepl("inla", carstm_modelengine) ) {
-    O = carstm_model_inla( p=p, M=M, E=E, sppoly=sppoly, region.id=region.id, fn_fit=fn_fit, fn_res=fn_res, compression_level=compression_level, num.threads=num.threads, ... ) 
+    O = carstm_model_inla( p=p, M=M, E=E, sppoly=sppoly, region.id=region.id, fn_fit=fn_fit, fn_res=fn_res, compress=compress, num.threads=num.threads, ... ) 
       #  print(O[["summary"]])
   }
    

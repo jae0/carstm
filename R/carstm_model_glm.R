@@ -1,5 +1,5 @@
 
-  carstm_model_glm = function( p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), fn_res=tempfile(pattern="res_", fileext=".Rdata"), compression_level=6,   redo_fit=TRUE , ...  ) {
+  carstm_model_glm = function( p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), fn_res=tempfile(pattern="res_", fileext=".Rdata"), compress=TRUE,   redo_fit=TRUE , ...  ) {
     
 
     # permit passing a function rather than data directly .. less RAM usage in parent call
@@ -21,7 +21,7 @@
 
       message( "Saving carstm fit: ", fn_fit )
 
-      save( fit, file=fn_fit, compression_level=compression_level )
+      save( fit, file=fn_fit, compress=compress )
 
     }
 
@@ -111,7 +111,7 @@
     if ( grepl( ".*lognormal", p$carstm_model_family)) O[[vn]] = exp(O[[vn]])
     if (exists("data_transformation", p) ) O[[vn]] = data_transformation$backward( O[[vn]] ) # make all positive
 
-    save( O, file=fn_res, compression_level=compression_level )
+    save( O, file=fn_res, compress=compress )
 
     message( "carstm summary saved as: ", fn_res )
 
