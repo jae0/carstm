@@ -1,20 +1,20 @@
 
-  carstm_model_glm = function( p, M, fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), fn_res=tempfile(pattern="res_", fileext=".Rdata"), compress=TRUE,   redo_fit=TRUE , ...  ) {
+  carstm_model_glm = function( O, data, fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), fn_res=tempfile(pattern="res_", fileext=".Rdata"), compress=TRUE,   redo_fit=TRUE , ...  ) {
     
+    # TODO:: assumes a fixed name convention .. look at carstm_model_inla to disconnect and use O$vn$*
 
     # permit passing a function rather than data directly .. less RAM usage in parent call
-    if (class(M)=="character") assign("M", eval(parse(text=M) ) )
+    if (class(data)=="character") assign("data", eval(parse(text=data) ) )
 
 
-    vn = p$variabletomodel
+    vn = O$variabletomodel
 
-    if (exists("data_transformation", p)) M[, vn]  = p$data_transformation$forward( M[, vn] ) # make all positive
+    if (exists("data_transformation", O)) data[, vn]  = O$data_transformation$forward( data[, vn] ) # make all positive
 
     fit = NULL
 
     if (redo_fit) {
-
-      fit = try( glm( p$carstm_model_formula , data=M, family=p$carstm_model_family ) )
+      fit = try( glm( O$formula , data=data, family=O$family ) )
 
       if (is.null(fit)) warning("model fit error")
       if ("try-error" %in% class(fit) ) warning("model fit error")
@@ -30,57 +30,58 @@
     # do the computations here as fit can be massive ... best not to copy, etc ..
     message( "Computing summaries ..." )
  
-    O = list()
+    # O = list()
+
 
     O[["summary"]] = summary(fit)
 
   # row indices for predictions
-    S = as.character( p[["AUID"]] )
+    S = as.character( O[["AUID"]] )
 
     nAUID = length(S)
  
-    if ( p$aegis_dimensionality == "space") {
+    if ( O$dimensionality == "space") {
       withsolutions = withsolutions[ grep( "AUID.*:year", withsolutions ) ]
       withsolutions = gsub("AUID", "", withsolutions )
-      MM = paste( M$AUID, M$year, sep=":")
+      MM = paste( data$AUID, data$year, sep=":")
       ipred = match(withsolutions, MM)
-      mfrom = list( S=M$AUID[ipred] )
+      mfrom = list( S=data$AUID[ipred] )
       mto   = list( S=S )
     }
 
-    if ( p$aegis_dimensionality == "space-year") {
-      T = as.character( p$yrs )
-      M$year = as.character(M$year)
+    if ( O$dimensionality == "space-time") {
+      T = as.character( O$yrs )
+      data$year = as.character(data$year)
       # filter by AUID and years in case additional data in other areas and times are used in the input data
       withsolutions = names( which(is.finite(fit$coefficients)) )
       withsolutions = withsolutions[ grep( "AUID.*:year", withsolutions ) ]
       withsolutions = gsub("AUID", "", withsolutions )
       withsolutions = gsub("year", "", withsolutions )
-      MM = paste( M$AUID, M$year, sep=":")
+      MM = paste( data$AUID, data$year, sep=":")
       ipred = ipred[ match(withsolutions, MM) ]
-      mfrom = list( S=M$AUID[ipred], T=M$year[ipred]  )
+      mfrom = list( S=data$AUID[ipred], T=data$year[ipred]  )
       mto   = list( S=S, T=T )
     }
 
-    if ( p$aegis_dimensionality == "space-year-season") {
-      T = as.character( p$yrs )
-      U = as.character( discretize_data( (p$dyears + diff(p$dyears)[1]/2), p$discretization[["dyear"]] ) )
+    if ( O$dimensionality == "space-time-cyclic") {
+      T = as.character( O$yrs )
+      U = as.character( discretize_data( (O$dyears + diff(O$dyears)[1]/2), O$discretization[["dyear"]] ) )
 
-      M$year = as.character(M$year)
-      M$dyear = as.character( discretize_data( M$dyear, p$discretization[["dyear"]] ) )
+      data$year = as.character(data$year)
+      data$dyear = as.character( discretize_data( data$dyear, O$discretization[["dyear"]] ) )
 
       withsolutions = names( which(is.finite(fit$coefficients)) )
       withsolutions = withsolutions[ grep( "AUID.*:year", withsolutions ) ]
       withsolutions = gsub("AUID", "", withsolutions )
       withsolutions = gsub("dyear", "", withsolutions )
       withsolutions = gsub("year", "", withsolutions )
-      MM = paste( M$AUID, M$year, M$dyear, sep=":")
+      MM = paste( data$AUID, data$year, data$dyear, sep=":")
       ipred = match(withsolutions, MM)
-      mfrom = list( S=M$AUID[ipred], T=M$year[ipred], U=M$dyear[ipred] )
+      mfrom = list( S=data$AUID[ipred], T=data$year[ipred], U=data$dyear[ipred] )
       mto   = list( S=S, T=T, U=U )
     }
 
-    preds = predict( fit, newdata=M[ipred,], type="link", na.action=na.omit, se.fit=TRUE )  # no/km2
+    preds = predict( fit, newdata=data[ipred,], type="link", na.action=na.omit, se.fit=TRUE )  # no/km2
     
     O = list()
 
@@ -89,9 +90,9 @@
     vn =  paste(vn, "predicted", sep=".")
     input = preds$fit
     O[[vn]] = reformat_to_array( input =input, matchfrom=mfrom, matchto=mto )
-    if ( grepl( ".*poisson", p$carstm_model_family)) O[[vn]] = exp(O[[vn]])
-    if ( grepl( ".*lognormal", p$carstm_model_family)) O[[vn]] = exp(O[[vn]])
-    if (exists("data_transformation", p) ) O[[vn]] = data_transformation$backward( O[[vn]] ) # make all positive
+    if ( grepl( ".*poisson", O$family)) O[[vn]] = exp(O[[vn]])
+    if ( grepl( ".*lognormal", O$family)) O[[vn]] = exp(O[[vn]])
+    if (exists("data_transformation", O) ) O[[vn]] = data_transformation$backward( O[[vn]] ) # make all positive
 
     vn =  paste(vn, "predicted_se", sep=".")
     input = preds$se.fit
@@ -100,16 +101,16 @@
     vn =  paste(vn, "predicted_lb", sep=".")
     input = preds$fit - 1.96*preds$se.fit
     O[[vn]] = reformat_to_array( input =input, matchfrom=mfrom, matchto=mto )
-    if ( grepl( ".*poisson", p$carstm_model_family)) O[[vn]] = exp(O[[vn]])
-    if ( grepl( ".*lognormal", p$carstm_model_family)) O[[vn]] = exp(O[[vn]])
-    if (exists("data_transformation", p) ) O[[vn]] = data_transformation$backward( O[[vn]] ) # make all positive
+    if ( grepl( ".*poisson", O$family)) O[[vn]] = exp(O[[vn]])
+    if ( grepl( ".*lognormal", O$family)) O[[vn]] = exp(O[[vn]])
+    if (exists("data_transformation", O) ) O[[vn]] = data_transformation$backward( O[[vn]] ) # make all positive
 
     vn =  paste(vn, "predicted_ub", sep=".")
     input = preds$fit + 1.96*preds$se.fit
     O[[vn]] = reformat_to_array( input =input, matchfrom=mfrom, matchto=mto )
-    if ( grepl( ".*poisson", p$carstm_model_family)) O[[vn]] = exp(O[[vn]])
-    if ( grepl( ".*lognormal", p$carstm_model_family)) O[[vn]] = exp(O[[vn]])
-    if (exists("data_transformation", p) ) O[[vn]] = data_transformation$backward( O[[vn]] ) # make all positive
+    if ( grepl( ".*poisson", O$family)) O[[vn]] = exp(O[[vn]])
+    if ( grepl( ".*lognormal", O$family)) O[[vn]] = exp(O[[vn]])
+    if (exists("data_transformation", O) ) O[[vn]] = data_transformation$backward( O[[vn]] ) # make all positive
 
     save( O, file=fn_res, compress=compress )
 

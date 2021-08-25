@@ -1,13 +1,14 @@
 
-carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, areal_units_fn=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compress=TRUE, fn_fit=NULL, fn_res=NULL, num.threads="1:1", 
+carstm_model = function( p=list(), data=NULL, E=NULL, sppoly=NULL, region.id=NULL, dimensionality=NULL, areal_units_fn=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compress=TRUE, fn_fit=NULL, fn_res=NULL, num.threads="1:1", 
    ... ) {
 
      if (0) {
-      M=NULL
+      data=NULL
       E=NULL
       sppoly=NULL
       region.id=NULL
       areal_units_fn=NULL
+      dimensionality=NULL
       DS="redo"
       improve.hyperparam.estimates=FALSE
       carstm_modelengine = "inla"
@@ -26,6 +27,13 @@ carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, 
     carstm_model_label = "default",
     carstm_modelengine ="inla" # glm and gam also possible ... though not very useful
   )
+
+  if (!exists("dimensionality", p)) {
+    if (p$aegis_dimensionality=="space") p$dimensionality = "space"  
+    if (p$aegis_dimensionality=="space-year") p$dimensionality = "space-time"  
+    if (p$aegis_dimensionality=="space-year-season") p$dimensionality = "space-time-cyclic"  
+  }
+  if (!exists("dimensionality", p)) stop("dimensionality needs to be specified")
 
   if (is.null(sppoly)) {
     message("Loading sppoly from file ..." )
@@ -54,13 +62,13 @@ carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, 
     return( fit )
   }
 
-  O = NULL
+  out = NULL
   if (DS=="carstm_modelled_summary") {  # carstm_model.*carstm_modelled
     if (!is.null(fn_res)) {
       message("Loading carstm data summary:  ", fn_res )
       if (file.exists(fn_res)) load( fn_res)
-      if (is.null(O)) message("carstm summary not found.")
-      return( O )
+      if (is.null(out)) message("carstm summary not found.")
+      return( out )
     }
   }
 
@@ -72,12 +80,12 @@ carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, 
 
   if ( grepl("glm", carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
-    O = carstm_model_glm( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, ... ) 
+    out = carstm_model_glm( O=p, data=data, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, ... ) 
   }
 
   if ( grepl("gam", carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
-    O = carstm_model_gam( p=p, M=M, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, ... ) 
+    out = carstm_model_gam( O=p, data=data, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, ... ) 
   }
 
   if (grepl("bayesx", carstm_modelengine) ) {
@@ -90,9 +98,9 @@ carstm_model = function( p=list(), M=NULL, E=NULL, sppoly=NULL, region.id=NULL, 
 
 
   if ( grepl("inla", carstm_modelengine) ) {
-    O = carstm_model_inla( p=p, M=M, E=E, sppoly=sppoly, region.id=region.id, fn_fit=fn_fit, fn_res=fn_res, compress=compress, num.threads=num.threads, ... ) 
-      #  print(O[["summary"]])
+
+    out = carstm_model_inla( O=p, data=data, E=E, region.id=region.id, sppoly=sppoly, fn_fit=fn_fit, fn_res=fn_res, compress=compress, num.threads=num.threads, ... ) 
   }
    
-  return( O )
+  return( out )
 }

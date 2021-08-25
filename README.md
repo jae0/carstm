@@ -83,35 +83,32 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   p = list(
     modeldir = tempdir(),
     carstm_model_label = "testlabel",
-    variabletomodel = "Y",
-    vnS = "region", 
-    vnSI="region.iid",
-    vnO = "E",
-    aegis_dimensionality = "space",   # a pure space model
     carstm_modelengine = "inla",
-    carstm_model_family = "poisson",
+    # vn = list(Y="Y", S="region", SI="region.iid", O = "E"),  # instructions on which are spatial and iid and offset terms. parsing will try t ofigure itout but this is most secure
+    dimensionality = "space",   # a pure space model
+    family = "poisson",
     nposteriors=5000
   ) 
 
-  p$carstm_model_formula = Y ~  1 + offset( E ) 
+  p$formula = formula( Y ~  1 + offset( E ) 
     + f(region, model="besag", graph.file=g, scale.model=TRUE ) 
-    + f(region.iid, model="iid", scale.model=TRUE) 
-    + f(x, model="rw2", scale.model=TRUE)  
+    + f(region.iid, model="iid" ) 
+    + f(x, model="rw2", scale.model=TRUE)  )
 
   
-  p$carstm_model_formula = Y ~  1 + offset( E ) 
+  p$formula = formula( Y ~  1 + offset( E ) 
     + f(region, model="bym2", graph.file=g, scale.model=TRUE ) 
-    + f(region.iid, model="iid", scale.model=TRUE) 
-    + f(x, model="rw2", scale.model=TRUE)  
+    + f(region.iid, model="iid") 
+    + f(x, model="rw2", scale.model=TRUE)  )
 
   # Leroux model
-  p$carstm_model_formula = Y ~  1 + offset( E ) 
+  p$formula = formula( Y ~  1 + offset( E ) 
     + f(region, model="besagproper2", graph.file=g, scale.model=TRUE ) 
-    + f(region.iid, model="iid", scale.model=TRUE) 
-    + f(x, model="rw2", scale.model=TRUE)  
+    + f(region.iid, model="iid" ) 
+    + f(x, model="rw2", scale.model=TRUE)   )
 
 
-  , scale.model=TRUE
+
 
   # note offset is not logged ... link function handles it 
 
@@ -120,7 +117,7 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
 
   res = carstm_model( 
     p=p,
-    M = Germany, 
+    data = Germany, 
     sppoly = sppoly,
     region.id = as.character(Germany$region),
     fn_fit = fn_fit,
