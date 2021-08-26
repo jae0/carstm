@@ -1,5 +1,5 @@
 
-  carstm_model_gam = function( O, data, fn_fit=tempfile(pattern="fit_", fileext=".Rdata"), fn_res=tempfile(pattern="res_", fileext=".Rdata"), compress=TRUE,   redo_fit=TRUE , ... ) {
+  carstm_model_gam = function( O, data, fn_fit=tempfile(pattern="fit_", fileext=".rdata"), fn_res=tempfile(pattern="res_", fileext=".rdata"), compress=TRUE,   redo_fit=TRUE , ... ) {
     
     # TODO:: assumes a fixed name convention .. look at carstm_model_inla to disconnect and use O$vn$*
 

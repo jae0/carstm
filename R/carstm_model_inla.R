@@ -6,7 +6,7 @@ carstm_model_inla = function(
   time.id=NULL,
   cyclic.id=NULL,
   sppoly=NULL, 
-  fn_fit=tempfile(pattern="fit_", fileext=".RDS"), 
+  fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
   fn_res=NULL, 
   num.threads="1:1",
   compress=TRUE,
@@ -28,7 +28,7 @@ carstm_model_inla = function(
     region.id=NULL
     time.id=NULL
     cyclic.id=NULL
-    fn_fit=tempfile(pattern="fit_", fileext=".RDS")
+    fn_fit=tempfile(pattern="fit_", fileext=".rdata")
     num.threads="1:1"
     compress="gzip"
     redo_fit = TRUE
@@ -72,7 +72,7 @@ carstm_model_inla = function(
   if (DS=="modelled_fit") {
     if (!is.null(fn_fit)) {
       message("Loading fit: ", fn_fit )
-      if (file.exists(fn_fit)) fit = readRDS( fn_fit )
+      if (file.exists(fn_fit)) load( fn_fit )
       if (is.null(fit)) message("modelled fit not found.")
     }
     return( fit )
@@ -82,7 +82,7 @@ carstm_model_inla = function(
     if (!is.null(fn_res)) {
       message("Loading  data summary:  ", fn_res )
       O = NULL
-      if (file.exists(fn_res)) O = readRDS( fn_res)
+      if (file.exists(fn_res)) load( fn_res)
       if (is.null(O)) message(" summary not found.")
       return( O )
     }
@@ -97,10 +97,10 @@ carstm_model_inla = function(
   if ( is.null(O)){
     if ( update_results) {
       if (!is.null(fn_res)) {
-        O = readRDS (fn_res) 
+        load (fn_res) 
       } else {
         fit = NULL
-        fit = readRDS(fn_fit )
+        load(fn_fit )
         if (!is.null(fit) ) {
           if (exists("results", fit)) O = fit$results
         } 
@@ -348,7 +348,7 @@ carstm_model_inla = function(
   
   if ( !is.null(fm$offset_variable) )  {
     # link function applied to offsets here .. do not need to send log() 
-    if (grepl("log", vnO)) message("Probably do not want to transform the offset .. it is done internally in , unlike glm, inla, etc")
+    if (grepl("log[[:space:]]*[(]", vnO)) message("Probably do not want to transform the offset .. it is done internally in , unlike glm, inla, etc")
 
     obs = 1:nrow(P[["data"]])
     if (exists("tag", P[["data"]])) {
@@ -358,11 +358,12 @@ carstm_model_inla = function(
     }   
     
     ol = lnk_function( P[["data"]][, vnO ])
+    
     O$offset_scale = median( ol[obs] , na.rm=TRUE )  # required to stabilize optimization
     obs = NULL
     ol = ol - O$offset_scale  # apply to all and overwrite, certing upon 0 (in user space 1)
     P[["data"]][ , vnO ] = ol 
-    O$offset_scale_revert = function(x) { x - O$offset_scale }  # used for Y value and so opposite sign of "-" but applied to numerator is returns it to "-"
+    O$offset_scale_revert = function(x) { x - O$offset_scale }  # applied on Y value (not offset0) and so opposite sign of "-" but applied to numerator is returns it to "-" .. used on link scale
     yl = yl - ol
   } 
 
@@ -418,12 +419,12 @@ carstm_model_inla = function(
     if (!is.null(fn_res)) {
       # then save as separate files (fit, results)
       if (P[["verbose"]])  message( "Saving fit (this can be slow): ", fn_fit )
-      saveRDS( fit, file=fn_fit, compress=compress )
+      save( fit, file=fn_fit, compress=compress )
     }
 
   }
 
-  if (is.null(fit)) fit = readRDS( fn_fit )
+  if (is.null(fit)) load( fn_fit )
   
   if (is.null(fit)) {
     message( "fit file not found: ", fn_fit )
@@ -433,7 +434,21 @@ carstm_model_inla = function(
   # do the computations here as fit can be massive ... best not to copy, etc ..
   if (P[["verbose"]])  message( "\nComputing summaries and computing from posterior simulations (can be longer than model fitting depending upon no of posterior sims: 'nposteriors' ) ..." )
 
-  
+  truncate_upperbound = function( b, upper_limit, eps=1e-12 ) {
+    # not used
+    k = which( b[,1] > upper_limit )
+    if (length(k) > 0) b[k,2] = 0
+    return( b )
+  }
+
+  if (exists("data_transformation", O))  {
+    backtransform = function( b ) {
+      b[,1] =  O$data_transformation$backward( b[,1]   )
+      return( b )
+    }
+  } 
+
+
   list_simplify = function(x) as.data.frame( t( as.data.frame( x )))
   exceedance_prob = function(x, threshold)  {1 - inla.pmarginal(q = threshold, x)}
   deceedance_prob = function(x, threshold)  { inla.pmarginal(q = threshold, x)}
@@ -459,16 +474,19 @@ carstm_model_inla = function(
     # back-transform from marginals
 
     if (exists( "marginals.fixed", fit)) {
-      V = fit$marginals.fixed
-
-      if (exists("offset_scale_revert", O)) {
-        fi = which( grepl("Intercept", names(V) ))
-        if (length(fi)>0) V[[fi]] = inla.tmarginal( O$offset_scale_revert, V[[fi]]) 
+      fi = which( grepl("Intercept", names(V) ))
+      if (length(fi) > 0) {
+        if ( exists("offset_scale_revert", O))  V[[fi]] = inla.tmarginal( O$offset_scale_revert, V[[fi]])  # on link scale
       }
 
-      summary_inv_fixed = function(x) inla.zmarginal( inla.tmarginal( invlink, x) , silent=TRUE  )
+      V = lapply( fit$marginals.fixed, function(x) inla.tmarginal( invlink, x)  )
+
+      if (length(fi) > 0) {
+        if ( exists("data_transformation", O))  V[[fi]] = inla.tmarginal( O$data_transformation$backward, V[[fi]]  ) # on user scale
+      }
+
       W = NULL
-      W = cbind ( t (apply_simplify( V, FUN=summary_inv_fixed ) ) )  # 
+      W = cbind ( t (apply_simplify( V, FUN=inla.zmarginal ) ) )  # 
       O[["summary"]][["fixed_effects"]] = W [, tokeep, drop =FALSE]
       W = NULL
     }
@@ -520,10 +538,15 @@ carstm_model_inla = function(
     
 
 
-    if (P[["verbose"]])  print(  O[["summary"]][["fixed_effects"]] )    
+    if (P[["verbose"]]) {
+      message( "Fixed effects")
+      print(  O[["summary"]][["fixed_effects"]] )    
+    } 
 
-    if (P[["verbose"]])  print(  O[["summary"]][["random_effects"]] )   
-
+    if (P[["verbose"]])  {
+      message( "Random effects:")
+      print(  O[["summary"]][["random_effects"]] )   
+    }
   }
 
 
@@ -893,22 +916,6 @@ carstm_model_inla = function(
 
     if (!exists("predictions", O)) O[["predictions"]] = list()
 
-    truncate_upperbound = function( b, upper_limit, eps=1e-12 ) {
-      # not used
-      k = which( b[,1] > upper_limit )
-      if (length(k) > 0) b[k,2] = 0
-      return( b )
-    }
-
-    if (exists("data_transformation", O))  {
-      backtransform = function( b ) {
-        b[,1] =  O$data_transformation$backward( b[,1]   )
-        return( b )
-      }
-    } 
-
-
-
     summary_inv_predictions = function(x) inla.zmarginal( x, silent=TRUE  )
     
     if (!exists("tag", P[["data"]])) P[["data"]]$tag="predictions" # force predictions for all data
@@ -922,7 +929,8 @@ carstm_model_inla = function(
         ipred = which( P[["data"]]$tag=="predictions"  &  P[["data"]][,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         g = fit$marginals.fitted.values[ipred]   
         if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
-        if (exists("data_transformation", O)) g = apply_generic( g, backtransform )
+        g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
+        if ( exists("data_transformation", O))  g = apply_generic( g, backtransform )
 
         m = list_simplify ( apply_simplify( g, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]),  length(names(m)) ),  dimnames=list( space=O[[vnS]], stat=names(m) ) )
@@ -943,7 +951,7 @@ carstm_model_inla = function(
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]] & P[["data"]][,vnT0] %in% O[[vnT]] )
         g = fit$marginals.fitted.values[ipred]   
         if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
-
+        g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
         if (exists("data_transformation", O)) g = apply_generic( g, backtransform )
 
         m = list_simplify ( apply_simplify( g, summary_inv_predictions ) )
@@ -966,8 +974,7 @@ carstm_model_inla = function(
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]]  &  P[["data"]][,vnT0] %in% O[[vnT]] &  P[["data"]][,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         g = fit$marginals.fitted.values[ipred]   
         if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
- 
-
+        g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
         if (exists("data_transformation", O)) g = apply_generic( g, backtransform )
 
         m = list_simplify ( apply_simplify( g, summary_inv_predictions ) )
@@ -1035,14 +1042,14 @@ carstm_model_inla = function(
 
   if (!is.null(fn_res)) {
     # then save as separate files (fit, results)
-    saveRDS( O, fn_res, compress=compress )
+    save( O, fn_res, compress=compress )
     if (P[["verbose"]])  message( "Summary saved as: ", fn_res )
     fit$results = O
 
   } else {
     # save as a single file
     fit$results = O
-    saveRDS( fit, fn_fit, compress=compress )
+    save( fit, fn_fit, compress=compress )
     if (P[["verbose"]])  message( "fit and summary saved as: ", fn_fit )
   }
   return(fit)
