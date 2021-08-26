@@ -1044,14 +1044,14 @@ carstm_model_inla = function(
 
   if (!is.null(fn_res)) {
     # then save as separate files (fit, results)
-    save( O, fn_res, compress=compress )
+    save( O, file=fn_res, compress=compress )
     if (P[["verbose"]])  message( "Summary saved as: ", fn_res )
     fit$results = O
 
   } else {
     # save as a single file
     fit$results = O
-    save( fit, fn_fit, compress=compress )
+    save( fit, file=fn_fit, compress=compress )
     if (P[["verbose"]])  message( "fit and summary saved as: ", fn_fit )
   }
   return(fit)
