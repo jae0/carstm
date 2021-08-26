@@ -474,6 +474,8 @@ carstm_model_inla = function(
     # back-transform from marginals
 
     if (exists( "marginals.fixed", fit)) {
+      V = fit$marginals.fixed
+      
       fi = which( grepl("Intercept", names(V) ))
       if (length(fi) > 0) {
         if ( exists("offset_scale_revert", O))  V[[fi]] = inla.tmarginal( O$offset_scale_revert, V[[fi]])  # on link scale
@@ -486,7 +488,7 @@ carstm_model_inla = function(
       }
 
       W = NULL
-      W = cbind ( t (apply_simplify( V, FUN=inla.zmarginal ) ) )  # 
+      W = cbind ( t (apply_simplify( V, FUN=inla.zmarginal, silent=TRUE ) ) )  # 
       O[["summary"]][["fixed_effects"]] = W [, tokeep, drop =FALSE]
       W = NULL
     }
