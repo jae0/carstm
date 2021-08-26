@@ -481,7 +481,7 @@ carstm_model_inla = function(
         if ( exists("offset_scale_revert", O))  V[[fi]] = inla.tmarginal( O$offset_scale_revert, V[[fi]])  # on link scale
       }
 
-      V = lapply( fit$marginals.fixed, function(x) inla.tmarginal( invlink, x)  )
+      V = lapply( V, function(x) inla.tmarginal( invlink, x)  )
 
       if (length(fi) > 0) {
         if ( exists("data_transformation", O))  V[[fi]] = inla.tmarginal( O$data_transformation$backward, V[[fi]]  ) # on user scale
