@@ -70,7 +70,8 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   # and posterior sims to compute combined spatial (and spatiotemporal) effects
   
   require(carstm)  # carstm options are sent via one controlling parameter list  
-  
+  # loadfunctions("carstm")
+
   Germany$tag = "predictions"  # predict on all locations
   
   Germany$region = as.character(Germany$region)
@@ -78,32 +79,32 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
 
   sppoly = Germany  # construct "sppoly" with required attributes (though it is not a polygon)
   attributes(sppoly)[["areal_units_fn"]] = g  
-  attributes(sppoly)[["nb"]] = inla.read.graph(g) 
+  p$nb = attributes(sppoly)[["nb"]] = inla.read.graph(g) 
 
   p = list(
     modeldir = tempdir(),
     carstm_model_label = "testlabel",
     carstm_modelengine = "inla",
-    # vn = list(Y="Y", S="region", SI="region.iid", O = "E"),  # instructions on which are spatial and iid and offset terms. parsing will try t ofigure itout but this is most secure
+    vn = list(Y="Y", S="region", SI="region.iid", O = "E"),  # instructions on which are spatial and iid and offset terms. parsing will try to figure it out but this is most secure
     dimensionality = "space",   # a pure space model
     family = "poisson",
     nposteriors=5000
   ) 
 
   p$formula = formula( Y ~  1 + offset( E ) 
-    + f(region, model="besag", graph.file=g, scale.model=TRUE ) 
+    + f(region, model="besag", graph=p$nb, scale.model=TRUE ) 
     + f(region.iid, model="iid" ) 
     + f(x, model="rw2", scale.model=TRUE)  )
 
   
   p$formula = formula( Y ~  1 + offset( E ) 
-    + f(region, model="bym2", graph.file=g, scale.model=TRUE ) 
+    + f(region, model="bym2", graph=p$nb, scale.model=TRUE ) 
     + f(region.iid, model="iid") 
     + f(x, model="rw2", scale.model=TRUE)  )
 
   # Leroux model
   p$formula = formula( Y ~  1 + offset( E ) 
-    + f(region, model="besagproper2", graph.file=g, scale.model=TRUE ) 
+    + f(region, model="besagproper2", graph=p$nb, scale.model=TRUE ) 
     + f(region.iid, model="iid" ) 
     + f(x, model="rw2", scale.model=TRUE)   )
 
@@ -118,7 +119,8 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   res = carstm_model( 
     p=p,
     data = Germany, 
-    sppoly = sppoly,
+    # sppoly = sppoly,
+    nb = nb,
     region.id = as.character(Germany$region),
     fn_fit = fn_fit,
     fn_res = fn_res,
