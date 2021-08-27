@@ -11,6 +11,7 @@ carstm_model_inla = function(
   num.threads="1:1",
   compress=TRUE,
   redo_fit = TRUE,
+  scale_offsets = FALSE,
   update_results = FALSE,
   toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), 
   nposteriors=NULL, 
@@ -358,12 +359,16 @@ carstm_model_inla = function(
     }   
     
     ol = lnk_function( P[["data"]][, vnO ])
-    
-    O$offset_scale = median( ol[obs] , na.rm=TRUE )  # required to stabilize optimization
+
+    if (scale_offsets) {
+      if (exists("offset_scale", O)) {
+        O$offset_scale = median( ol[obs] , na.rm=TRUE )  # required to stabilize optimization
+        ol = ol - O$offset_scale  # apply to all and overwrite, certing upon 0 (in user space 1)
+        P[["data"]][ , vnO ] = ol 
+        O$offset_scale_revert = function(x) { x - O$offset_scale }  # used for Y value and so opposite sign of "-" but applied to numerator is returns it to "-"
+      }
+    }    
     obs = NULL
-    ol = ol - O$offset_scale  # apply to all and overwrite, certing upon 0 (in user space 1)
-    P[["data"]][ , vnO ] = ol 
-    O$offset_scale_revert = function(x) { x - O$offset_scale }  # applied on Y value (not offset0) and so opposite sign of "-" but applied to numerator is returns it to "-" .. used on link scale
     yl = yl - ol
   } 
 
@@ -478,7 +483,9 @@ carstm_model_inla = function(
       
       fi = which( grepl("Intercept", names(V) ))
       if (length(fi) > 0) {
-        if ( exists("offset_scale_revert", O))  V[[fi]] = inla.tmarginal( O$offset_scale_revert, V[[fi]])  # on link scale
+        if (scale_offsets) {
+          if ( exists("offset_scale_revert", O))  V[[fi]] = inla.tmarginal( O$offset_scale_revert, V[[fi]])  # on link scale
+        }
       }
 
       V = lapply( V, function(x) inla.tmarginal( invlink, x)  )
@@ -541,13 +548,18 @@ carstm_model_inla = function(
 
 
     if (P[["verbose"]]) {
+      message( "")
       message( "Fixed effects")
       print(  O[["summary"]][["fixed_effects"]] )    
+      message( "")
     } 
 
     if (P[["verbose"]])  {
+      message( "")
       message( "Random effects:")
       print(  O[["summary"]][["random_effects"]] )   
+      message( " -- NOTE: 'SD *' are on link scale and not user scale")
+      message( "")
     }
   }
 
@@ -930,7 +942,9 @@ carstm_model_inla = function(
       if (  O[["dimensionality"]] == "space" ) {
         ipred = which( P[["data"]]$tag=="predictions"  &  P[["data"]][,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         g = fit$marginals.fitted.values[ipred]   
-        if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
+        if (scale_offsets) {
+          if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+        }    
         g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
         if ( exists("data_transformation", O))  g = apply_generic( g, backtransform )
 
@@ -952,7 +966,10 @@ carstm_model_inla = function(
       if (O[["dimensionality"]] == "space-time"  ) {
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]] & P[["data"]][,vnT0] %in% O[[vnT]] )
         g = fit$marginals.fitted.values[ipred]   
-        if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
+        if (scale_offsets) {
+          if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+        }
+
         g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
         if (exists("data_transformation", O)) g = apply_generic( g, backtransform )
 
@@ -975,7 +992,9 @@ carstm_model_inla = function(
       if ( O[["dimensionality"]] == "space-time-cyclic" ) {
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]]  &  P[["data"]][,vnT0] %in% O[[vnT]] &  P[["data"]][,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         g = fit$marginals.fitted.values[ipred]   
-        if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
+        if (scale_offsets) {
+          if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+        }    
         g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
         if (exists("data_transformation", O)) g = apply_generic( g, backtransform )
 

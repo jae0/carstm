@@ -62,13 +62,13 @@ carstm_model = function( p=list(), data=NULL, E=NULL, sppoly=NULL, region.id=NUL
     return( fit )
   }
 
-  out = NULL
+  O = NULL
   if (DS=="carstm_modelled_summary") {  # carstm_model.*carstm_modelled
     if (!is.null(fn_res)) {
       message("Loading carstm data summary:  ", fn_res )
       if (file.exists(fn_res)) load( fn_res)
-      if (is.null(out)) message("carstm summary not found.")
-      return( out )
+      if (is.null(O)) message("carstm summary not found.")
+      return( O )
     }
   }
 
