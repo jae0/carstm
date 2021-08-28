@@ -239,6 +239,22 @@ carstm_model_inla = function(
     } 
   }
 
+
+  if (is.null(region.id)) {
+    if (!is.null(sppoly))  region.id = try( as.character( slot( slot(sppoly, "nb"), "region.id" ) ) )
+    if (inherits(region.id, "try-error")) region.id = NULL
+  }
+
+  if (is.null(region.id)) {
+    if (!is.null(sppoly)) region.id = try( as.character( slot( slot(sppoly, "W.nb"), "region.id" ) ) )
+    if (inherits(region.id, "try-error")) region.id = NULL
+  }
+
+  if (is.null(region.id)) {
+    if (!is.null(sppoly)) region.id = try( as.character( slot( sppoly,  "region.id" ) ) )
+    if (inherits(region.id, "try-error")) region.id = NULL
+  }
+
   if (is.null(region.id)) {
     if (!is.null(sppoly)) {
       if (exists("AUID", sppoly)) {
@@ -246,19 +262,6 @@ carstm_model_inla = function(
         region.id = as.character( sppoly[["AUID"]] )  # the master / correct sequence of the AU's and neighbourhood matrix index values
       }
     }
-  }
-
-  if (is.null(region.id)) {
-    if (!is.null(sppoly))  region.id = try( as.character( slot( slot(sppoly, "nb"), "region.id" ) ) )
-    if (inherits(region.id, "try-error")) region.id = NULL
-  }
-  if (is.null(region.id)) {
-    if (!is.null(sppoly)) region.id = try( as.character( slot( slot(sppoly, "W.nb"), "region.id" ) ) )
-    if (inherits(region.id, "try-error")) region.id = NULL
-  }
-  if (is.null(region.id)) {
-    if (!is.null(sppoly)) region.id = try( as.character( slot( sppoly,  "region.id" ) ) )
-    if (inherits(region.id, "try-error")) region.id = NULL
   }
 
   if (is.null(region.id)) stop("Not found: region.id is a required variable")
@@ -1076,6 +1079,8 @@ carstm_model_inla = function(
   }
 
   if (!is.null(sppoly)) O[["sppoly"]] = sppoly
+  if (!is.null(region.id)) O[["region.id"]] = region.id
+  if (!is.null(nb)) O[["nb"]] = nb
 
   if (!is.null(fn_res)) {
     # then save as separate files (fit, results)

@@ -79,7 +79,7 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
 
   sppoly = Germany  # construct "sppoly" with required attributes (though it is not a polygon)
   attributes(sppoly)[["areal_units_fn"]] = g  
-  p$nb = attributes(sppoly)[["nb"]] = inla.read.graph(g) 
+  attributes(sppoly)$nb = inla.read.graph(g)
 
   p = list(
     modeldir = tempdir(),
@@ -92,22 +92,21 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   ) 
 
   p$formula = formula( Y ~  1 + offset( E ) 
-    + f(region, model="besag", graph=p$nb, scale.model=TRUE ) 
+    + f(region, model="besag", graph=slot(sppoly, "nb"), scale.model=TRUE ) 
     + f(region.iid, model="iid" ) 
     + f(x, model="rw2", scale.model=TRUE)  )
 
   
   p$formula = formula( Y ~  1 + offset( E ) 
-    + f(region, model="bym2", graph=p$nb, scale.model=TRUE ) 
+    + f(region, model="bym2", graph=attributes(data)$nb, scale.model=TRUE ) 
     + f(region.iid, model="iid") 
     + f(x, model="rw2", scale.model=TRUE)  )
 
   # Leroux model
   p$formula = formula( Y ~  1 + offset( E ) 
-    + f(region, model="besagproper2", graph=p$nb, scale.model=TRUE ) 
+    + f(region, model="besagproper2", graph=attributes(data)$nb, scale.model=TRUE ) 
     + f(region.iid, model="iid" ) 
     + f(x, model="rw2", scale.model=TRUE)   )
-
 
 
 
@@ -119,9 +118,8 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   res = carstm_model( 
     p=p,
     data = Germany, 
-    # sppoly = sppoly,
-    nb = nb,
     region.id = as.character(Germany$region),
+    sppoly = sppoly,
     fn_fit = fn_fit,
     fn_res = fn_res,
     verbose=TRUE
