@@ -75,7 +75,7 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   Germany$tag = "predictions"  # predict on all locations
   
   Germany$region = as.character(Germany$region)
-  Germany$region.iid = Germany$region
+  Germany$region.iid = NULL
 
   sppoly = Germany  # construct "sppoly" with required attributes (though it is not a polygon)
   attributes(sppoly)[["areal_units_fn"]] = g  
@@ -118,7 +118,7 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   res = carstm_model( 
     p=p,
     data = Germany, 
-    region.id = as.character(Germany$region),
+    space.id = as.character(Germany$region),
     sppoly = sppoly,
     fn_fit = fn_fit,
     fn_res = fn_res,

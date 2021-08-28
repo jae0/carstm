@@ -2,14 +2,12 @@
 carstm_model_inla = function(
   O, 
   DS = "",
-  region.id=NULL,
-  time.id=NULL,
+  sppoly =NULL,
+  space.id = NULL,
+  time.id = NULL,
   cyclic.id=NULL,
-  sppoly=NULL, 
-  nb=NULL,
   fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
   fn_res=NULL, 
-  num.threads="1:1",
   compress=TRUE,
   scale_offsets = FALSE,
   redo_fit = TRUE,
@@ -26,13 +24,11 @@ carstm_model_inla = function(
     # for debugging
     P = list()
     DS = ""
-    sppoly=NULL
-    nb=NULL
-    region.id=NULL
-    time.id=NULL
-    cyclic.id=NULL
+    sppoly =NULL
+    space.id = NULL
+    time.id =NULL
+    cyclic.id = NULL
     fn_fit=tempfile(pattern="fit_", fileext=".rdata")
-    num.threads="1:1"
     compress="gzip"
     redo_fit = TRUE
     update_results = FALSE
@@ -61,9 +57,12 @@ carstm_model_inla = function(
     }
   }
 
+  P = list(...)  # INLA options to be passed directly to it  
 
+  num.threads = "1:1"
+  if (exists("num.threads", O)) num.threads = O[["num.threads"]]
+  if (exists("num.threads", P)) num.threads = P[["num.threads"]]
   inla.setOption(num.threads=num.threads)
-
   num.cores =  as.numeric( unlist(strsplit(num.threads, ":") )[1] )
   
   # local functions
@@ -113,7 +112,6 @@ carstm_model_inla = function(
     } 
   } 
 
-  P = list(...)  # INLA options to be passed directly to it  
 
   if ( inherits(O, "try-error")) O = NULL
   if ( is.null(O)) O = list()  # options
@@ -229,73 +227,48 @@ carstm_model_inla = function(
   
 
 #  if (is.null(sppoly)) if (exists("areal_units")) sppoly = try(areal_units( O ))  # not used in Cancer Matrix ()..
+#  if (is.null(sppoly)) if (exists("sppoly", O)) sppoly = O$sppoly
   if (is.null(sppoly)) if (exists("sppoly", O)) sppoly = O$sppoly
-
-  # region.id
-  if (is.null(region.id)) {
-    if (exists("region.id", O)) {
-      if ( P[["verbose"]] ) message( "region.id was not passed, using region.id found in options, O" )
-      region.id = O[["region.id"]]
+  if (is.null(sppoly)) if (exists("areal_units")) sppoly = areal_units( p=O )  # not used in Cancer Matrix ()..
+ 
+  if (is.null(space.id)) {
+    if (exists("space.id", O)) {
+      if ( P[["verbose"]] ) message( "space.id was not passed, using space.id found in options, O" )
+      space.id = O[["space.id"]]
     } 
+  }  
+
+  if (is.null(space.id)) {
+    if (!is.null(sppoly))  space.id = try( as.character( slot( slot(sppoly, "nb"), "space.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
   }
 
-
-  if (is.null(region.id)) {
-    if (!is.null(sppoly))  region.id = try( as.character( slot( slot(sppoly, "nb"), "region.id" ) ) )
-    if (inherits(region.id, "try-error")) region.id = NULL
+  if (is.null(space.id)) {
+    if (!is.null(sppoly)) space.id = try( as.character( slot( slot(sppoly, "W.nb"), "space.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
   }
 
-  if (is.null(region.id)) {
-    if (!is.null(sppoly)) region.id = try( as.character( slot( slot(sppoly, "W.nb"), "region.id" ) ) )
-    if (inherits(region.id, "try-error")) region.id = NULL
+  if (is.null(space.id)) {
+    if (!is.null(sppoly)) space.id = try( as.character( slot( sppoly,  "space.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
   }
 
-  if (is.null(region.id)) {
-    if (!is.null(sppoly)) region.id = try( as.character( slot( sppoly,  "region.id" ) ) )
-    if (inherits(region.id, "try-error")) region.id = NULL
-  }
-
-  if (is.null(region.id)) {
+  if (is.null(space.id)) {
     if (!is.null(sppoly)) {
       if (exists("AUID", sppoly)) {
-        if ( P[["verbose"]] ) message( "region.id was not passed, using region.id found in sppoly" )
-        region.id = as.character( sppoly[["AUID"]] )  # the master / correct sequence of the AU's and neighbourhood matrix index values
+        if ( P[["verbose"]] ) message( "space.id was not passed, using space.id found in sppoly" )
+        space.id = as.character( sppoly[["AUID"]] )  # the master / correct sequence of the AU's and neighbourhood matrix index values
       }
     }
   }
 
-  if (is.null(region.id)) stop("Not found: region.id is a required variable")
-
-  # nb matrix
-  if (is.null(nb)) {
-    if (exists("nb", O)) {
-      if ( P[["verbose"]] ) message( "neighbourhood matrix nb was not passed, using nb found in options, O" )
-      nb = O[["nb"]]
-    } 
-  }
-  if (is.null(nb)) {
-    if (exists("sppoly")) {
-      nb = try( attributes(sppoly)$nb )
-      if (inherits(nb, "try-error")) nb = NULL
-      if (!is.null(nb)) if ( P[["verbose"]] ) message( "neighbourhood matrix nb from sppoly" )
-    } 
-  }
-  if (is.null(nb)) {
-    if (exists("sppoly")) {
-      nb = try( INLA::inla.read.graph( spdep::nb2mat( attributes(sppoly)$NB_graph )) )
-      if (inherits(nb, "try-error")) nb = NULL
-      if (!is.null(nb)) if ( P[["verbose"]] ) message( "neighbourhood matrix nb from NB_graph found in sppoly" )
-    } 
-  }
-
-  if (is.null(nb)) stop( "neighbourhood matrix 'nb' not found")
-
-
-  # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("region.id")
+  if (is.null(space.id)) stop("Not found: space.id is a required variable")
+ 
+  # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("space.id")
   # convert space and time to numeric codes for INLA
   if (grepl("space", O[["dimensionality"]])) {
 
-    if (!exists(vnS, O)) O[[vnS]] = as.character( region.id )  # this sequence is a master key as index matches nb matrix values
+    if (!exists(vnS, O)) O[[vnS]] = as.character( space.id )  # this sequence is a master key as index matches nb matrix values
     P[["data"]][,vnS0] = as.character( P[["data"]][,vnS] ) # local copy
     P[["data"]][,vnS] = match( P[["data"]][,vnS0], O[[vnS]] )  # overwrite with numeric values that must match index of neighbourhood matrix
   }
@@ -435,6 +408,8 @@ carstm_model_inla = function(
       message("Running model fit using the following data and options: \n")
       str(P)
     }
+     
+     browser()
      
     fit = try( do.call( inla, P ) )      
 
@@ -1079,7 +1054,7 @@ carstm_model_inla = function(
   }
 
   if (!is.null(sppoly)) O[["sppoly"]] = sppoly
-  if (!is.null(region.id)) O[["region.id"]] = region.id
+  if (!is.null(space.id)) O[["space.id"]] = space.id
   if (!is.null(nb)) O[["nb"]] = nb
 
   if (!is.null(fn_res)) {
