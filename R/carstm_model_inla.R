@@ -2,14 +2,14 @@
 carstm_model_inla = function(
   O, 
   DS = "",
-  region.id=NULL,
-  time.id=NULL,
+  sppoly =NULL,
+  space.id = NULL,
+  time.id = NULL,
   cyclic.id=NULL,
-  sppoly=NULL, 
   fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
   fn_res=NULL, 
-  num.threads="1:1",
   compress=TRUE,
+  scale_offsets = FALSE,
   redo_fit = TRUE,
   update_results = FALSE,
   toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), 
@@ -24,12 +24,11 @@ carstm_model_inla = function(
     # for debugging
     P = list()
     DS = ""
-    sppoly=NULL
-    region.id=NULL
-    time.id=NULL
-    cyclic.id=NULL
+    sppoly =NULL
+    space.id = NULL
+    time.id =NULL
+    cyclic.id = NULL
     fn_fit=tempfile(pattern="fit_", fileext=".rdata")
-    num.threads="1:1"
     compress="gzip"
     redo_fit = TRUE
     update_results = FALSE
@@ -45,7 +44,7 @@ carstm_model_inla = function(
         # usual variable names used in aegis .. char / num
         O$vn$S = "space"  # "space"
         O$vn$T = "time"
-        O$vn$U = "season" # "dyri"  # sub annual time
+        O$vn$U = "cyclic" # "dyri"  # sub annual time
 
         # alt charracter descrptions of vars (if any, taken from main above if not)
         # O$vn$S0 = "AUID"  # as character
@@ -58,7 +57,11 @@ carstm_model_inla = function(
     }
   }
 
+  P = list(...)  # INLA options to be passed directly to it  
 
+  num.threads = "1:1"
+  if (exists("num.threads", O)) num.threads = O[["num.threads"]]
+  if (exists("num.threads", P)) num.threads = P[["num.threads"]]
   inla.setOption(num.threads=num.threads)
 
   num.cores =  as.numeric( unlist(strsplit(num.threads, ":") )[1] )
@@ -66,6 +69,8 @@ carstm_model_inla = function(
   # local functions
   apply_generic = function(...)  mclapply(...,   mc.cores=num.cores ) # drop-in for lapply
   apply_simplify = function(...) simplify2array(mclapply(...,  mc.cores=num.cores ))  # drop in for sapply
+  #apply_generic = function(...)  lapply(...  ) # drop-in for lapply
+  #apply_simplify = function(...) simplify2array(lappy(...  ))  # drop in for sapply
 
   fit  = NULL
 
@@ -108,7 +113,6 @@ carstm_model_inla = function(
     } 
   } 
 
-  P = list(...)  # INLA options to be passed directly to it  
 
   if ( inherits(O, "try-error")) O = NULL
   if ( is.null(O)) O = list()  # options
@@ -175,6 +179,7 @@ carstm_model_inla = function(
     print(fm)
   }
 
+
   if (!exists("vn", O)) O[["vn"]] = list() 
 
   # labels .. not all used but defining the here makes things simpler below
@@ -184,9 +189,9 @@ carstm_model_inla = function(
 
     if (exists( O[["vn"]]$O, P[["data"]] )) {
       vnO = O[["vn"]]$O
-      if ( P[["verbose"]] ) message( 'setting offset variable from params to, ', O[["vn"]]$O )
+      if ( P[["verbose"]] ) message( 'setting offset variable from params to: ', O[["vn"]]$O )
     } else {
-      if ( P[["verbose"]] ) message( 'offset variable, ', O[["vn"]]$O, ' not found in data')
+      if ( P[["verbose"]] ) message( 'offset variable: ', O[["vn"]]$O, ' not found in data')
     }
   }
 
@@ -211,8 +216,9 @@ carstm_model_inla = function(
   vnT = ifelse( exists("T", O[["vn"]]), O[["vn"]]$T, "time" )
   vnT0 = ifelse( exists("T0", O[["vn"]]), O[["vn"]]$T0, "time0" )
 
-  vnU = ifelse( exists("U", O[["vn"]]), O[["vn"]]$U, "season" )  
-  vnU0 = ifelse( exists("U0", O[["vn"]]), O[["vn"]]$U0, "season0" )
+  vnU = ifelse( exists("U", O[["vn"]]), O[["vn"]]$U, "cyclic" )  
+  vnUI = ifelse( exists("UI", O[["vn"]]), O[["vn"]]$UI, "cyclic_iid" )  
+  vnU0 = ifelse( exists("U0", O[["vn"]]), O[["vn"]]$U0, "cyclic0" )
   
   vnST = ifelse( exists("ST", O[["vn"]]), O[["vn"]]$ST, "space_time" )
   vnTS = ifelse( exists("TS", O[["vn"]]), O[["vn"]]$TS, "time_space" )
@@ -222,46 +228,61 @@ carstm_model_inla = function(
   vnTSI = ifelse( exists("TSI", O[["vn"]]), O[["vn"]]$TSI, "time_space_iid" )
   
 
-  # region.id
-  if (is.null(region.id)) {
-    if (exists("region.id", O)) {
-      if ( P[["verbose"]] ) message( "region.id was not passed, using region.id found in options, O" )
-      region.id = O[["region.id"]]
+  if (is.null(sppoly)) if (exists("sppoly", O)) sppoly = O$sppoly
+  if (is.null(sppoly)) if (exists("areal_units")) sppoly = areal_units( O ) 
+ 
+  if (is.null(space.id)) {
+    if (exists("space.id", O)) {
+      if ( P[["verbose"]] ) message( "space.id was not passed, using space.id found in options, O" )
+      space.id = O[["space.id"]]
     } 
+  }  
+
+  if (is.null(space.id)) {
+    if (!is.null(sppoly))  space.id = try( as.character( slot( slot(sppoly, "nb"), "space.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
   }
 
-  if (is.null(region.id)) {
-    if (is.null(sppoly)) sppoly = areal_units( p=O )  # not used in Cancer Matrix ()..
-    if (is.null(sppoly)) if (exists("sppoly", O)) sppoly = O$sppoly
+  if (is.null(space.id)) {
+    if (!is.null(sppoly))  space.id = try( as.character( slot( slot(sppoly, "nb"), "region.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
+  }
+
+  if (is.null(space.id)) {
+    if (!is.null(sppoly)) space.id = try( as.character( slot( slot(sppoly, "W.nb"), "space.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
+  }
+
+  if (is.null(space.id)) {
+    if (!is.null(sppoly)) space.id = try( as.character( slot( slot(sppoly, "W.nb"), "region.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
+  }
+
+  if (is.null(space.id)) {
+    if (!is.null(sppoly)) space.id = try( as.character( slot( sppoly,  "space.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
+  }
+
+  if (is.null(space.id)) {
+    if (!is.null(sppoly)) space.id = try( as.character( slot( sppoly,  "region.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
+  }
+
+  if (is.null(space.id)) {
     if (!is.null(sppoly)) {
-      if (is.null(region.id)) {
-        if (exists("AUID", sppoly)) {
-          if ( P[["verbose"]] ) message( "region.id was not passed, using region.id found in sppoly" )
-          region.id = as.character( sppoly[["AUID"]] )  # the master / correct sequence of the AU's and neighbourhood matrix index values
-        }
-      }
-      if ( P[["verbose"]] ) message( "region.id was not passed, trying to find region.id sppoly" )
-      if (is.null(region.id)) {
-        region.id = try( as.character( slot( slot(sppoly, "nb"), "region.id" ) ) )
-        if (inherits(region.id, "try-error")) region.id = NULL
-      }
-      if (is.null(region.id)) {
-        region.id = try( as.character( slot( slot(sppoly, "W.nb"), "region.id" ) ) )
-        if (inherits(region.id, "try-error")) region.id = NULL
-      }
-      if (is.null(region.id)) {
-        region.id = try( as.character( slot( sppoly,  "region.id" ) ) )
-        if (inherits(region.id, "try-error")) region.id = NULL
+      if (exists("AUID", sppoly)) {
+        if ( P[["verbose"]] ) message( "space.id was not passed, using space.id found in sppoly" )
+        space.id = as.character( sppoly[["AUID"]] )  # the master / correct sequence of the AU's and neighbourhood matrix index values
       }
     }
   }
-  if (is.null(region.id)) stop("Not found: region.id is a required variable")
 
-   # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("region.id")
+  if (is.null(space.id)) stop("Not found: space.id is a required variable")
+ 
+  # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("space.id")
   # convert space and time to numeric codes for INLA
   if (grepl("space", O[["dimensionality"]])) {
-    if (! vnS %in% fm$random_effects$vn ) stop( "the spatial random variable (S) needs to be defined")
-    if (!exists(vnS, O)) O[[vnS]] = as.character( region.id )  # this sequence is a master key as index matches nb matrix values
+    if (!exists(vnS, O)) O[[vnS]] = as.character( space.id )  # this sequence is a master key as index matches nb matrix values
     P[["data"]][,vnS0] = as.character( P[["data"]][,vnS] ) # local copy
     P[["data"]][,vnS] = match( P[["data"]][,vnS0], O[[vnS]] )  # overwrite with numeric values that must match index of neighbourhood matrix
   }
@@ -269,8 +290,6 @@ carstm_model_inla = function(
 
   if ( grepl("time", O[["dimensionality"]]) | grepl("cyclic", O[["dimensionality"]]) ) {
  
-    if (! vnT %in% fm$random_effects$vn ) stop( "the temporal random variable (T) needs to be defined")
-
     if (any( grepl( vnT, fm$vars )))  {
       
       if (!exists(vnT, O)) if (!is.null(time.id)) O[[vnT]] = as.character( time.id )  # this sequence is a master key
@@ -285,7 +304,6 @@ carstm_model_inla = function(
     if (any( grepl( vnST, fm$vars )))  P[["data"]][,vnTS] = P[["data"]][,vnT]
     # sub-annual time
     if (any( grepl( vnU, fm$vars )))  {
-      if (! vnU %in% fm$random_effects$vn ) stop( "the cyclic random variable (U) needs to be defined")
 
       if (!exists(vnU, O)) if (!is.null(cyclic.id)) O[[vnU]] = as.character( cyclic.id )  # this sequence is a master key
       if (!exists(vnU, O)) if (exists("dyears", O)) O[[vnU]] = as.character( O$dyears + diff(O$dyears)[1]/2)
@@ -357,14 +375,17 @@ carstm_model_inla = function(
       obso = NULL
     }   
     
-    ol = lnk_function( P[["data"]][, vnO ])
-    
-    O$offset_scale = median( ol[obs] , na.rm=TRUE )  # required to stabilize optimization
+    P[["data"]][, vnO]  = lnk_function( P[["data"]][, vnO ])
+
+    if (scale_offsets) {
+      if (exists("offset_scale", O)) {
+        O$offset_scale = median( P[["data"]][obs, vnO] , na.rm=TRUE )  # required to stabilize optimization
+        P[["data"]][, vnO] = P[["data"]][, vnO] - O$offset_scale  # apply to all and overwrite, centering upon 0 (in user space 1)
+        O$offset_scale_revert = function(x) { x - O$offset_scale }  # used for Y value and so opposite sign of "-" but applied to numerator is returns it to "-"
+      }
+    }    
     obs = NULL
-    ol = ol - O$offset_scale  # apply to all and overwrite, certing upon 0 (in user space 1)
-    P[["data"]][ , vnO ] = ol 
-    O$offset_scale_revert = function(x) { x - O$offset_scale }  # applied on Y value (not offset0) and so opposite sign of "-" but applied to numerator is returns it to "-" .. used on link scale
-    yl = yl - ol
+    yl = yl - P[["data"]][, vnO]
   } 
 
   ll = which(is.finite(yl))
@@ -388,7 +409,7 @@ carstm_model_inla = function(
 
     if ( P[["inla.mode"]] != "experimental") {
       # location of this option has moved ... might move again
-      if ( !exists("control.results", P ) ) P[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
+      # if ( !exists("control.results", P ) ) P[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
       P[["control.compute"]][["return.marginals.predictor"]] = NULL
     }
 
@@ -478,7 +499,9 @@ carstm_model_inla = function(
       
       fi = which( grepl("Intercept", names(V) ))
       if (length(fi) > 0) {
-        if ( exists("offset_scale_revert", O))  V[[fi]] = inla.tmarginal( O$offset_scale_revert, V[[fi]])  # on link scale
+        if (scale_offsets) {
+          if ( exists("offset_scale_revert", O))  V[[fi]] = inla.tmarginal( O$offset_scale_revert, V[[fi]])  # on link scale
+        }
       }
 
       V = lapply( V, function(x) inla.tmarginal( invlink, x)  )
@@ -541,13 +564,18 @@ carstm_model_inla = function(
 
 
     if (P[["verbose"]]) {
+      message( "")
       message( "Fixed effects")
       print(  O[["summary"]][["fixed_effects"]] )    
+      message( "")
     } 
 
     if (P[["verbose"]])  {
+      message( "")
       message( "Random effects:")
       print(  O[["summary"]][["random_effects"]] )   
+      message( " -- NOTE: 'SD *' are on link scale and not user scale")
+      message( "")
     }
   }
 
@@ -575,7 +603,8 @@ carstm_model_inla = function(
 
         bym = iid = NULL
         matchto = list( space=O[[vnS]] )
-  
+        matchfrom0 = NULL  # used for matching spatial effects in exceed/deceed .. required as bym2 uses 2x nsp for by and iid
+
         if ( exists(vnSI, fit$marginals.random)  | exists(vnS, fit$marginals.random) ) {
     
           if (P[["verbose"]])  message("Extracting from marginals: random spatial errors"  )
@@ -583,18 +612,16 @@ carstm_model_inla = function(
           if ( exists(vnSI, fit$marginals.random) ) {
             O[["random"]] [[vnSI]] = list()  # space as a main effect
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSI) ]  # should be iid
-
-            # single spatial effect (eg besag) .. indexing not needed but here in case more complex models ..
-            Z = expand.grid( space=O[[vnSI]], type=model_name, stringsAsFactors =FALSE )
-            iid =  which(Z$type==model_name)
-            matchfrom0 = list( space=Z[["space"]][iid] )
-
             m = list_simplify ( apply_simplify( fit$marginals.random[[vnSI]], summary_inv_random ) )
 
-            #  spatial effect ... besag, etc main effects
+            # single spatial effect (eg in conjucyion with besag) .. indexing not needed but here in case more complex models ..
+            Z = expand.grid( space=O[[vnSI]], type=model_name, stringsAsFactors =FALSE )
+
+            iid =  which(Z$type==model_name)
+            matchfrom0 = matchfrom = list( space=Z[["space"]][iid] )
             W = array( NA,  dim=c( length( O[[vnS]]), length(names(m)) ), dimnames=list( space=O[[vnS]], stat=names(m) ) )
             names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
-            matchfrom = list( space=Z[["space"]][iid] )
+
             for (k in 1:length(names(m))) {
               W[,k] = reformat_to_array( input = unlist(m[iid,k]), matchfrom=matchfrom, matchto=matchto )
             }
@@ -605,41 +632,39 @@ carstm_model_inla = function(
           if ( exists(vnS, fit$marginals.random) ) {
             O[["random"]] [[vnS]] = list()  # space as a main effect
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnS) ]
-            if ( model_name %in% c("bym", "bym2") ) {
-              # bym2 effect: bym and iid
-              Z = expand.grid( space=O[[vnS]], type = c("iid", model_name), stringsAsFactors =FALSE )
-              bym = which(Z$type==model_name)
-              iid = which(Z$type=="iid")
-              matchfrom0 = list( space=Z[["space"]][iid] )
-            } else {
-              # single spatial effect (eg besag, etc)
-              Z = expand.grid( space=O[[vnS]], type=model_name, stringsAsFactors =FALSE )
-              bym = which(Z$type==model_name)
-              matchfrom0 = list( space=Z[["space"]][bym] )
-            }
-
             m = list_simplify ( apply_simplify( fit$marginals.random[[vnS]], summary_inv_random ) )
 
-            #  spatial effect ... besag, etc main effects
-            W = array( NA,  dim=c( length( O[[vnS]]), length(names(m)) ), dimnames=list( space=O[[vnS]], stat=names(m) ) )
-            names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
-            matchfrom = list( space=Z[["space"]][bym] )
-            for (k in 1:length(names(m))) {
-              W[,k] = reformat_to_array( input = unlist(m[bym,k]), matchfrom=matchfrom, matchto=matchto )
-            }
-            O[["random"]] [[vnS]] [[model_name]] = W [, tokeep, drop =FALSE]
+            if ( model_name %in% c("bym", "bym2") ) {
+              # bym2 effect: bym and iid simultaneously
+              Z = expand.grid( space=O[[vnS]], type = c("iid", model_name), stringsAsFactors =FALSE )
 
-            if  ( model_name %in% c("bym", "bym2") ) {
-              #  iid main effects
+              #  extract iid main effects
+              iid = which(Z$type=="iid")
+              matchfrom0 = matchfrom = list( space=Z[["space"]][iid] )
               W = array( NA,  dim=c( length( O[[vnS]]), length(names(m)) ), dimnames=list( space=O[[vnS]], stat=names(m) ) )
               names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
-              matchfrom = list( space=Z[["space"]][iid] )
               for (k in 1:length(names(m))) {
                 W[,k] = reformat_to_array( input = unlist(m[iid,k]), matchfrom=matchfrom, matchto=matchto )
               }
               O[["random"]] [[vnS]] [["iid"]] = W [, tokeep, drop =FALSE]
               W = NULL
+
+            } else {
+              # single spatial effect (eg besag, etc)
+              Z = expand.grid( space=O[[vnS]], type=model_name, stringsAsFactors =FALSE )
             }
+
+            bym = which(Z$type==model_name)
+            matchfrom = list( space=Z[["space"]][bym] )
+            if (!is.null(matchfrom0)) matchfrom0 = matchfrom # ie besag etc
+
+            #  extract spatial effect ... besag, etc main effects or bym2 
+            W = array( NA,  dim=c( length( O[[vnS]]), length(names(m)) ), dimnames=list( space=O[[vnS]], stat=names(m) ) )
+            names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
+            for (k in 1:length(names(m))) {
+              W[,k] = reformat_to_array( input = unlist(m[bym,k]), matchfrom=matchfrom, matchto=matchto )
+            }
+            O[["random"]] [[vnS]] [[model_name]] = W [, tokeep, drop =FALSE]
             m = NULL
           }
 
@@ -724,7 +749,7 @@ carstm_model_inla = function(
         
         bym = iid = NULL
         matchto = list( space=O[[vnS]], time=O[[vnT]]  )
-      
+        matchfrom0 = NULL
 
         if (exists(vnST, fit$marginals.random ) | exists(vnSTI, fit$marginals.random ) ) {
           if (P[["verbose"]])  message("Extracting from marginals: random spatiotemporal errors"  )
@@ -732,18 +757,16 @@ carstm_model_inla = function(
           if (exists(vnSTI, fit$marginals.random )) {
             O[["random"]] [[vnSTI]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSTI) ]  # should be iid
-
-            Z = expand.grid( space=O[[vnS]], type=model_name, time=O[[vnT]], stringsAsFactors =FALSE )
-            iid =  which(Z$type==model_name)
-            matchfrom0 = list( space=Z[["space"]][iid], time=Z[["time"]][iid]  )
-
             m = list_simplify ( apply_simplify( fit$marginals.random[[vnSTI]], summary_inv_random ) )
 
+            Z = expand.grid( space=O[[vnS]], type=model_name, time=O[[vnT]], stringsAsFactors =FALSE )
+
             #  spatiotemporal interaction effects  iid
+            iid =  which(Z$type==model_name)
+            matchfrom0 = matchfrom = list( space=Z[["space"]][iid], time=Z[["time"]][iid]  )
             W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
             names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
             names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
-            matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  )
             for (k in 1:length(names(m))) {
               W[,,k] = reformat_to_array(  input = unlist(m[iid,k]), matchfrom=matchfrom, matchto=matchto )
             }
@@ -756,23 +779,33 @@ carstm_model_inla = function(
 
             O[["random"]] [[vnST]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnST) ]
+            m = list_simplify ( apply_simplify( fit$marginals.random[[vnST]], summary_inv_random ) )
 
             if ( model_name %in% c("bym", "bym2") ) {
               # bym2 effect: bym and iid with annual results
               Z = expand.grid( space=O[[vnS]], type = c("iid", model_name), time=O[[vnT]], stringsAsFactors =FALSE )
-              bym = which(Z$type==model_name)
+ 
+              #  spatiotemporal interaction effects  iid
               iid = which(Z$type=="iid")
-              matchfrom0 = list( space=Z[["space"]][iid], time=Z[["time"]][iid]  )
+              matchfrom0 = matchfrom = list( space=Z[["space"]][iid], time=Z[["time"]][iid]  )
+              W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
+              names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
+              names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
+              for (k in 1:length(names(m))) {
+                W[,,k] = reformat_to_array(  input = unlist(m[iid,k]), matchfrom = matchfrom, matchto = matchto )
+              }
+              O[["random"]] [[vnST]] [["iid"]] = W [,, tokeep, drop =FALSE]
+              W = NULL
             } else {
               # besag effect: with annual results
               Z = expand.grid( space=O[[vnS]], type =model_name, time=O[[vnT]], stringsAsFactors =FALSE )
-              bym =  which(Z$type==model_name)
-              matchfrom0 = list( space=Z[["space"]][bym], time=Z[["time"]][bym]  )
             }
 
-            m = list_simplify ( apply_simplify( fit$marginals.random[[vnST]], summary_inv_random ) )
-
             #  spatiotemporal interaction effects  bym
+            bym =  which(Z$type==model_name)
+            matchfrom = list( space=Z[["space"]][bym], time=Z[["time"]][bym]  )
+            if (!is.null(matchfrom0)) matchfrom0 = matchfrom # ie besag etc
+
             W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
             names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
             names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
@@ -782,21 +815,10 @@ carstm_model_inla = function(
             }
             O[["random"]] [[vnST]] [[model_name]] = W [,, tokeep, drop =FALSE]
             W = NULL
-
-            if ( model_name %in% c("bym", "bym2") ) {
-              #  spatiotemporal interaction effects  iid
-              W = array( NA, dim=c( length( O[[vnS]]), length(O[[vnT]]), length(names(m)) ), dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
-              names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
-              names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
-              matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  )
-              for (k in 1:length(names(m))) {
-                W[,,k] = reformat_to_array(  input = unlist(m[iid,k]), matchfrom = matchfrom, matchto = matchto )
-              }
-              O[["random"]] [[vnST]] [["iid"]] = W [,, tokeep, drop =FALSE]
-              W = NULL
-            }
             m = NULL
 
+
+            # combined effects from posterior simulations
             if ( exists(vnSTI, fit$marginals.random ) &  exists(vnST, fit$marginals.random ) ) {
               # sep besag +iid  
                 selection=list()
@@ -807,15 +829,7 @@ carstm_model_inla = function(
                 iid = which(aa_rn==vnSTI)
                 bym = which(aa_rn==vnST)
                 g = apply_simplify( aa, function(x) {invlink(x$latent[iid] + x$latent[bym] ) } )
-                
-                if (median(iid) < median(bym) ) {
-                  kkk = iid 
-                } else {
-                  kkk = bym
-                }
-                matchfrom = list( space=Z[["space"]][kkk],  time=Z[["time"]][kkk]  )
-          
-
+ 
             } else if (exists(vnSTI, fit$marginals.random ) & ! exists(vnST, fit$marginals.random )) {
               # iid  only
                 selection=list()
@@ -824,20 +838,21 @@ carstm_model_inla = function(
                 aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
                 iid = which(aa_rn==vnSTI)
                 g = apply_simplify( aa, function(x) {invlink(x$latent[iid] ) } )
-                matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  )
+ 
             } else if ( !exists(vnSTI, fit$marginals.random ) & exists(vnST, fit$marginals.random ) ) {
               # besag  only or bym/bym2
                 selection=list()
                 selection[vnST] = 0  # 0 means everything matching space
                 aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
                 if ( model_name %in% c("bym", "bym2") ) {
+                  aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
+                  iid = which(aa_rn=="iid")
+                  bym = which(aa_rn==vnST)
                   g = apply_simplify( aa, function(x) {invlink(x$latent[iid] + x$latent[bym] ) } )
-                  matchfrom = list( space=Z[["space"]][iid],  time=Z[["time"]][iid]  )
                 } else {
                   aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
                   bym = which(aa_rn==vnST)
                   g = apply_simplify( aa, function(x) {invlink(x$latent[bym] ) } )
-                  matchfrom = list( space=Z[["space"]][bym],  time=Z[["time"]][bym]  )
                 }
             } 
             aa = NULL
@@ -856,7 +871,7 @@ carstm_model_inla = function(
             names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
             
             for (k in 1:length(names(m))) {
-              W[,,k] = reformat_to_array(  input = m[,k], matchfrom=matchfrom, matchto=matchto )
+              W[,,k] = reformat_to_array(  input = m[,k], matchfrom=matchfrom0, matchto=matchto )
             }
             O[["random"]] [[vnST]] [["combined"]] = W [,, tokeep, drop =FALSE]
             W = NULL
@@ -929,8 +944,10 @@ carstm_model_inla = function(
 
       if (  O[["dimensionality"]] == "space" ) {
         ipred = which( P[["data"]]$tag=="predictions"  &  P[["data"]][,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
-        g = fit$marginals.fitted.values[ipred]   
-        if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
+        g = fit$marginals.fitted.values[ipred]
+        if (scale_offsets) {
+          if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+        }    
         g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
         if ( exists("data_transformation", O))  g = apply_generic( g, backtransform )
 
@@ -952,7 +969,10 @@ carstm_model_inla = function(
       if (O[["dimensionality"]] == "space-time"  ) {
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]] & P[["data"]][,vnT0] %in% O[[vnT]] )
         g = fit$marginals.fitted.values[ipred]   
-        if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
+        if (scale_offsets) {
+          if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+        }
+
         g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
         if (exists("data_transformation", O)) g = apply_generic( g, backtransform )
 
@@ -975,18 +995,20 @@ carstm_model_inla = function(
       if ( O[["dimensionality"]] == "space-time-cyclic" ) {
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]]  &  P[["data"]][,vnT0] %in% O[[vnT]] &  P[["data"]][,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         g = fit$marginals.fitted.values[ipred]   
-        if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )    
+        if (scale_offsets) {
+          if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+        }    
         g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
         if (exists("data_transformation", O)) g = apply_generic( g, backtransform )
 
         m = list_simplify ( apply_simplify( g, summary_inv_predictions ) )
-        W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], season=O[[vnU]], stat=names(m) ) )
+        W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
         names(dimnames(W))[3] = vnU  # need to do this in a separate step ..
 
-        matchfrom = list( space=P[["data"]][ipred, vnS0], time=P[["data"]][ipred, vnT0], season=P[["data"]][ipred, vnU0] )
-        matchto = list( space=O[[vnS]], time=O[[vnT]], season=O[[vnU]] )
+        matchfrom = list( space=P[["data"]][ipred, vnS0], time=P[["data"]][ipred, vnT0], cyclic=P[["data"]][ipred, vnU0] )
+        matchto = list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]] )
 
         for (k in 1:length(names(m))) {
           W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=matchfrom, matchto=matchto )
@@ -1041,6 +1063,7 @@ carstm_model_inla = function(
   }
 
   if (!is.null(sppoly)) O[["sppoly"]] = sppoly
+  if (!is.null(space.id)) O[["space.id"]] = space.id
 
   if (!is.null(fn_res)) {
     # then save as separate files (fit, results)

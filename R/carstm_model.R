@@ -1,12 +1,16 @@
 
-carstm_model = function( p=list(), data=NULL, E=NULL, sppoly=NULL, region.id=NULL, dimensionality=NULL, areal_units_fn=NULL, DS="redo", improve.hyperparam.estimates=FALSE, compress=TRUE, fn_fit=NULL, fn_res=NULL, num.threads="1:1", 
+carstm_model = function( p=list(), data=NULL, dimensionality=NULL,  
+  sppoly =NULL, space.id = NULL, time.id = NULL, cyclic.id=NULL, areal_units_fn=NULL, DS="redo", 
+  improve.hyperparam.estimates=FALSE, compress=TRUE, fn_fit=NULL, fn_res=NULL, 
    ... ) {
 
      if (0) {
       data=NULL
       E=NULL
-      sppoly=NULL
-      region.id=NULL
+      sppoly =NULL
+      space.id = NULL
+      time.id = NULL
+      cyclic.id=NULL
       areal_units_fn=NULL
       dimensionality=NULL
       DS="redo"
@@ -62,13 +66,13 @@ carstm_model = function( p=list(), data=NULL, E=NULL, sppoly=NULL, region.id=NUL
     return( fit )
   }
 
-  out = NULL
+  O = NULL
   if (DS=="carstm_modelled_summary") {  # carstm_model.*carstm_modelled
     if (!is.null(fn_res)) {
       message("Loading carstm data summary:  ", fn_res )
       if (file.exists(fn_res)) load( fn_res)
-      if (is.null(out)) message("carstm summary not found.")
-      return( out )
+      if (is.null(O)) message("carstm summary not found.")
+      return( O )
     }
   }
 
@@ -98,8 +102,8 @@ carstm_model = function( p=list(), data=NULL, E=NULL, sppoly=NULL, region.id=NUL
 
 
   if ( grepl("inla", carstm_modelengine) ) {
-
-    out = carstm_model_inla( O=p, data=data, E=E, region.id=region.id, sppoly=sppoly, fn_fit=fn_fit, fn_res=fn_res, compress=compress, num.threads=num.threads, ... ) 
+    out = carstm_model_inla( O=p, data=data, sppoly=sppoly, space.id=space.id, time.id = time.id,
+      cyclic.id=cyclic.id, fn_fit=fn_fit, fn_res=fn_res, compress=compress, ... ) 
   }
    
   return( out )
