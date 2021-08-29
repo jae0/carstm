@@ -44,7 +44,7 @@ carstm_model_inla = function(
         # usual variable names used in aegis .. char / num
         O$vn$S = "space"  # "space"
         O$vn$T = "time"
-        O$vn$U = "season" # "dyri"  # sub annual time
+        O$vn$U = "cyclic" # "dyri"  # sub annual time
 
         # alt charracter descrptions of vars (if any, taken from main above if not)
         # O$vn$S0 = "AUID"  # as character
@@ -214,9 +214,10 @@ carstm_model_inla = function(
   
   vnT = ifelse( exists("T", O[["vn"]]), O[["vn"]]$T, "time" )
   vnT0 = ifelse( exists("T0", O[["vn"]]), O[["vn"]]$T0, "time0" )
-  
-  vnU = ifelse( exists("U", O[["vn"]]), O[["vn"]]$U, "season" )  
-  vnU0 = ifelse( exists("U0", O[["vn"]]), O[["vn"]]$U0, "season0" )
+
+  vnU = ifelse( exists("U", O[["vn"]]), O[["vn"]]$U, "cyclic" )  
+  vnUI = ifelse( exists("UI", O[["vn"]]), O[["vn"]]$UI, "cyclic_iid" )  
+  vnU0 = ifelse( exists("U0", O[["vn"]]), O[["vn"]]$U0, "cyclic0" )
   
   vnST = ifelse( exists("ST", O[["vn"]]), O[["vn"]]$ST, "space_time" )
   vnTS = ifelse( exists("TS", O[["vn"]]), O[["vn"]]$TS, "time_space" )
@@ -226,10 +227,8 @@ carstm_model_inla = function(
   vnTSI = ifelse( exists("TSI", O[["vn"]]), O[["vn"]]$TSI, "time_space_iid" )
   
 
-#  if (is.null(sppoly)) if (exists("areal_units")) sppoly = try(areal_units( O ))  # not used in Cancer Matrix ()..
-#  if (is.null(sppoly)) if (exists("sppoly", O)) sppoly = O$sppoly
   if (is.null(sppoly)) if (exists("sppoly", O)) sppoly = O$sppoly
-  if (is.null(sppoly)) if (exists("areal_units")) sppoly = areal_units( p=O )  # not used in Cancer Matrix ()..
+  if (is.null(sppoly)) if (exists("areal_units")) sppoly = areal_units( O ) 
  
   if (is.null(space.id)) {
     if (exists("space.id", O)) {
@@ -244,12 +243,27 @@ carstm_model_inla = function(
   }
 
   if (is.null(space.id)) {
+    if (!is.null(sppoly))  space.id = try( as.character( slot( slot(sppoly, "nb"), "region.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
+  }
+
+  if (is.null(space.id)) {
     if (!is.null(sppoly)) space.id = try( as.character( slot( slot(sppoly, "W.nb"), "space.id" ) ) )
     if (inherits(space.id, "try-error")) space.id = NULL
   }
 
   if (is.null(space.id)) {
+    if (!is.null(sppoly)) space.id = try( as.character( slot( slot(sppoly, "W.nb"), "region.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
+  }
+
+  if (is.null(space.id)) {
     if (!is.null(sppoly)) space.id = try( as.character( slot( sppoly,  "space.id" ) ) )
+    if (inherits(space.id, "try-error")) space.id = NULL
+  }
+
+  if (is.null(space.id)) {
+    if (!is.null(sppoly)) space.id = try( as.character( slot( sppoly,  "region.id" ) ) )
     if (inherits(space.id, "try-error")) space.id = NULL
   }
 
@@ -267,7 +281,6 @@ carstm_model_inla = function(
   # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("space.id")
   # convert space and time to numeric codes for INLA
   if (grepl("space", O[["dimensionality"]])) {
-
     if (!exists(vnS, O)) O[[vnS]] = as.character( space.id )  # this sequence is a master key as index matches nb matrix values
     P[["data"]][,vnS0] = as.character( P[["data"]][,vnS] ) # local copy
     P[["data"]][,vnS] = match( P[["data"]][,vnS0], O[[vnS]] )  # overwrite with numeric values that must match index of neighbourhood matrix
@@ -361,18 +374,17 @@ carstm_model_inla = function(
       obso = NULL
     }   
     
-    ol = lnk_function( P[["data"]][, vnO ])
+    P[["data"]][, vnO]  = lnk_function( P[["data"]][, vnO ])
 
     if (scale_offsets) {
       if (exists("offset_scale", O)) {
-        O$offset_scale = median( ol[obs] , na.rm=TRUE )  # required to stabilize optimization
-        ol = ol - O$offset_scale  # apply to all and overwrite, certing upon 0 (in user space 1)
-        P[["data"]][ , vnO ] = ol 
+        O$offset_scale = median( P[["data"]][obs, vnO] , na.rm=TRUE )  # required to stabilize optimization
+        P[["data"]][, vnO] = P[["data"]][, vnO] - O$offset_scale  # apply to all and overwrite, centering upon 0 (in user space 1)
         O$offset_scale_revert = function(x) { x - O$offset_scale }  # used for Y value and so opposite sign of "-" but applied to numerator is returns it to "-"
       }
     }    
     obs = NULL
-    yl = yl - ol
+    yl = yl - P[["data"]][, vnO]
   } 
 
   ll = which(is.finite(yl))
@@ -993,13 +1005,13 @@ carstm_model_inla = function(
         if (exists("data_transformation", O)) g = apply_generic( g, backtransform )
 
         m = list_simplify ( apply_simplify( g, summary_inv_predictions ) )
-        W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], season=O[[vnU]], stat=names(m) ) )
+        W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
         names(dimnames(W))[3] = vnU  # need to do this in a separate step ..
 
-        matchfrom = list( space=P[["data"]][ipred, vnS0], time=P[["data"]][ipred, vnT0], season=P[["data"]][ipred, vnU0] )
-        matchto = list( space=O[[vnS]], time=O[[vnT]], season=O[[vnU]] )
+        matchfrom = list( space=P[["data"]][ipred, vnS0], time=P[["data"]][ipred, vnT0], cyclic=P[["data"]][ipred, vnU0] )
+        matchto = list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]] )
 
         for (k in 1:length(names(m))) {
           W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=matchfrom, matchto=matchto )
@@ -1055,7 +1067,6 @@ carstm_model_inla = function(
 
   if (!is.null(sppoly)) O[["sppoly"]] = sppoly
   if (!is.null(space.id)) O[["space.id"]] = space.id
-  if (!is.null(nb)) O[["nb"]] = nb
 
   if (!is.null(fn_res)) {
     # then save as separate files (fit, results)

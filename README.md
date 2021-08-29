@@ -75,7 +75,6 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   Germany$tag = "predictions"  # predict on all locations
   
   Germany$region = as.character(Germany$region)
-  Germany$region.iid = NULL
 
   sppoly = Germany  # construct "sppoly" with required attributes (though it is not a polygon)
   attributes(sppoly)[["areal_units_fn"]] = g  
@@ -98,13 +97,13 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
 
   
   p$formula = formula( Y ~  1 + offset( E ) 
-    + f(region, model="bym2", graph=attributes(data)$nb, scale.model=TRUE ) 
+    + f(region, model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE ) 
     + f(region.iid, model="iid") 
     + f(x, model="rw2", scale.model=TRUE)  )
 
   # Leroux model
   p$formula = formula( Y ~  1 + offset( E ) 
-    + f(region, model="besagproper2", graph=attributes(data)$nb, scale.model=TRUE ) 
+    + f(region, model="besagproper2", graph=slot(sppoly, "nb"), scale.model=TRUE ) 
     + f(region.iid, model="iid" ) 
     + f(x, model="rw2", scale.model=TRUE)   )
 
@@ -120,8 +119,11 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
     data = Germany, 
     space.id = as.character(Germany$region),
     sppoly = sppoly,
+    space.id = as.character(Germany$region),
+    scale_offsets=T,  
     fn_fit = fn_fit,
     fn_res = fn_res,
+    num.threads="4:2",
     verbose=TRUE
   ) 
 
@@ -131,7 +133,7 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
     
     # extract currently saved model fit
     fit3 = carstm_model( p=p, fn_fit = fn_fit, DS="carstm_modelled_fit" )  
-    
+    s
     fit3$summary$dic$dic
     fit3$summary$dic$p.eff
     summary(fit3)  # identical to fit2

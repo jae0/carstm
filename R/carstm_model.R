@@ -9,8 +9,8 @@ carstm_model = function( p=list(), data=NULL, dimensionality=NULL,
       E=NULL
       sppoly =NULL
       space.id = NULL
-      time.id = NULL,
-      cyclic.id=NULL,
+      time.id = NULL
+      cyclic.id=NULL
       areal_units_fn=NULL
       dimensionality=NULL
       DS="redo"
