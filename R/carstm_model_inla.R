@@ -421,8 +421,6 @@ carstm_model_inla = function(
       str(P)
     }
      
-     browser()
-     
     fit = try( do.call( inla, P ) )      
 
     if (inherits(fit, "try-error" )) {

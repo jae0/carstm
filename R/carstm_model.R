@@ -102,9 +102,9 @@ carstm_model = function( p=list(), data=NULL, dimensionality=NULL,
 
 
   if ( grepl("inla", carstm_modelengine) ) {
-    out = carstm_model_inla( O=p, data=data, sppoly=sppoly, space.id=space.id, time.id = time.id,
+    out = carstm_model_inla( O=p, data=data, sppoly=sppoly, space.id=space.id, time.id=time.id,
       cyclic.id=cyclic.id, fn_fit=fn_fit, fn_res=fn_res, compress=compress, ... ) 
   }
-   
+  
   return( out )
 }

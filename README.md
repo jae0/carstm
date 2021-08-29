@@ -117,10 +117,9 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
   res = carstm_model( 
     p=p,
     data = Germany, 
-    space.id = as.character(Germany$region),
     sppoly = sppoly,
     space.id = as.character(Germany$region),
-    scale_offsets=T,  
+    scale_offsets=TRUE,  
     fn_fit = fn_fit,
     fn_res = fn_res,
     num.threads="4:2",
