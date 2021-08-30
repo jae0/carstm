@@ -541,7 +541,7 @@ carstm_model_inla = function(
 
   if ( "summary" %in% toget) {
 
-    if (P[["verbose"]])  message("Extracting from marginals: parameter summaries"  )
+    if (P[["verbose"]])  message("Extracting parameter summaries from marginals"  )
     if (!exists("summary", O)) O[["summary"]] = list()
 
     O[["summary"]][["direct"]] = summary(fit)
@@ -644,7 +644,7 @@ carstm_model_inla = function(
         summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink, x) , silent=TRUE  )
         raneff = setdiff( names( fit$marginals.random ), c(vnS, vnST, vnSI, vnSTI ) )
         for (re in raneff) {
-          if (P[["verbose"]])  message("Extracting from marginals: random covariate ", re  )
+          if (P[["verbose"]])  message("Extracting random covariates from marginals:  ", re  )
           g = fit$marginals.random[[re]]
           O[["random"]] [[re]] = list_simplify ( apply_simplify( g, summary_inv_random ) )  [, tokeep, drop =FALSE]
           O[["random"]] [[re]]$ID = fit$summary.random[[re]]$ID
@@ -664,7 +664,7 @@ carstm_model_inla = function(
 
         if ( exists(vnSI, fit$marginals.random)  | exists(vnS, fit$marginals.random) ) {
     
-          if (P[["verbose"]])  message("Extracting from marginals: random spatial errors"  )
+          if (P[["verbose"]])  message("Extracting random spatial errors from marginals"  )
 
           if ( exists(vnSI, fit$marginals.random) ) {
             O[["random"]] [[vnSI]] = list()  # space as a main effect
@@ -806,7 +806,7 @@ carstm_model_inla = function(
         matchfrom0 = NULL
 
         if (exists(vnST, fit$marginals.random ) | exists(vnSTI, fit$marginals.random ) ) {
-          if (P[["verbose"]])  message("Extracting from marginals: random spatiotemporal errors"  )
+          if (P[["verbose"]])  message("Extracting random spatiotemporal errors from marginals:"  )
 
           if (exists(vnSTI, fit$marginals.random )) {
             O[["random"]] [[vnSTI]] = list()
@@ -988,7 +988,7 @@ carstm_model_inla = function(
     # adjusted by offset
     if (exists("marginals.fitted.values", fit)) {
 
-      if (P[["verbose"]])  message("Extracting from marginals: predictions"  )
+      if (P[["verbose"]])  message("Extracting predictions from marginals"  )
 
       if (  O[["dimensionality"]] == "space" ) {
         ipred = which( P[["data"]]$tag=="predictions"  &  P[["data"]][,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
