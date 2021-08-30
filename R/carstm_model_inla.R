@@ -59,23 +59,9 @@ carstm_model_inla = function(
 
   P = list(...)  # INLA options to be passed directly to it  
 
-  num.threads = "1:1"
-  if (exists("num.threads", O)) num.threads = O[["num.threads"]]
-  if (exists("num.threads", P)) num.threads = P[["num.threads"]]
-  inla.setOption(num.threads=num.threads)
-
-  num.cores =  as.numeric( unlist(strsplit(num.threads, ":") )[1] )
-  
-  # local functions
-  apply_generic = function(...)  mclapply(...,   mc.cores=num.cores ) # drop-in for lapply
-  apply_simplify = function(...) simplify2array(mclapply(...,  mc.cores=num.cores ))  # drop in for sapply
-  #apply_generic = function(...)  lapply(...  ) # drop-in for lapply
-  #apply_simplify = function(...) simplify2array(lappy(...  ))  # drop in for sapply
-
-  fit  = NULL
-
   if (DS=="modelled_fit") {
     if (!is.null(fn_fit)) {
+      fit  = NULL
       message("Loading fit: ", fn_fit )
       if (file.exists(fn_fit)) load( fn_fit )
       if (is.null(fit)) message("modelled fit not found.")
@@ -93,12 +79,28 @@ carstm_model_inla = function(
     }
   }
 
+  num.threads = "1:1"
+  if (exists("num.threads", O)) num.threads = O[["num.threads"]]
+  if (exists("num.threads", P)) num.threads = P[["num.threads"]]
+  inla.setOption(num.threads=num.threads)
+
+  num.cores =  as.numeric( unlist(strsplit(num.threads, ":") )[1] )
+  
+  # local functions
+  apply_generic = function(...)  mclapply(...,   mc.cores=num.cores ) # drop-in for lapply
+  apply_simplify = function(...) simplify2array(mclapply(...,  mc.cores=num.cores ))  # drop in for sapply
+  #apply_generic = function(...)  lapply(...  ) # drop-in for lapply
+  #apply_simplify = function(...) simplify2array(lappy(...  ))  # drop in for sapply
+
+
 
   outputdir = dirname(fn_fit)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
   
 
   # outputs
+  fit  = NULL
+
   if ( is.null(O)){
     if ( update_results) {
       if (!is.null(fn_res)) {
@@ -469,6 +471,7 @@ carstm_model_inla = function(
       str(P)
     }
 
+    fit  = NULL
     fit = try( do.call( inla, P ) )      
 
     if (inherits(fit, "try-error" )) {
@@ -499,6 +502,11 @@ carstm_model_inla = function(
     stop()
   }
 
+  if (P[["verbose"]]) {
+    print( summary(fit) )
+    message( "   --- NOTE: parameter estimates are on link scale and not user scale")
+  }
+  
   # do the computations here as fit can be massive ... best not to copy, etc ..
   if (P[["verbose"]])  message( "\nComputing summaries and computing from posterior simulations (can be longer than model fitting depending upon no of posterior sims: 'nposteriors' ) ..." )
 
@@ -622,7 +630,7 @@ carstm_model_inla = function(
       message( "")
       message( "Random effects:")
       print(  O[["summary"]][["random_effects"]] )   
-      message( " -- NOTE: 'SD *' are on link scale and not user scale")
+      message( "   --- NOTE: 'SD *' are on link scale and not user scale")
       message( "")
     }
   }
@@ -725,7 +733,11 @@ carstm_model_inla = function(
             selection[vnSI] = 0  # 0 means everything matching space
             selection[vnS] = 0  # 0 means everything matching space
             aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE , num.threads=num.threads )  # 0 means everything matching space
-            g = apply_simplify( aa, function(x) {invlink(x$latent[iid] + x$latent[bym] ) } )
+            # order of effects gets messed up .. must use names
+            aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
+            aa_iid = which(aa_rn==vnSTI)
+            aa_bym = which(aa_rn==vnST)
+            g = apply_simplify( aa, function(x) {invlink(x$latent[aa_iid] + x$latent[aa_bym] ) } )
           } else if ( exists(vnSI, fit$marginals.random ) & ! exists(vnS, fit$marginals.random ) )  {
             # iid  only
             selection=list()
@@ -756,7 +768,7 @@ carstm_model_inla = function(
           W = NULL
 
           if ( !is.null(exceedance_threshold)  | !is.null(deceedance_threshold) ) {
-            if (P[["verbose"]])  message("Computing random spatial errors exceedence/deceedance"  )
+            if (P[["verbose"]])  message("Extracting random spatial errors exceedence/deceedance"  )
 
             if (!is.null(exceedance_threshold)) {
               m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold) ) ) / nposteriors
@@ -814,7 +826,6 @@ carstm_model_inla = function(
             }
             O[["random"]] [[vnSTI]] [[model_name]] = W [,, tokeep, drop =FALSE]
             W = NULL
-            iid = NULL
           }
 
           if (exists(vnST, fit$marginals.random )) {
@@ -864,10 +875,14 @@ carstm_model_inla = function(
             if ( exists(vnSTI, fit$marginals.random ) &  exists(vnST, fit$marginals.random ) ) {
               # sep besag +iid  
                 selection=list()
-                selection[vnSTI] = 0  # 0 means everything matching space_time iid
                 selection[vnST] = 0  # 0 means everything matching space_time
+                selection[vnSTI] = 0  # 0 means everything matching space_time iid
                 aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  # 0 means everything matching space
-                g = apply_simplify( aa, function(x) {invlink(x$latent[iid] + x$latent[bym] ) } )
+                # order of effects gets messed up .. must use names
+                aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
+                aa_iid = which(aa_rn==vnSTI)
+                aa_bym = which(aa_rn==vnST)
+                g = apply_simplify( aa, function(x) {invlink(x$latent[aa_iid] + x$latent[aa_bym] ) } )
  
             } else if (exists(vnSTI, fit$marginals.random ) & ! exists(vnST, fit$marginals.random )) {
               # iid  only
@@ -915,7 +930,7 @@ carstm_model_inla = function(
           
           if ( !is.null(exceedance_threshold)  | !is.null(deceedance_threshold) ) {
   
-            if (P[["verbose"]])  message("Computing random spatiotemporal errors exceedence/deceedance"  )
+            if (P[["verbose"]])  message("Extracting random spatiotemporal errors exceedence/deceedance"  )
 
             if (!is.null(exceedance_threshold)) {
               m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold) ) ) / nposteriors
