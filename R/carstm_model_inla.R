@@ -63,6 +63,7 @@ carstm_model_inla = function(
   if (exists("num.threads", O)) num.threads = O[["num.threads"]]
   if (exists("num.threads", P)) num.threads = P[["num.threads"]]
   inla.setOption(num.threads=num.threads)
+
   num.cores =  as.numeric( unlist(strsplit(num.threads, ":") )[1] )
   
   # local functions
@@ -237,35 +238,82 @@ carstm_model_inla = function(
     } 
   }  
 
+
   if (is.null(space.id)) {
-    if (!is.null(sppoly))  space.id = try( as.character( slot( slot(sppoly, "nb"), "space.id" ) ) )
-    if (inherits(space.id, "try-error")) space.id = NULL
+    if (!is.null(sppoly))  {
+      aa = attributes(sppoly)
+      if (!is.null(aa)) {
+        if ( exists("space.id", aa) ) {
+          space.id =  as.character( aa$space.id )
+        }
+      }
+    }
+  }
+
+
+  if (is.null(space.id)) {
+    if (!is.null(sppoly))  {
+      aa = attributes(sppoly)
+      if (!is.null(aa)) {
+        if ( exists("region.id", aa) ) {
+          space.id =  as.character( aa$region.id )
+        }
+      }
+    }
+  }
+ 
+  if (is.null(space.id)) {
+    if (!is.null(sppoly))  {
+      aa = attributes(sppoly)
+      if (!is.null(aa)) {
+        if ( exists("nb", aa) ) {
+          if ( exists("space.id", attributes(aa$nb) )) {
+            space.id =  as.character( slot( aa$nb, "space.id" ) )
+          }
+        }
+      }
+    }
   }
 
   if (is.null(space.id)) {
-    if (!is.null(sppoly))  space.id = try( as.character( slot( slot(sppoly, "nb"), "region.id" ) ) )
-    if (inherits(space.id, "try-error")) space.id = NULL
+    if (!is.null(sppoly))  {
+      aa = attributes(sppoly)
+      if (!is.null(aa)) {
+        if ( exists("nb", aa) ) {
+          if ( exists("region.id", attributes(aa$nb) )) {
+            space.id =  as.character( slot( aa$nb, "region.id" ) )
+          }
+        }
+      }
+    }
   }
 
   if (is.null(space.id)) {
-    if (!is.null(sppoly)) space.id = try( as.character( slot( slot(sppoly, "W.nb"), "space.id" ) ) )
-    if (inherits(space.id, "try-error")) space.id = NULL
+    if (!is.null(sppoly))  {
+      aa = attributes(sppoly)
+      if (!is.null(aa)) {
+        if ( exists("W.nb", aa) ) {
+          if ( exists("region.id", attributes(aa$W.nb) )) {
+            space.id =  as.character( slot( aa$W.nb, "space.id" ) )
+          }
+        }
+      }
+    }
   }
 
   if (is.null(space.id)) {
-    if (!is.null(sppoly)) space.id = try( as.character( slot( slot(sppoly, "W.nb"), "region.id" ) ) )
-    if (inherits(space.id, "try-error")) space.id = NULL
+    if (!is.null(sppoly))  {
+      aa = attributes(sppoly)
+      if (!is.null(aa)) {
+        if ( exists("W.nb", aa) ) {
+          if ( exists("region.id", attributes(aa$W.nb) )) {
+            space.id =  as.character( slot( aa$W.nb, "region.id" ) )
+          }
+        }
+      }
+    }
   }
 
-  if (is.null(space.id)) {
-    if (!is.null(sppoly)) space.id = try( as.character( slot( sppoly,  "space.id" ) ) )
-    if (inherits(space.id, "try-error")) space.id = NULL
-  }
-
-  if (is.null(space.id)) {
-    if (!is.null(sppoly)) space.id = try( as.character( slot( sppoly,  "region.id" ) ) )
-    if (inherits(space.id, "try-error")) space.id = NULL
-  }
 
   if (is.null(space.id)) {
     if (!is.null(sppoly)) {
@@ -420,7 +468,7 @@ carstm_model_inla = function(
       message("Running model fit using the following data and options: \n")
       str(P)
     }
-     
+
     fit = try( do.call( inla, P ) )      
 
     if (inherits(fit, "try-error" )) {
@@ -676,29 +724,22 @@ carstm_model_inla = function(
             selection=list()
             selection[vnSI] = 0  # 0 means everything matching space
             selection[vnS] = 0  # 0 means everything matching space
-            aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
-            aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
-            iid = which(aa_rn==vnSI)
-            bym = which(aa_rn==vnS)
+            aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE , num.threads=num.threads )  # 0 means everything matching space
             g = apply_simplify( aa, function(x) {invlink(x$latent[iid] + x$latent[bym] ) } )
           } else if ( exists(vnSI, fit$marginals.random ) & ! exists(vnS, fit$marginals.random ) )  {
             # iid  only
             selection=list()
             selection[vnSI] = 0  # 0 means everything matching space
-            aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
-            aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
-            iid = which(aa_rn==vnSI)
+            aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE , num.threads=num.threads )  # 0 means everything matching space
             g = apply_simplify( aa, function(x) {invlink(x$latent[iid] ) } )
           } else if ( ! exists(vnSI, fit$marginals.random ) & exists(vnS, fit$marginals.random ) ) {
             # besag only or bym/bym2
             selection=list()
             selection[vnS] = 0  # 0 means everything matching space
-            aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
+            aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE , num.threads=num.threads )  # 0 means everything matching space
             if ( model_name %in% c("bym", "bym2") ) {
               g = apply_simplify( aa, function(x) {invlink(x$latent[iid] + x$latent[bym] ) } )
             } else {
-              aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
-              bym = which(aa_rn==vnS)
               g = apply_simplify( aa, function(x) {invlink(x$latent[bym] ) } )
             }
           }
@@ -823,39 +864,30 @@ carstm_model_inla = function(
             if ( exists(vnSTI, fit$marginals.random ) &  exists(vnST, fit$marginals.random ) ) {
               # sep besag +iid  
                 selection=list()
-                selection[vnSTI] = 0  # 0 means everything matching space
-                selection[vnST] = 0  # 0 means everything matching space
-                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
-                aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
-                iid = which(aa_rn==vnSTI)
-                bym = which(aa_rn==vnST)
+                selection[vnSTI] = 0  # 0 means everything matching space_time iid
+                selection[vnST] = 0  # 0 means everything matching space_time
+                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  # 0 means everything matching space
                 g = apply_simplify( aa, function(x) {invlink(x$latent[iid] + x$latent[bym] ) } )
  
             } else if (exists(vnSTI, fit$marginals.random ) & ! exists(vnST, fit$marginals.random )) {
               # iid  only
                 selection=list()
-                selection[vnSTI] = 0  # 0 means everything matching space
-                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
-                aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
-                iid = which(aa_rn==vnSTI)
+                selection[vnSTI] = 0  # 0 means everything matching space_time
+                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads )  # 0 means everything matching space
                 g = apply_simplify( aa, function(x) {invlink(x$latent[iid] ) } )
  
             } else if ( !exists(vnSTI, fit$marginals.random ) & exists(vnST, fit$marginals.random ) ) {
               # besag  only or bym/bym2
                 selection=list()
-                selection[vnST] = 0  # 0 means everything matching space
-                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE )  # 0 means everything matching space
+                selection[vnST] = 0  # 0 means everything matching space_time
+                aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  # 0 means everything matching space
                 if ( model_name %in% c("bym", "bym2") ) {
-                  aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
-                  iid = which(aa_rn=="iid")
-                  bym = which(aa_rn==vnST)
                   g = apply_simplify( aa, function(x) {invlink(x$latent[iid] + x$latent[bym] ) } )
                 } else {
-                  aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
-                  bym = which(aa_rn==vnST)
                   g = apply_simplify( aa, function(x) {invlink(x$latent[bym] ) } )
                 }
             } 
+
             aa = NULL
 
             mq = t( apply( g, 1, quantile, probs =c(0.025, 0.5, 0.975), na.rm =TRUE) )
