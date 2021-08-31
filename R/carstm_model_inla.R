@@ -672,7 +672,7 @@ carstm_model_inla = function(
             m = list_simplify ( apply_simplify( fit$marginals.random[[vnSI]], summary_inv_random ) )
 
             # single spatial effect (eg in conjucyion with besag) .. indexing not needed but here in case more complex models ..
-            Z = expand.grid( space=O[[vnSI]], type=model_name, stringsAsFactors =FALSE )
+            Z = expand.grid( space=O[[vnS]], type=model_name, stringsAsFactors =FALSE )
 
             iid =  which(Z$type==model_name)
             matchfrom0 = matchfrom = list( space=Z[["space"]][iid] )
@@ -735,8 +735,8 @@ carstm_model_inla = function(
             aa = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE , num.threads=num.threads )  # 0 means everything matching space
             # order of effects gets messed up .. must use names
             aa_rn = gsub( "[:].*$", "", rownames(aa[[1]]$latent) )
-            aa_iid = which(aa_rn==vnSTI)
-            aa_bym = which(aa_rn==vnST)
+            aa_iid = which(aa_rn==vnSI)
+            aa_bym = which(aa_rn==vnS)
             g = apply_simplify( aa, function(x) {invlink(x$latent[aa_iid] + x$latent[aa_bym] ) } )
           } else if ( exists(vnSI, fit$marginals.random ) & ! exists(vnS, fit$marginals.random ) )  {
             # iid  only
