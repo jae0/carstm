@@ -336,6 +336,7 @@ carstm_model_inla = function(
     P[["data"]][,vnS] = match( P[["data"]][,vnS0], O[[vnS]] )  # overwrite with numeric values that must match index of neighbourhood matrix
   }
   
+browser()
 
   if ( grepl("time", O[["dimensionality"]]) | grepl("cyclic", O[["dimensionality"]]) ) {
  
@@ -351,6 +352,7 @@ carstm_model_inla = function(
       }
       if (vnT %in% fm$random_effects$vn ) {
         P[["data"]][,vnT] = as.numeric( P[["data"]][,vnT] )  # in case it is sent as a character 
+        # O[[vnT]] = as.numeric( O[[vnT]] )
         # nothing to do .. leave alone as numeric
       } 
 
@@ -372,7 +374,7 @@ carstm_model_inla = function(
       }
       if (vnU %in% fm$random_effects$vn ) {
         P[["data"]][,vnU] = as.numeric( P[["data"]][,vnU] )  # in case it is sent as a character 
-        # nothing to do .. leave alone as numeric
+        # O[[vnU]] = as.numeric( O[[vnU]] )        # nothing to do .. leave alone as numeric
       } 
     }
   }
@@ -391,7 +393,11 @@ carstm_model_inla = function(
         next()
       }
       if (vntest %in% totestTime)  {
-        P[["data"]][,vntest] = P[["data"]][,vnT] 
+        if ( fm$random_effects$submodel[ grep( vntest, fm$random_effects$vn ) ] %in% c("group", "replicate") ) {
+          P[["data"]][,vntest] = match( P[["data"]][,vnT0], O[[vnT]] ) 
+        } else {
+          P[["data"]][,vntest] = P[["data"]][,vnT] 
+        }
         next()
       }
       message( "Variable name was not found in data:" )

@@ -38,14 +38,14 @@ parse_formula = function( fm ) {
         vnrgac = strsplit( vnrgmod, "model[[:space:]]*=" ) [[1]][2]
         vnrgac = strsplit( vnrgac, "," ) [[1]][1]
         vnrgac = gsub( "f[[:space:]]*[(]{1}|[,()=\"\']|[[:space:]]", "",  vnrgac  )
-        random_effects = rbind( random_effects, cbind( vn=vnrg, model=vnrgac ) )
+        random_effects = rbind( random_effects, cbind( vn=vnrg, model=vnrgac, submodel="group" ) )
       }
       reps = grepl("[[:space:]]+replicate[[:space:]]*[=]", vars[rt[i]] )
       if (reps) {
         vnrr = strsplit( vars[rt[i]], "[[:space:]]+replicate[[:space:]]*[=][[:space:]]*" )[[1]][2]
         vnrr = strsplit( vnrr, "[[:space:]]*,")[[1]][1]
         vnrr = gsub( "[,()=\"\']|[[:space:]]", "",  vnrr )  
-        random_effects = rbind( random_effects, cbind( vn=vnrr, model="replicate" ) )
+        random_effects = rbind( random_effects, cbind( vn=vnrr, model="iid", submodel="replicate" ) )
       }
     }
   }
@@ -57,12 +57,12 @@ parse_formula = function( fm ) {
   fixed_effects = NULL
   if (n_fixed > 0) {
     for (i in 1:length(ft)) {
-      fixed_effects = rbind( fixed_effects, cbind( vn=vars[ft[i]], model="fixed" ) ) 
+      fixed_effects = rbind( fixed_effects, cbind( vn=vars[ft[i]], model="fixed", submodel="main" ) ) 
     }
   }
       
   if (attributes(tfm)$intercept) {
-      fixed_effects = rbind( cbind( vn="Intercept", model="fixed" ), fixed_effects )
+      fixed_effects = rbind( cbind( vn="Intercept", model="fixed", submodel="NA" ), fixed_effects )
   }
       
   return(
