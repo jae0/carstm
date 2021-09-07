@@ -107,7 +107,7 @@ carstm_model_inla = function(
         load (fn_res) 
       } else {
         fit = NULL
-        load(fn_fit )
+	load(fn_fit )
         if (!is.null(fit) ) {
           if (exists("results", fit)) O = fit$results
         } 
@@ -336,6 +336,7 @@ carstm_model_inla = function(
     P[["data"]][,vnS] = match( P[["data"]][,vnS0], O[[vnS]] )  # overwrite with numeric values that must match index of neighbourhood matrix
   }
   
+
   if ( grepl("time", O[["dimensionality"]]) | grepl("cyclic", O[["dimensionality"]]) ) {
  
     if (any( grepl( vnT, fm$vars )))  {
@@ -350,14 +351,11 @@ carstm_model_inla = function(
       }
       if (vnT %in% fm$random_effects$vn ) {
         P[["data"]][,vnT] = as.numeric( P[["data"]][,vnT] )  # in case it is sent as a character 
-        # O[[vnT]] = as.numeric( O[[vnT]] )
         # nothing to do .. leave alone as numeric
       } 
 
     }
-    # internal vars, for inla
-    if (any( grepl( vnST, fm$vars )))  P[["data"]][,vnST] = P[["data"]][,vnS]
-    if (any( grepl( vnST, fm$vars )))  P[["data"]][,vnTS] = P[["data"]][,vnT]
+
     # sub-annual time
     if (any( grepl( vnU, fm$vars )))  {
 
@@ -372,11 +370,14 @@ carstm_model_inla = function(
       }
       if (vnU %in% fm$random_effects$vn ) {
         P[["data"]][,vnU] = as.numeric( P[["data"]][,vnU] )  # in case it is sent as a character 
-        # O[[vnU]] = as.numeric( O[[vnU]] )        # nothing to do .. leave alone as numeric
+        # nothing to do .. leave alone as numeric
       } 
     }
-  }
-
+  } 
+  
+  # internal vars, for inla
+  # if (any( grepl( vnST, fm$vars )))  P[["data"]][,vnST] = P[["data"]][,vnS]
+  # if (any( grepl( vnST, fm$vars )))  P[["data"]][,vnTS] = P[["data"]][,vnT]
 
   nre = nrow(fm$random_effects)
   if (nre > 0) {
@@ -403,9 +404,7 @@ carstm_model_inla = function(
       stop()
     }
   }
-
-
-
+ 
   # on user scale
   ii = which(is.finite(P[["data"]][ , vnY ]))
   
