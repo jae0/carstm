@@ -29,7 +29,7 @@ parse_formula = function( fm ) {
       vnr = strsplit( vnr, ",") [[1]][1]
       vnr = gsub( "f[[:space:]]*[(]{1}|[,()=\"\']|[[:space:]]", "",  vnr )
       vnm = gsub( "[,()=\"\']|[[:space:]]", "", strsplit( rfac[2], ",")[[1]][1])
-      random_effects  = rbind( random_effects, cbind( vn=vnr, model=vnm ) ) 
+      random_effects  = rbind( random_effects, cbind( vn=vnr, model=vnm, submodel="main" ) ) 
       grps = grepl("[[:space:]]+group[[:space:]]*[=]", vars[rt[i]] )
       if (grps) {
         vnrg = strsplit( vars[rt[i]], "[[:space:]]+group[[:space:]]*[=][[:space:]]*" )[[1]][2]
