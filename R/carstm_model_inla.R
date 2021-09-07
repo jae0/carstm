@@ -346,7 +346,14 @@ carstm_model_inla = function(
       if (!exists(vnT, O)) if (exists(vnT, P[["data"]])) O[[vnT]] = as.character( sort(unique( P[["data"]][, vnT ]) ) ) 
 
       P[["data"]][,vnT0] = as.character( P[["data"]][,vnT] ) # a copy for internal matching 
-      P[["data"]][,vnT] = match( P[["data"]][,vnT0], O[[vnT]] ) # convert to numeric (ie. a numeric factor)
+      if (vnT %in% fm$fixed_effects$vn ) {
+        P[["data"]][,vnT] = match( P[["data"]][,vnT0], O[[vnT]] ) # convert to data numeric (ie. a numeric factor)
+      }
+      if (vnT %in% fm$random_effects$vn ) {
+        P[["data"]][,vnT] = as.numeric( P[["data"]][,vnT] )  # in case it is sent as a character 
+        # nothing to do .. leave alone as numeric
+      } 
+
     }
     # internal vars, for inla
     if (any( grepl( vnST, fm$vars )))  P[["data"]][,vnST] = P[["data"]][,vnS]
@@ -359,7 +366,14 @@ carstm_model_inla = function(
       if (!exists(vnU, O)) if (exists(vnU, P[["data"]])) O[[vnU]] = as.character( sort(unique( P[["data"]][, vnU ]) ) ) 
 
       P[["data"]][,vnU0] = as.character( P[["data"]][,vnU] )  # a copy for internal matching 
-      P[["data"]][,vnU] = match( P[["data"]][,vnU0], O[[vnU]] )  # convert to numeric (ie. a numeric factor)
+
+      if (vnU %in% fm$fixed_effects$vn ) {
+        P[["data"]][,vnU] = match( P[["data"]][,vnU0], O[[vnU]] ) # convert to data numeric (ie. a numeric factor)
+      }
+      if (vnU %in% fm$random_effects$vn ) {
+        P[["data"]][,vnU] = as.numeric( P[["data"]][,vnU] )  # in case it is sent as a character 
+        # nothing to do .. leave alone as numeric
+      } 
     }
   }
 
@@ -440,7 +454,7 @@ carstm_model_inla = function(
   ll = which(is.finite(yl))
   O[["reference_sd"]] = sd(yl[ll] )
 
-  H = hyperparameters(  O[["reference_sd"]] , alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped
+  H = hyperparameters(  O[["reference_sd"]], alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped .. but use of pc.priors that shrink to 0
   
   O$priors = H
 
@@ -783,24 +797,26 @@ carstm_model_inla = function(
           O[["random"]] [[vnS]] [["combined"]] = W
           W = NULL
 
-          if ( !is.null(exceedance_threshold)  | !is.null(deceedance_threshold) ) {
-            if (P[["verbose"]])  message("Extracting random spatial errors exceedence/deceedance"  )
-
-            if (!is.null(exceedance_threshold)) {
-              m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold) ) ) / nposteriors
+          if (!is.null(exceedance_threshold)) {
+            if (P[["verbose"]])  message("Extracting random spatial errors exceedence"  )
+            for ( b in 1:length(exceedance_threshold)) {
+              m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold[b]) ) ) / nposteriors
               W = reformat_to_array( input = m, matchfrom=matchfrom0, matchto = matchto )
               names(dimnames(W))[1] = vnS
               dimnames( W )[[vnS]] = O[[vnS]]
-              O[["random"]] [[vnS]] [["exceedance"]] = W
+              O[["random"]] [[vnS]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = W
               W = m = NULL
             }
+          }
 
-            if (!is.null(deceedance_threshold)) {
-              m = apply ( g, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / nposteriors
+          if (!is.null(deceedance_threshold)) {
+            if (P[["verbose"]])  message("Extracting random spatial errors deceedance"  )
+            for ( b in 1:length(deceedance_threshold)) {
+              m = apply ( g, 1, FUN=function(x) length( which(x < deceedance_threshold[b]) ) ) / nposteriors
               W = reformat_to_array( input = m, matchfrom=matchfrom0, matchto=matchto  )
               names(dimnames(W))[1] = vnS
               dimnames( W )[[vnS]] = O[[vnS]]
-              O[["random"]] [[vnS]] [["deceedance"]] = W
+              O[["random"]] [[vnS]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = W
               W = m = NULL
             }
           }
@@ -943,13 +959,10 @@ carstm_model_inla = function(
         }
 
         if (!is.null(g)) { 
-          
-          if ( !is.null(exceedance_threshold)  | !is.null(deceedance_threshold) ) {
-  
-            if (P[["verbose"]])  message("Extracting random spatiotemporal errors exceedence/deceedance"  )
-
-            if (!is.null(exceedance_threshold)) {
-              m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold) ) ) / nposteriors
+          if (!is.null(exceedance_threshold)) {
+            if (P[["verbose"]])  message("Extracting random spatiotemporal errors exceedence"  )
+            for ( b in 1:length(exceedance_threshold)) {
+              m = apply ( g, 1, FUN=function(x) length( which(x > exceedance_threshold[b] ) ) ) / nposteriors
               W = reformat_to_array( input=m, matchfrom=matchfrom0,  matchto=matchto )
               names(dimnames(W))[1] = vnS
               dimnames( W )[[vnS]] = O[[vnS]]
@@ -962,11 +975,15 @@ carstm_model_inla = function(
                 names(dimnames(W))[3] = vnU
                 dimnames( W )[[vnU]] = O[[vnU]]
               }
-              O[["random"]] [[vnST]] [["exceedance"]] = W
+              O[["random"]] [[vnST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = W
               W = NULL
             }
+          }
 
-            if (!is.null(deceedance_threshold)) {
+          if (!is.null(deceedance_threshold)) {
+            if (P[["verbose"]])  message("Extracting random spatiotemporal errors deceedance"  )
+
+            for ( b in 1:length(deceedance_threshold)) {
               m = apply ( g, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / nposteriors
               W = reformat_to_array( input = m, matchfrom=matchfrom0,  matchto=matchto )
               names(dimnames(W))[1] = vnS
@@ -980,11 +997,11 @@ carstm_model_inla = function(
                 names(dimnames(W))[3] = vnU
                 dimnames( W )[[vnU]] = O[[vnU]]
               }
-              O[["random"]] [[vnST]] [["deceedance"]] = W
+              O[["random"]] [[vnST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = W
               W = NULL
-            }  
-            # end space-time
-          }
+            }
+          }  
+          # end space-time
         }
         Z = g = NULL
         gc()
@@ -1082,37 +1099,41 @@ carstm_model_inla = function(
       }
 
       if (!is.null(exceedance_threshold_predictions)) {
-        m = list_simplify ( apply_simplify( g, FUN=exceedance_prob, threshold=exceedance_threshold ) )
-        W = reformat_to_array(  input = unlist(m ), matchfrom = matchfrom, matchto = matchto )
-        names(dimnames(W))[1] = vnS
-        dimnames( W )[[vnS]] = O[[vnS]]
-        if (O[["dimensionality"]] == "space-time"  ) {
-          names(dimnames(W))[2] = vnT
-          dimnames( W )[[vnT]] = O[[vnT]]
+        for (b in exceedance_threshold_predictions) {  
+          m = list_simplify ( apply_simplify( g, FUN=exceedance_prob, threshold=exceedance_threshold_predictions[b] ) )
+          W = reformat_to_array(  input = unlist(m ), matchfrom = matchfrom, matchto = matchto )
+          names(dimnames(W))[1] = vnS
+          dimnames( W )[[vnS]] = O[[vnS]]
+          if (O[["dimensionality"]] == "space-time"  ) {
+            names(dimnames(W))[2] = vnT
+            dimnames( W )[[vnT]] = O[[vnT]]
+          }
+          if (O[["dimensionality"]]=="space-time-cyclic") {
+            names(dimnames(W))[3] = vnU
+            dimnames( W )[[vnU]] = O[[vnU]]
+          }
+          O[["predictions"]] [["exceedance"]] [[ as.character(exceedance_threshold[b]) ]]= W
+          W = m = NULL
         }
-        if (O[["dimensionality"]]=="space-time-cyclic") {
-          names(dimnames(W))[3] = vnU
-          dimnames( W )[[vnU]] = O[[vnU]]
-        }
-        O[["exceedance_probability_predictions"]] = W
-        W = m = NULL
       }
 
       if (!is.null(deceedance_threshold_predictions)) {
-        m = list_simplify ( apply_simplify( g, FUN=deceedance_prob, threshold=deceedance_threshold ) )
-        W = reformat_to_array(  input = unlist(m ), matchfrom = matchfrom, matchto = matchto )
-        names(dimnames(W))[1] = vnS
-        dimnames( W )[[vnS]] = O[[vnS]]
-        if (O[["dimensionality"]] == "space-time"  ) {
-          names(dimnames(W))[2] = vnT
-          dimnames( W )[[vnT]] = O[[vnT]]
+        for (b in deceedance_threshold_predictions) {  
+          m = list_simplify ( apply_simplify( g, FUN=deceedance_prob, threshold=deceedance_threshold_predictions[b] ) )
+          W = reformat_to_array(  input = unlist(m ), matchfrom = matchfrom, matchto = matchto )
+          names(dimnames(W))[1] = vnS
+          dimnames( W )[[vnS]] = O[[vnS]]
+          if (O[["dimensionality"]] == "space-time"  ) {
+            names(dimnames(W))[2] = vnT
+            dimnames( W )[[vnT]] = O[[vnT]]
+          }
+          if (O[["dimensionality"]]=="space-time-cyclic") {
+            names(dimnames(W))[3] = vnU
+            dimnames( W )[[vnU]] = O[[vnU]]
+          }
+          O[["predictions"]] [["deceedance"]] [[ as.character(deceedance_threshold[b]) ]]= W
+          W = m = NULL
         }
-        if (O[["dimensionality"]]=="space-time-cyclic") {
-          names(dimnames(W))[3] = vnU
-          dimnames( W )[[vnU]] = O[[vnU]]
-        }
-        O[["deceedance_probability_predictions"]] = W
-        W = m = NULL
       }
     }
 
