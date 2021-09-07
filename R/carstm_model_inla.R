@@ -336,8 +336,6 @@ carstm_model_inla = function(
     P[["data"]][,vnS] = match( P[["data"]][,vnS0], O[[vnS]] )  # overwrite with numeric values that must match index of neighbourhood matrix
   }
   
-browser()
-
   if ( grepl("time", O[["dimensionality"]]) | grepl("cyclic", O[["dimensionality"]]) ) {
  
     if (any( grepl( vnT, fm$vars )))  {
