@@ -8,7 +8,7 @@
     vn_label=NULL,
     space = "space",
     time= "time",
-    season="season",
+    cyclic="cyclic",
     stat_var="mean",
     sppoly=NULL,
     smatch=NULL, 
@@ -37,7 +37,7 @@
       toplot=NULL
       space = "space"
       time= "time"
-      season="season"
+      cyclic="cyclic"
       stat_var="mean"
       sppoly=NULL
       smatch=NULL 
@@ -154,10 +154,10 @@
           if (is.null(tmatch)) tmatch = tuid
           jt = match( tmatch, res[[time]] )  
         } 
-        if (exists(season, res)) {
-          uuid = res[[season]]
+        if (exists(cyclic, res)) {
+          uuid = res[[cyclic]]
           if (is.null(umatch)) umatch = uuid
-          ju = match( umatch, res[[season]] )  
+          ju = match( umatch, res[[cyclic]] )  
         }
 
         data_dimensionality = ifelse (is.vector(toplot), 1, length(dim(toplot) ) )
