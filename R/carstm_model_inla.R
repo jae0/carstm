@@ -10,6 +10,7 @@ carstm_model_inla = function(
   fn_res=NULL, 
   compress=TRUE,
   scale_offsets = FALSE,
+  offset_scale = NULL,
   redo_fit = TRUE,
   update_results = FALSE,
   toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), 
@@ -444,11 +445,9 @@ carstm_model_inla = function(
     P[["data"]][, vnO]  = lnk_function( P[["data"]][, vnO ])
 
     if (scale_offsets) {
-      if (exists("offset_scale", O)) {
-        O$offset_scale = median( P[["data"]][obs, vnO] , na.rm=TRUE )  # required to stabilize optimization
-        P[["data"]][, vnO] = P[["data"]][, vnO] - O$offset_scale  # apply to all and overwrite, centering upon 0 (in user space 1)
-        O$offset_scale_revert = function(x) { x - O$offset_scale }  # used for Y value and so opposite sign of "-" but applied to numerator is returns it to "-"
-      }
+      if (!exists("offset_scale", O))  O$offset_scale = min( P[["data"]][obs, vnO] , na.rm=TRUE )  # required to stabilize optimization
+      P[["data"]][, vnO] = P[["data"]][, vnO] - O$offset_scale  # apply to all and overwrite, centering upon 0 (in user space 1)
+      O$offset_scale_revert = function(x) { x - O$offset_scale }  # used for Y value and so opposite sign of "-" but applied to numerator is returns it to "-"
     }    
     obs = NULL
     yl = yl - P[["data"]][, vnO]
