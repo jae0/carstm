@@ -69,10 +69,17 @@ carstm_model = function( p=list(), data=NULL, dimensionality=NULL,
   O = NULL
   if (DS=="carstm_modelled_summary") {  # carstm_model.*carstm_modelled
     if (!is.null(fn_res)) {
-      message("Loading carstm data summary:  ", fn_res )
+      message("Loading  data summary:  ", fn_res )
+      O = NULL
       if (file.exists(fn_res)) load( fn_res)
-      if (is.null(O)) message("carstm summary not found.")
+      if (is.null(O)) message(" summary not found.")
       return( O )
+    } else {
+      fit  = NULL
+      message("Loading results from fit: ", fn_fit )
+      if (file.exists(fn_fit)) load( fn_fit )
+      if (exists( "results", fit)) return( fit$results )
+      message("modelled results not found. .. try to run extraction: '' ")
     }
   }
 

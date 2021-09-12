@@ -12,7 +12,6 @@ carstm_model_inla = function(
   scale_offsets = FALSE,
   offset_scale = NULL,
   redo_fit = TRUE,
-  update_results = FALSE,
   toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), 
   nposteriors=NULL, 
   exceedance_threshold=NULL, 
@@ -32,7 +31,6 @@ carstm_model_inla = function(
     fn_fit=tempfile(pattern="fit_", fileext=".rdata")
     compress="gzip"
     redo_fit = TRUE
-    update_results = FALSE
     toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions")
     exceedance_threshold=NULL
     deceedance_threshold=NULL
@@ -77,6 +75,12 @@ carstm_model_inla = function(
       if (file.exists(fn_res)) load( fn_res)
       if (is.null(O)) message(" summary not found.")
       return( O )
+    } else {
+      fit  = NULL
+      message("Loading results from fit: ", fn_fit )
+      if (file.exists(fn_fit)) load( fn_fit )
+      if (!is.null(fit)) if (exists( "results", fit)) return( fit$results )
+      message("modelled results not found. .. try to run extraction: '' ")
     }
   }
 
@@ -101,24 +105,6 @@ carstm_model_inla = function(
 
   # outputs
   fit  = NULL
-
-  if ( is.null(O)){
-    if ( update_results) {
-      if (!is.null(fn_res)) {
-        load (fn_res) 
-      } else {
-        fit = NULL
-	load(fn_fit )
-        if (!is.null(fit) ) {
-          if (exists("results", fit)) O = fit$results
-        } 
-      }
-    } 
-  } 
-
-
-  if ( inherits(O, "try-error")) O = NULL
-  if ( is.null(O)) O = list()  # options
   
   if (is.null(nposteriors))  nposteriors = ifelse( exists("nposteriors", O), O$nposteriors, 5000 )
 
@@ -1138,8 +1124,6 @@ carstm_model_inla = function(
         }
       }
     }
-
-
   }
 
   # copy the modified data in case needed for plotting ..
@@ -1153,17 +1137,19 @@ carstm_model_inla = function(
   if (!is.null(space.id)) O[["space.id"]] = space.id
 
   if (!is.null(fn_res)) {
-    # then save as separate files (fit, results)
+  
+    # then save results as separate file
     save( O, file=fn_res, compress=compress )
     if (P[["verbose"]])  message( "Summary saved as: ", fn_res )
-    fit$results = O
 
-  } else {
-    # save as a single file
+  }  else {
+    # then save results as a component of fit
     fit$results = O
-    save( fit, file=fn_fit, compress=compress )
-    if (P[["verbose"]])  message( "fit and summary saved as: ", fn_fit )
   }
+
+  save( fit, file=fn_fit, compress=compress )
+  if (P[["verbose"]])  message( "fit and summary saved as: ", fn_fit )
+
   return(fit)
 
 }
