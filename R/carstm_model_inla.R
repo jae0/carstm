@@ -18,7 +18,9 @@ carstm_model_inla = function(
   deceedance_threshold=NULL, 
   exceedance_threshold_predictions=NULL,
   deceedance_threshold_predictions=NULL,
-  improve.hyperparam.estimates=NULL,  ... ) {
+  improve.hyperparam.estimates=NULL,  
+  posterior_simulations_to_retain="",
+  ... ) {
   
   if (0) {
     # for debugging
@@ -808,8 +810,15 @@ carstm_model_inla = function(
               W = m = NULL
             }
           }
+
+          if ( "random_spatial" %in% posterior_simulations_to_retain ) {
+            O[["random"]] [[vnS]] [["posteriors"]] = g
+          }
+
         }
+      
       }
+
 
       Z = g = NULL
       gc()
@@ -988,7 +997,12 @@ carstm_model_inla = function(
               O[["random"]] [[vnST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = W
               W = NULL
             }
-          }  
+          }
+
+          if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
+            O[["random"]] [[vnS]] [["posteriors"]] = g
+          }
+  
           # end space-time
         }
         Z = g = NULL
@@ -1013,14 +1027,14 @@ carstm_model_inla = function(
 
       if (  O[["dimensionality"]] == "space" ) {
         ipred = which( P[["data"]]$tag=="predictions"  &  P[["data"]][,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
-        g = fit$marginals.fitted.values[ipred]
+        m = fit$marginals.fitted.values[ipred]
         if (scale_offsets) {
-          if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+          if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
         }    
-        g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
-        if ( exists("data_transformation", O))  g = apply_generic( g, backtransform )
+        m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
+        if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
-        m = list_simplify ( apply_simplify( g, summary_inv_predictions ) )
+        m = list_simplify ( apply_simplify( m, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]),  length(names(m)) ),  dimnames=list( space=O[[vnS]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         
@@ -1031,21 +1045,42 @@ carstm_model_inla = function(
           W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=matchfrom, matchto=matchto )
         }
         O[["predictions"]] = W[, tokeep, drop =FALSE]
-        W = m = NULL
+        W = NULL
+
+        if ( "predictions" %in% posterior_simulations_to_retain ) {
+          selection = list(Predictor=0)
+          g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
+          g = apply_simplify( g, function(x) {x$latent[ipred] } )
+          if (scale_offsets) {
+            if ( exists("offset_scale_revert", O) ) g = O$offset_scale_revert(g)
+          }  
+          g = invlink(g)      
+          if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
+          W = array( NA, dim=c( length(O[[vnS]]), nposteriors ),  dimnames=list( space=O[[vnS]], sim=1:nposteriors ) )
+          names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
+          for (k in 1:nposteriors ) {
+            W[,k] = reformat_to_array( input=unlist(g[,k]), matchfrom=matchfrom, matchto=matchto )
+          }
+          O[["predictions"]] [["posteriors"]] = W[,, drop =FALSE]
+          W = NULL
+          g = NULL
+        }
+
+
       }
 
 
       if (O[["dimensionality"]] == "space-time"  ) {
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]] & P[["data"]][,vnT0] %in% O[[vnT]] )
-        g = fit$marginals.fitted.values[ipred]   
+        m = fit$marginals.fitted.values[ipred]   
         if (scale_offsets) {
-          if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+          if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
         }
 
-        g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
-        if (exists("data_transformation", O)) g = apply_generic( g, backtransform )
+        m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
+        if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 
-        m = list_simplify ( apply_simplify( g, summary_inv_predictions ) )
+        m = list_simplify ( apply_simplify( m, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
@@ -1057,20 +1092,41 @@ carstm_model_inla = function(
           W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=matchfrom, matchto=matchto)
         }
         O[["predictions"]] = W[,, tokeep, drop =FALSE]
-        W = m = NULL
+        W = NULL
+
+        if ( "predictions" %in% posterior_simulations_to_retain ) {
+          selection = list(Predictor=0)
+          g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
+          g = apply_simplify( g, function(x) {x$latent[ipred] } )
+          if (scale_offsets) {
+            if ( exists("offset_scale_revert", O) ) g = O$offset_scale_revert(g)
+          }  
+          g = invlink(g)      
+          if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
+          W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], sim=1:nposteriors ) )
+          names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
+          names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
+          for (k in 1:nposteriors ) {
+            W[,,k] = reformat_to_array( input=unlist(g[,k]), matchfrom=matchfrom, matchto=matchto )
+          }
+          O[["predictions"]] [["posteriors"]] = W[,,, drop =FALSE]
+          W = NULL
+          g = NULL
+        }
+
       }
 
 
       if ( O[["dimensionality"]] == "space-time-cyclic" ) {
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]]  &  P[["data"]][,vnT0] %in% O[[vnT]] &  P[["data"]][,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
-        g = fit$marginals.fitted.values[ipred]   
+        m = fit$marginals.fitted.values[ipred]   
         if (scale_offsets) {
-          if ( exists("offset_scale_revert", O) ) g = apply_generic( g, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+          if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
         }    
-        g = apply_generic( g, function(u) {inla.tmarginal( invlink, u) } )    
-        if (exists("data_transformation", O)) g = apply_generic( g, backtransform )
+        m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
+        if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 
-        m = list_simplify ( apply_simplify( g, summary_inv_predictions ) )
+        m = list_simplify ( apply_simplify( m, summary_inv_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
@@ -1083,12 +1139,36 @@ carstm_model_inla = function(
           W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=matchfrom, matchto=matchto )
         }
         O[["predictions"]] = W[,,, tokeep, drop =FALSE]
-        W = m = NULL
+        W = NULL
+
+        if ( "predictions" %in% posterior_simulations_to_retain ) {
+          selection = list(Predictor=0)
+          g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
+          g = apply_simplify( g, function(x) {x$latent[ipred] } )
+          if (scale_offsets) {
+            if ( exists("offset_scale_revert", O) ) g = O$offset_scale_revert(g)
+          }  
+          g = invlink(g)      
+          if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
+          W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]], sim=1:nposteriors ) )
+          names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
+          names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
+          names(dimnames(W))[3] = vnU  # need to do this in a separate step ..
+          for (k in 1:nposteriors ) {
+            W[,,,k] = reformat_to_array( input=unlist(g[,k]), matchfrom=matchfrom, matchto=matchto )
+          }
+          O[["predictions"]] [["posteriors"]] = W[,,, ,drop =FALSE]
+          W = NULL
+          g = NULL
+        }
+
       }
 
+
       if (!is.null(exceedance_threshold_predictions)) {
+
         for (b in exceedance_threshold_predictions) {  
-          m = list_simplify ( apply_simplify( g, FUN=exceedance_prob, threshold=exceedance_threshold_predictions[b] ) )
+          m = list_simplify ( apply_simplify( m, FUN=exceedance_prob, threshold=exceedance_threshold_predictions[b] ) )
           W = reformat_to_array(  input = unlist(m ), matchfrom = matchfrom, matchto = matchto )
           names(dimnames(W))[1] = vnS
           dimnames( W )[[vnS]] = O[[vnS]]
@@ -1107,7 +1187,7 @@ carstm_model_inla = function(
 
       if (!is.null(deceedance_threshold_predictions)) {
         for (b in deceedance_threshold_predictions) {  
-          m = list_simplify ( apply_simplify( g, FUN=deceedance_prob, threshold=deceedance_threshold_predictions[b] ) )
+          m = list_simplify ( apply_simplify( m, FUN=deceedance_prob, threshold=deceedance_threshold_predictions[b] ) )
           W = reformat_to_array(  input = unlist(m ), matchfrom = matchfrom, matchto = matchto )
           names(dimnames(W))[1] = vnS
           dimnames( W )[[vnS]] = O[[vnS]]
@@ -1123,6 +1203,7 @@ carstm_model_inla = function(
           W = m = NULL
         }
       }
+
     }
   }
 
