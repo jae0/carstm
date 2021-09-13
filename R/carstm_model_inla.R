@@ -1048,6 +1048,7 @@ carstm_model_inla = function(
         W = NULL
 
         if ( "predictions" %in% posterior_simulations_to_retain ) {
+          if (P[["verbose"]])  message("Extracting posterior simulations"  )
           selection = list(Predictor=0)
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) {x$latent[ipred] } )
@@ -1061,7 +1062,7 @@ carstm_model_inla = function(
           for (k in 1:nposteriors ) {
             W[,k] = reformat_to_array( input=unlist(g[,k]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["predictions"]] [["posteriors"]] = W[,, drop =FALSE]
+          O[["predictions_posterior_simulations"]] = W[,, drop =FALSE]
           W = NULL
           g = NULL
         }
@@ -1095,6 +1096,8 @@ carstm_model_inla = function(
         W = NULL
 
         if ( "predictions" %in% posterior_simulations_to_retain ) {
+          if (P[["verbose"]])  message("Extracting posterior simulations"  )
+
           selection = list(Predictor=0)
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) {x$latent[ipred] } )
@@ -1109,7 +1112,8 @@ carstm_model_inla = function(
           for (k in 1:nposteriors ) {
             W[,,k] = reformat_to_array( input=unlist(g[,k]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["predictions"]] [["posteriors"]] = W[,,, drop =FALSE]
+          
+          O[["predictions_posterior_simulations"]] = W[,,, drop =FALSE]
           W = NULL
           g = NULL
         }
@@ -1142,6 +1146,7 @@ carstm_model_inla = function(
         W = NULL
 
         if ( "predictions" %in% posterior_simulations_to_retain ) {
+          if (P[["verbose"]])  message("Extracting posterior simulations"  )
           selection = list(Predictor=0)
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) {x$latent[ipred] } )
@@ -1157,7 +1162,7 @@ carstm_model_inla = function(
           for (k in 1:nposteriors ) {
             W[,,,k] = reformat_to_array( input=unlist(g[,k]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["predictions"]] [["posteriors"]] = W[,,, ,drop =FALSE]
+          O[["predictions_posterior_simulations"]] = W[,,, ,drop =FALSE]
           W = NULL
           g = NULL
         }
@@ -1166,6 +1171,7 @@ carstm_model_inla = function(
 
 
       if (!is.null(exceedance_threshold_predictions)) {
+        if (P[["verbose"]])  message("Extracting de/exceedance from marginals"  )
 
         for (b in exceedance_threshold_predictions) {  
           m = list_simplify ( apply_simplify( m, FUN=exceedance_prob, threshold=exceedance_threshold_predictions[b] ) )
