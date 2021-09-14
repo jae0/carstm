@@ -251,9 +251,9 @@
       # https://leaflet-extras.github.io/leaflet-providers/preview/
       # OpenTopoMap, Stamen.Watercolor, Stamen.Terrain, Stamen.TonerLite, Esri.OceanBasemap 
       tmout = tmout +
-        tm_basemap(leaflet::providers$CartoDB.Positron, alpha=0.8) +
-  #      tm_basemap(leaflet::providers$Esri.OceanBasemap, alpha=0.9) +
-        tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, alpha=0.8) 
+        tm_basemap(leaflet::providers$CartoDB.Positron, alpha=0.8) 
+  #     tm_basemap(leaflet::providers$Esri.OceanBasemap, alpha=0.9) +
+  #     tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, alpha=0.8) 
     }
 
     tmout = tmout + 
@@ -349,6 +349,7 @@
     if ( outfilename !="" ) {
 
       if ( map_mode=="plot") {
+        message( "You will need to tweak more settings such as anlge of compass and size of elements .." ) 
         if (outformat=="tmap") {
           # tmap_save options:
           twidth=1000
