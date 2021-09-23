@@ -455,8 +455,25 @@ carstm_model_inla = function(
   if (redo_fit) {
     
     if ( !exists("inla.mode", P ) ) P[["inla.mode"]] = "experimental"
+
+    inlaversion = inla_version(test="21.09.13")  
+    if (inlaversion$current_version_newer_than_test ) {
+      if ( exists("inla.mode", P ) ) {
+        if ( P[["inla.mode"]] == "experimental" ) {
+          if ( P[["verbose"]])  {
+            message( " ---> NOTE:: ---------------------------------------------------------------------------------" )
+            message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the predictions!" )
+            message( " ---> NOTE:: but not posterior simulations! " )
+            message( " ---> NOTE:: .. future INLA versions need to be tested to see if this behaviour changes!" )
+            message( " ---> NOTE:: ---------------------------------------------------------------------------------" )
+          }  
+        }  
+      }
+    }
+
+    
     if ( !exists("control.inla", P ) ) P[["control.inla"]] = list( strategy='adaptive' )
-    if ( !exists("control.predictor", P ) ) P[["control.predictor"]] = list(compute=TRUE, link=1  ) #everything on link scale
+    if ( !exists("control.predictor", P ) ) P[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if ( !exists("control.compute", P ) ) P[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
 
 
@@ -775,6 +792,8 @@ carstm_model_inla = function(
               g = apply_simplify( aa, function(x) {invlink(x$latent[bym] ) } )
             }
           }
+
+          
           aa = NULL
 
           mq = t( apply( g, 1, quantile, probs =c(0.025, 0.5, 0.975), na.rm =TRUE) )
@@ -930,7 +949,7 @@ carstm_model_inla = function(
                 } else {
                   g = apply_simplify( aa, function(x) {invlink(x$latent[bym] ) } )
                 }
-            } 
+            }
 
             aa = NULL
 
@@ -1016,7 +1035,7 @@ carstm_model_inla = function(
 
     if (!exists("predictions", O)) O[["predictions"]] = list()
 
-    summary_inv_predictions = function(x) inla.zmarginal( x, silent=TRUE  )
+    summary_predictions = function(x) inla.zmarginal( x, silent=TRUE  )
     
     if (!exists("tag", P[["data"]])) P[["data"]]$tag="predictions" # force predictions for all data
 
@@ -1028,13 +1047,25 @@ carstm_model_inla = function(
       if (  O[["dimensionality"]] == "space" ) {
         ipred = which( P[["data"]]$tag=="predictions"  &  P[["data"]][,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         m = fit$marginals.fitted.values[ipred]
+
         if (scale_offsets) {
           if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
         }    
-        m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
+        if ( P[["inla.mode"]] == "experimental") {
+          
+          # assume old behaviour ..
+          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the predictions but not posterior simulations!" )
+          for ( i in 1:length(ipred) ) {
+            m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i],vnO]
+          }
+
+          # experiemental mode also returns in link space .. inverse-link transform
+          m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
+        }
+        
         if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
-        m = list_simplify ( apply_simplify( m, summary_inv_predictions ) )
+        m = list_simplify ( apply_simplify( m, summary_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]),  length(names(m)) ),  dimnames=list( space=O[[vnS]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         
@@ -1055,6 +1086,7 @@ carstm_model_inla = function(
           if (scale_offsets) {
             if ( exists("offset_scale_revert", O) ) g = O$offset_scale_revert(g)
           }  
+          # note offsets not required (at least for now)
           g = invlink(g)      
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), nposteriors ),  dimnames=list( space=O[[vnS]], sim=1:nposteriors ) )
@@ -1078,10 +1110,21 @@ carstm_model_inla = function(
           if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
         }
 
-        m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
+        if ( P[["inla.mode"]] == "experimental") {
+          # assume old behaviour ..
+          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the predictions but not posterior simulations!" )
+
+          for ( i in 1:length(ipred) ) {
+            m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i],vnO]
+          }
+
+          # experiemental mode also returns in link space .. inverse-link transform
+          m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
+        }
+        
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 
-        m = list_simplify ( apply_simplify( m, summary_inv_predictions ) )
+        m = list_simplify ( apply_simplify( m, summary_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
@@ -1104,6 +1147,7 @@ carstm_model_inla = function(
           if (scale_offsets) {
             if ( exists("offset_scale_revert", O) ) g = O$offset_scale_revert(g)
           }  
+          # note offsets not required (at least for now)
           g = invlink(g)      
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], sim=1:nposteriors ) )
@@ -1127,10 +1171,21 @@ carstm_model_inla = function(
         if (scale_offsets) {
           if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
         }    
-        m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
+
+        if ( P[["inla.mode"]] == "experimental") {
+          # assume old behaviour .. 
+          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the predictions but not posterior simulations!" )
+          for ( i in 1:length(ipred) ) {
+            m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i],vnO]
+          }
+
+          # experiemental mode also returns in link space .. inverse-link transform
+          m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
+        }
+
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 
-        m = list_simplify ( apply_simplify( m, summary_inv_predictions ) )
+        m = list_simplify ( apply_simplify( m, summary_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
@@ -1153,6 +1208,7 @@ carstm_model_inla = function(
           if (scale_offsets) {
             if ( exists("offset_scale_revert", O) ) g = O$offset_scale_revert(g)
           }  
+          # note offsets not required (at least for now)
           g = invlink(g)      
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]], sim=1:nposteriors ) )
@@ -1186,7 +1242,7 @@ carstm_model_inla = function(
             names(dimnames(W))[3] = vnU
             dimnames( W )[[vnU]] = O[[vnU]]
           }
-          O[["predictions"]] [["exceedance"]] [[ as.character(exceedance_threshold[b]) ]]= W
+          O[["predictions_exceedance"]] [[ as.character(exceedance_threshold[b]) ]]= W
           W = m = NULL
         }
       }
@@ -1205,7 +1261,7 @@ carstm_model_inla = function(
             names(dimnames(W))[3] = vnU
             dimnames( W )[[vnU]] = O[[vnU]]
           }
-          O[["predictions"]] [["deceedance"]] [[ as.character(deceedance_threshold[b]) ]]= W
+          O[["predictions_deceedance"]] [[ as.character(deceedance_threshold[b]) ]]= W
           W = m = NULL
         }
       }
