@@ -610,7 +610,7 @@ carstm_model_inla = function(
       if (length(prcs) > 0) {
 
         summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(pmax(y, 1e-12)), x) , silent=TRUE  )
-        summary_inv_prec_1024 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt((pmax(y, 1e-12)), x, n=1024L) , silent=TRUE  )
+        summary_inv_prec_1024 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt((pmax(y, 1e-12)), x, n=1024L) , silent=TRUE  ) )
         # summary_inv_prec_512 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x, n=512L) , silent=TRUE  )
 
         precs = try( list_simplify( apply_simplify( fit$marginals.hyperpar[prcs], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
