@@ -24,6 +24,7 @@ carstm_model_inla = function(
   
   if (0) {
     # for debugging
+    O = p
     P = list()
     DS = ""
     sppoly =NULL
@@ -40,6 +41,7 @@ carstm_model_inla = function(
     deceedance_threshold_predictions=NULL
     nposteriors=NULL
     improve.hyperparam.estimates=NULL
+    posterior_simulations_to_retain=""
 
     if (0) {
         # usual variable names used in aegis .. char / num
@@ -96,9 +98,10 @@ carstm_model_inla = function(
   # local functions
   apply_generic = function(...)  mclapply(...,   mc.cores=num.cores ) # drop-in for lapply
   apply_simplify = function(...) simplify2array(mclapply(...,  mc.cores=num.cores ))  # drop in for sapply
-  #apply_generic = function(...)  lapply(...  ) # drop-in for lapply
-  #apply_simplify = function(...) simplify2array(lappy(...  ))  # drop in for sapply
-
+  
+  # not used, for reference
+  apply_generic_serial = function(...)  lapply(...  ) # drop-in for lapply .. serial
+  apply_simplify_serial = function(...) simplify2array(lappy(...  ))  # drop in for sapply .. serial
 
 
   outputdir = dirname(fn_fit)
@@ -408,6 +411,7 @@ carstm_model_inla = function(
     median=mq[2], 
     ub=mq[3]  
   )  # on data /user scale not internal link
+  mq = NULL
 
   # prefilter/transformation (e.g. translation to make all positive)
   if (exists("data_transformation", O)) P[["data"]][, vnY]  = O$data_transformation$forward( P[["data"]][, vnY] ) 
@@ -442,11 +446,25 @@ carstm_model_inla = function(
   } 
 
   ll = which(is.finite(yl))
-  O[["reference_sd"]] = sd(yl[ll] )
 
-  H = hyperparameters(  O[["reference_sd"]], alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped .. but use of pc.priors that shrink to 0
+  mqi = quantile( yl[ll], probs=c(0.025, 0.5, 0.975) )
+
+  O[["data_range_internal"]] = c( 
+    mean=mean(yl[ll]), 
+    sd=sd(yl[ll]), 
+    min=min(yl[ll]), 
+    max=max(yl[ll]),  
+    lb=mqi[1], 
+    median=mqi[2], 
+    ub=mqi[3]  
+  )  # on data /user scale not internal link
+  
+  mqi = NULL
+  
+  H = hyperparameters(  reference_sd = O[["data_range_internal"]][["sd"]], alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped .. but use of pc.priors that shrink to 0
   
   O$priors = H
+
 
   m = yl = ii = ll = fy = ol = NULL
   gc()
@@ -462,8 +480,8 @@ carstm_model_inla = function(
         if ( P[["inla.mode"]] == "experimental" ) {
           if ( P[["verbose"]])  {
             message( " ---> NOTE:: ---------------------------------------------------------------------------------" )
-            message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the predictions!" )
-            message( " ---> NOTE:: .. future INLA versions need to be tested to see if this behaviour changes!" )
+            message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the predictions" )
+            message( " ---> NOTE:: .. future INLA versions need to be tested to see if this behaviour changes" )
             message( " ---> NOTE:: ---------------------------------------------------------------------------------" )
           }  
         }  
@@ -476,10 +494,9 @@ carstm_model_inla = function(
     if ( !exists("control.compute", P ) ) P[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
 
 
-    if ( P[["inla.mode"]] != "experimental") {
-      # location of this option has moved ... might move again
-      # if ( !exists("control.results", P ) ) P[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
-      P[["control.compute"]][["return.marginals.predictor"]] = NULL
+    if ( P[["inla.mode"]] == "classic") {
+      if ( !exists("control.results", P ) ) P[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
+      P[["control.compute"]]["return.marginals.predictor"] = NULL  # location of this option has moved ... might move again
     }
 
 
@@ -530,12 +547,6 @@ carstm_model_inla = function(
   # do the computations here as fit can be massive ... best not to copy, etc ..
   if (P[["verbose"]])  message( "\nComputing summaries and computing from posterior simulations (can be longer than model fitting depending upon no of posterior sims: 'nposteriors' ) ..." )
 
-  truncate_upperbound = function( b, upper_limit, eps=1e-12 ) {
-    # not used
-    k = which( b[,1] > upper_limit )
-    if (length(k) > 0) b[k,2] = 0
-    return( b )
-  }
 
   if (exists("data_transformation", O))  {
     backtransform = function( b ) {
@@ -701,7 +712,7 @@ carstm_model_inla = function(
         if ( exists(vnSI, fit$marginals.random)  | exists(vnS, fit$marginals.random) ) {
     
           if (P[["verbose"]])  message("Extracting random spatial errors from marginals"  )
-
+          
           if ( exists(vnSI, fit$marginals.random) ) {
             O[["random"]] [[vnSI]] = list()  # space as a main effect
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSI) ]  # should be iid
@@ -763,6 +774,7 @@ carstm_model_inla = function(
 
 
           # POSTERIOR SIMS
+          if (P[["verbose"]])  message("Extracting random spatial combined errors from joint distributions of posteriors"  )
           if ( exists(vnSI, fit$marginals.random ) &  exists(vnS, fit$marginals.random ) )  {
             # sep besag + iid  
             selection=list()
@@ -917,6 +929,8 @@ carstm_model_inla = function(
             W = NULL
             m = NULL
 
+            
+            if (P[["verbose"]])  message("Extracting random spatiotemporal 'combined' errors from joint distributions of posteriors"  )
 
             # combined effects from posterior simulations
             if ( exists(vnSTI, fit$marginals.random ) &  exists(vnST, fit$marginals.random ) ) {
@@ -1104,9 +1118,9 @@ carstm_model_inla = function(
 
         if ( "predictions" %in% posterior_simulations_to_retain ) {
           if (P[["verbose"]])  message("Extracting posterior simulations"  )
-          selection = list(Predictor=0)
+          selection = list(Predictor=ipred)
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
-          g = apply_simplify( g, function(x) {x$latent[ipred] } )
+          g = apply_simplify( g, function(x) {x$latent } )
           if (scale_offsets) {
             if ( exists("offset_scale_revert", O) ) g = O$offset_scale_revert(g)
           }  
@@ -1130,7 +1144,6 @@ carstm_model_inla = function(
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]] & P[["data"]][,vnT0] %in% O[[vnT]] )
         m = fit$marginals.fitted.values[ipred]   
         
-
         if ( P[["inla.mode"]] == "experimental") {
           
           # if (scale_offsets) {
@@ -1178,9 +1191,9 @@ carstm_model_inla = function(
         if ( "predictions" %in% posterior_simulations_to_retain ) {
           if (P[["verbose"]])  message("Extracting posterior simulations"  )
 
-          selection = list(Predictor=0)
+          selection = list(Predictor=ipred)
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
-          g = apply_simplify( g, function(x) {x$latent[ipred] } )
+          g = apply_simplify( g, function(x) {x$latent } )
           if (scale_offsets) {
             if ( exists("offset_scale_revert", O) ) g = O$offset_scale_revert(g)
           }  
@@ -1255,9 +1268,9 @@ carstm_model_inla = function(
 
         if ( "predictions" %in% posterior_simulations_to_retain ) {
           if (P[["verbose"]])  message("Extracting posterior simulations"  )
-          selection = list(Predictor=0)
+          selection = list(Predictor=ipred)
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
-          g = apply_simplify( g, function(x) {x$latent[ipred] } )
+          g = apply_simplify( g, function(x) {x$latent } )
           if (scale_offsets) {
             if ( exists("offset_scale_revert", O) ) g = O$offset_scale_revert(g)
           }  
