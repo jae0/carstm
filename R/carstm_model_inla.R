@@ -438,9 +438,9 @@ carstm_model_inla = function(
 
     if (scale_offsets) {
       if (!exists("offset_scale", O))  O$offset_scale = min( P[["data"]][obs, vnO] , na.rm=TRUE )  # required to stabilize optimization
-      O$offset_scale_internal = function(x) { x - O$offset_scale }  
-      O$offset_scale_revert = function(x) { x + O$offset_scale }  
-      P[["data"]][, vnO] = O$offset_scale_internal ( P[["data"]][, vnO] )  # apply to all and overwrite, centering upon 0 (in user space 1)
+      O$offset_scale_substract = function(x) { x - O$offset_scale }  
+      O$offset_scale_add       = function(x) { x + O$offset_scale }  
+      P[["data"]][, vnO]       = P[["data"]][, vnO] - O$offset_scale   # apply to all and overwrite, centering upon 0 (in user space 1)
     }    
     obs = NULL
     yl = yl - P[["data"]][, vnO]
@@ -589,7 +589,7 @@ carstm_model_inla = function(
       fi = which( grepl("Intercept", names(V) ))
       if (length(fi) > 0) {
         if (scale_offsets) {
-          if ( exists("offset_scale_internal", O))  V[[fi]] = inla.tmarginal( O$offset_scale_internal, V[[fi]])  # on link scale .. as y so opposite
+          if ( exists("offset_scale_substract", O))  V[[fi]] = inla.tmarginal( O$offset_scale_substract, V[[fi]])  # on link scale .. as y so opposite
         } 
       }
 
@@ -1081,11 +1081,7 @@ carstm_model_inla = function(
 
         if ( P[["inla.mode"]] == "experimental" ) {
           
-          # if (scale_offsets) {
-          #   NOTE:: no need as all offsets including scale_offsets are ignored 
-          #   if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
-          # }    
-
+ 
           # assume old behaviour .. add offset_scale
           message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the '*.fiited.values' predictions in experimenta mode" )
           ooo = P[["data"]][ipred, vnO]  # already contain offset and offset_scale (if any)
@@ -1126,10 +1122,15 @@ carstm_model_inla = function(
           selection = list(Predictor=ipred)
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) {x$latent } )
+
           if (scale_offsets) {
-            if ( exists("offset_scale_internal", O) ) g = O$offset_scale_internal(g)  # revert as operation on y (not offset)
-          }  
-          # note offsets not required (at least for now)
+            # inla.posterior.sample ignores offsets .. add prediction offsets
+            # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
+            g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
+          } else {
+            g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+          }
+
           g = invlink(g)      
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), nposteriors ),  dimnames=list( space=O[[vnS]], sim=1:nposteriors ) )
@@ -1153,7 +1154,7 @@ carstm_model_inla = function(
           
           # if (scale_offsets) {
           #   NOTE:: no need as all offsets including scale_offsets are ignored 
-          #   if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+          #   if ( exists("offset_scale_add", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_add, u) } )
           # }    
 
           # assume old behaviour ..
@@ -1171,7 +1172,7 @@ carstm_model_inla = function(
 
           # offsets already incorporated .. just need to revert the offset_scale, if used:
           if (scale_offsets) {
-            if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+            if ( exists("offset_scale_add", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_add, u) } )
           }
 
         }
@@ -1198,10 +1199,15 @@ carstm_model_inla = function(
           selection = list(Predictor=ipred)
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) { x$latent } )
-           if (scale_offsets) {
-            if ( exists("offset_scale_internal", O) ) g = O$offset_scale_internal(g)  # revert as operation on y (not offset)
-          }  
-          # note offsets not required (at least for now)
+
+          if (scale_offsets) {
+            # inla.posterior.sample ignores offsets .. add prediction offsets
+            # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
+            g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
+          } else {
+            g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+          }
+
           g = invlink(g)      
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], sim=1:nposteriors ) )
@@ -1223,14 +1229,14 @@ carstm_model_inla = function(
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]]  &  P[["data"]][,vnT0] %in% O[[vnT]] &  P[["data"]][,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         m = fit$marginals.fitted.values[ipred]   
         if (scale_offsets) {
-          if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+          if ( exists("offset_scale_add", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_add, u) } )
         }    
 
         if ( P[["inla.mode"]] == "experimental") {
           
           # if (scale_offsets) {
           #   NOTE:: no need as all offsets including scale_offsets are ignored 
-          #   if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+          #   if ( exists("offset_scale_add", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_add, u) } )
           # }    
 
           # assume old behaviour ..
@@ -1248,7 +1254,7 @@ carstm_model_inla = function(
 
           # offsets already incorporated .. just need to revert the offset_scale, if used:
           if (scale_offsets) {
-            if ( exists("offset_scale_revert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_revert, u) } )
+            if ( exists("offset_scale_add", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_add, u) } )
           }    
 
         }
@@ -1276,14 +1282,14 @@ carstm_model_inla = function(
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) {x$latent } )
 
-          ooo = P[["data"]][ipred,vnO]   # already contain offset and offset_scale (if any)
-          
-          g = apply( g, 2, function(x) x - ooo )
-
           if (scale_offsets) {
-            if ( exists("offset_scale_internal", O) ) g = O$offset_scale_internal(g)  # revert as operation on y (not offset), only scale_offset as prediction offset is OK
-          }  
-          # note offsets not required (at least for now)
+            # inla.posterior.sample ignores offsets .. add prediction offsets
+            # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
+            g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
+          } else {
+            g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+          }
+
           g = invlink(g)      
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]], sim=1:nposteriors ) )
@@ -1300,7 +1306,12 @@ carstm_model_inla = function(
 
       }
 
-browser()
+# browser()
+# if (0) {
+#   oo = apply( O[["predictions_posterior_simulations"]], c(1,2), mean )
+#   plot(oo ~ O[["predictions"]][,,"mean"])
+# }
+
 
       if (!is.null(exceedance_threshold_predictions)) {
         if (P[["verbose"]])  message("Extracting de/exceedance from marginals"  )
