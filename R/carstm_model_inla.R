@@ -400,6 +400,11 @@ carstm_model_inla = function(
   # on user scale
   ii = which(is.finite(P[["data"]][ , vnY ]))
   
+  if ( P[["verbose"]] ) {
+    dev.new()
+    hist( P[["data"]][ ii, vnY ], main="Histogram of input variable to model" )
+  }
+
   mq = quantile( P[["data"]][ ii, vnY ], probs=c(0.025, 0.5, 0.975) )
 
   O[["data_range"]] = c( 
@@ -436,12 +441,26 @@ carstm_model_inla = function(
     
     P[["data"]][, vnO]  = lnk_function( P[["data"]][, vnO ])
 
+    if (  P[["verbose"]]  ) {
+      dev.new(); 
+      hist( invlink(yl - P[["data"]][, vnO]), "fd", main="Histogram of input variable to model with offsets"  )
+    }
+
     if (scale_offsets) {
       if (!exists("offset_scale", O))  O$offset_scale = min( P[["data"]][obs, vnO] , na.rm=TRUE )  # required to stabilize optimization
       P[["data"]][, vnO] = P[["data"]][, vnO] - O$offset_scale   # apply to all and overwrite, centering upon 0 (in user space 1)
     }
     obs = NULL
     yl = yl - P[["data"]][, vnO]
+
+    if (  P[["verbose"]]  ) {
+      dev.new(); 
+      hist( invlink(yl), "fd", main="Histogram of input variable to model with offsets and offset_scale "  )
+      
+      dev.new()
+      hist( yl, "fd", main="Histogram of input variable to model with offsets and offset_scale, on link scale"  )
+    }
+
   } 
 
   ll = which(is.finite(yl))
@@ -543,6 +562,9 @@ carstm_model_inla = function(
   if (P[["verbose"]]) {
     print( summary(fit) )
     message( "   --- NOTE: parameter estimates are on link scale and not user scale")
+
+    dev.new(); 
+    hist( fit$summary.fitted.values$mean, "fd", main="Histogram of summary.fitted.values$mean from model fit"  )
   }
   
   # do the computations here as fit can be massive ... best not to copy, etc ..
@@ -1116,6 +1138,10 @@ carstm_model_inla = function(
         O[["predictions"]] = W[, tokeep, drop =FALSE]
         W = NULL
 
+        if (P[["verbose"]]) {
+          dev.new(); hist( O[["predictions"]][,"mean"], "fd", main="Histogram of predictions"  )
+        }
+
         if ( "predictions" %in% posterior_simulations_to_retain ) {
           if (P[["verbose"]])  message("Extracting posterior simulations"  )
           selection = list(Predictor=ipred)
@@ -1191,6 +1217,10 @@ carstm_model_inla = function(
         }
         O[["predictions"]] = W[,, tokeep, drop =FALSE]
         W = NULL
+
+        if (P[["verbose"]]) {
+          dev.new(); hist( O[["predictions"]][,,"mean"], "fd", main="Histogram of predictions"  )
+        }
 
         if ( "predictions" %in% posterior_simulations_to_retain ) {
           if (P[["verbose"]])  message("Extracting posterior simulations"  )
@@ -1270,6 +1300,11 @@ carstm_model_inla = function(
         O[["predictions"]] = W[,,, tokeep, drop =FALSE]
         W = NULL
 
+        if (P[["verbose"]]) {
+          dev.new(); hist( O[["predictions"]][,,,"mean"], "fd", main="Histogram of predictions"  )
+        }
+
+
         if ( "predictions" %in% posterior_simulations_to_retain ) {
           if (P[["verbose"]])  message("Extracting posterior simulations"  )
           selection = list(Predictor=ipred)
@@ -1344,6 +1379,7 @@ carstm_model_inla = function(
           W = m = NULL
         }
       }
+
 
     }
   }
