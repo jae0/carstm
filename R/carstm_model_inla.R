@@ -438,10 +438,8 @@ carstm_model_inla = function(
 
     if (scale_offsets) {
       if (!exists("offset_scale", O))  O$offset_scale = min( P[["data"]][obs, vnO] , na.rm=TRUE )  # required to stabilize optimization
-      O$offset_scale_substract = function(x) { x - O$offset_scale }  
-      O$offset_scale_add       = function(x) { x + O$offset_scale }  
-      P[["data"]][, vnO]       = P[["data"]][, vnO] - O$offset_scale   # apply to all and overwrite, centering upon 0 (in user space 1)
-    }    
+      P[["data"]][, vnO] = P[["data"]][, vnO] - O$offset_scale   # apply to all and overwrite, centering upon 0 (in user space 1)
+    }
     obs = NULL
     yl = yl - P[["data"]][, vnO]
   } 
@@ -589,7 +587,7 @@ carstm_model_inla = function(
       fi = which( grepl("Intercept", names(V) ))
       if (length(fi) > 0) {
         if (scale_offsets) {
-          if ( exists("offset_scale_substract", O))  V[[fi]] = inla.tmarginal( O$offset_scale_substract, V[[fi]])  # on link scale .. as y so opposite
+          if ( exists("offset_scale", O))  V[[fi]] = inla.tmarginal( function(x) { x - O$offset_scale }, V[[fi]])  # on link scale .. as being applied on y, opposite
         } 
       }
 
@@ -1056,12 +1054,13 @@ carstm_model_inla = function(
     # in experimental mode (should use offset_scale if offsets deviate from 1):
       # summary.fitted.values == predictions with no offsets at all (none, not even the offset_scale) .. only needs main offsets
       # marginals.fitted.values == predictions with no offsets at all (none, not even the offset_scale)  .. only needs main offsets
-      # posterior simulations == predictions with offsets (including offset_scale)
+      # posterior simulations == predictions with no offsets at all ... needs offsets but excluding offset_scale, if any 
 
-    # in classic mode ( there is no not need to use offset_scale):
+
+    # in classic mode ( there is no not need to use offset_scale ):
       # summary.fitted.values == predictions with offsets  (including offset_scale)
       # marginals.fitted.values == predictions with offsets  (including offset_scale)
-      # posterior simulations == predictions with offsets  (including offset_scale)
+      # posterior simulations == predictions needs offsets but excluding offset_scale, if any 
 
     if (!exists("predictions", O)) O[["predictions"]] = list()
 
@@ -1080,11 +1079,10 @@ carstm_model_inla = function(
         m = fit$marginals.fitted.values[ipred]
 
         if ( P[["inla.mode"]] == "experimental" ) {
-          
- 
+           
           # assume old behaviour .. add offset_scale
-          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the '*.fiited.values' predictions in experimenta mode" )
-          ooo = P[["data"]][ipred, vnO]  # already contain offset and offset_scale (if any)
+          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the '*.fiited.values' predictions in experimental mode" )
+          ooo = P[["data"]][ipred, vnO]   # already contain offset and offset_scale (if any)
           for ( i in 1:length(ipred) ) {
             m[[i]][,1] = m[[i]][,1] + ooo[i] 
           }
@@ -1097,7 +1095,7 @@ carstm_model_inla = function(
 
           # offsets already incorporated .. just need to revert the offset_scale, if used:
           if (scale_offsets) {
-            if ( exists("offset_scale_invert", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_invert, u) } )  # apply on y not offset so inverse
+            if ( exists("offset_scale", O) ) m = apply_generic( m, function(u) {inla.tmarginal( function(x) { x + O$offset_scale }, u) } )  # apply on y not offset so inverse
           }    
 
         }
@@ -1143,6 +1141,7 @@ carstm_model_inla = function(
           g = NULL
         }
 
+
       }
 
 
@@ -1151,20 +1150,15 @@ carstm_model_inla = function(
         m = fit$marginals.fitted.values[ipred]   
         
         if ( P[["inla.mode"]] == "experimental") {
-          
-          # if (scale_offsets) {
-          #   NOTE:: no need as all offsets including scale_offsets are ignored 
-          #   if ( exists("offset_scale_add", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_add, u) } )
-          # }    
-
-          # assume old behaviour ..
-          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the '*.fiited.values' predictions in experimenta mode" )
-          ooo =  P[["data"]][ipred,vnO]  # already contains offset (and offset_scale, if any)
+         
+          # assume old behaviour .. add offset_scale
+          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the '*.fiited.values' predictions in experimental mode" )
+          ooo = P[["data"]][ipred, vnO]   # already contain offset and offset_scale (if any)
           for ( i in 1:length(ipred) ) {
             m[[i]][,1] = m[[i]][,1] + ooo[i] 
           }
           ooo = NULL
-
+        
           # experiemental mode also returns in link space .. inverse-link transform
           m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
 
@@ -1172,8 +1166,8 @@ carstm_model_inla = function(
 
           # offsets already incorporated .. just need to revert the offset_scale, if used:
           if (scale_offsets) {
-            if ( exists("offset_scale_add", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_add, u) } )
-          }
+            if ( exists("offset_scale", O) ) m = apply_generic( m, function(u) {inla.tmarginal( function(x) { x + O$offset_scale }, u) } )  # apply on y not offset so inverse
+          }    
 
         }
 
@@ -1228,25 +1222,17 @@ carstm_model_inla = function(
       if ( O[["dimensionality"]] == "space-time-cyclic" ) {
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]]  &  P[["data"]][,vnT0] %in% O[[vnT]] &  P[["data"]][,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         m = fit$marginals.fitted.values[ipred]   
-        if (scale_offsets) {
-          if ( exists("offset_scale_add", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_add, u) } )
-        }    
 
         if ( P[["inla.mode"]] == "experimental") {
           
-          # if (scale_offsets) {
-          #   NOTE:: no need as all offsets including scale_offsets are ignored 
-          #   if ( exists("offset_scale_add", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_add, u) } )
-          # }    
-
-          # assume old behaviour ..
-          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the '*.fiited.values' predictions in experimenta mode" )
-          ooo = P[["data"]][ipred,vnO]   # already contain offset and offset_scale (if any)
+          # assume old behaviour .. add offset_scale
+          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the '*.fiited.values' predictions in experimental mode" )
+          ooo = P[["data"]][ipred, vnO]   # already contain offset and offset_scale (if any)
           for ( i in 1:length(ipred) ) {
             m[[i]][,1] = m[[i]][,1] + ooo[i] 
           }
           ooo = NULL
-
+        
           # experiemental mode also returns in link space .. inverse-link transform
           m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
 
@@ -1254,9 +1240,8 @@ carstm_model_inla = function(
 
           # offsets already incorporated .. just need to revert the offset_scale, if used:
           if (scale_offsets) {
-            if ( exists("offset_scale_add", O) ) m = apply_generic( m, function(u) {inla.tmarginal( O$offset_scale_add, u) } )
+            if ( exists("offset_scale", O) ) m = apply_generic( m, function(u) {inla.tmarginal( function(x) { x + O$offset_scale }, u) } )  # apply on y not offset so inverse
           }    
-
         }
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
@@ -1305,12 +1290,6 @@ carstm_model_inla = function(
         }
 
       }
-
-# browser()
-# if (0) {
-#   oo = apply( O[["predictions_posterior_simulations"]], c(1,2), mean )
-#   plot(oo ~ O[["predictions"]][,,"mean"])
-# }
 
 
       if (!is.null(exceedance_threshold_predictions)) {
