@@ -187,6 +187,7 @@ carstm_model_inla = function(
     } else {
       if ( P[["verbose"]] ) message( 'offset variable: ', O[["vn"]]$O, ' not found in data')
     }
+
   }
 
   if (is.null(vnO)) {
@@ -197,7 +198,6 @@ carstm_model_inla = function(
       }
     }
   }
-  if (is.null(vnO))  vnO="data_offset"  # use generic default in case parsing issues
 
   vnY = NULL
   if (is.null(vnY)) if ( exists("Y", O[["vn"]])) vnY = O[["vn"]]$Y
@@ -423,7 +423,7 @@ carstm_model_inla = function(
 
   # offsets need to be close to 1 in user scale ( that is log(1)==0 in internal scale ) in experimental mode .. rescale  
   
-  if ( !is.null(fm$offset_variable) )  {
+  if ( !is.null(vnO) )  {
     # link function applied to offsets here .. do not need to send log() 
     if (grepl("log[[:space:]]*[(]", vnO)) message("Probably do not want to transform the offset .. it is done internally in , unlike glm, inla, etc")
 
@@ -1078,26 +1078,28 @@ carstm_model_inla = function(
         ipred = which( P[["data"]]$tag=="predictions"  &  P[["data"]][,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         m = fit$marginals.fitted.values[ipred]
 
-        if ( P[["inla.mode"]] == "experimental" ) {
-           
-          # assume old behaviour .. add offset_scale
-          ooo = P[["data"]][ipred, vnO]   # already contain offset and offset_scale (if any)
-          for ( i in 1:length(ipred) ) {
-            m[[i]][,1] = m[[i]][,1] + ooo[i] 
+        if (!is.null(vnO)) {
+
+          if ( P[["inla.mode"]] == "experimental" ) {
+            # assume old behaviour .. add offset_scale
+            # experiemental mode also returns in link space .. inverse-link transform
+            # already contain offset and offset_scale (if any)
+            for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
+  
+          } else if ( P[["inla.mode"]] == "classic" ) {
+
+            # offsets already incorporated .. just need to revert the offset_scale, if used:
+            if (scale_offsets) {
+              if ( exists("offset_scale", O) ) {
+                message( " this part needs testing .." ) 
+                for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + O$offset_scale 
+              }
+            }    
           }
-          ooo = NULL
-        
-          # experiemental mode also returns in link space .. inverse-link transform
-          m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
-
-        } else if ( P[["inla.mode"]] == "classic" ) {
-
-          # offsets already incorporated .. just need to revert the offset_scale, if used:
-          if (scale_offsets) {
-            if ( exists("offset_scale", O) ) m = apply_generic( m, function(u) {inla.tmarginal( function(x) { x + O$offset_scale }, u) } )  # apply on y not offset so inverse
-          }    
 
         }
+ 
+        if ( P[["inla.mode"]] == "experimental" ) m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
         
         if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
@@ -1120,12 +1122,14 @@ carstm_model_inla = function(
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) {x$latent } )
 
-          if (scale_offsets) {
-            # inla.posterior.sample ignores offsets .. add prediction offsets
-            # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
-            g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
-          } else {
-            g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+          if (!is.null(vnO)) {
+            if (scale_offsets) {
+              # inla.posterior.sample ignores offsets .. add prediction offsets
+              # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
+              g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
+            } else {
+              g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+            }
           }
 
           g = invlink(g)      
@@ -1148,26 +1152,28 @@ carstm_model_inla = function(
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]] & P[["data"]][,vnT0] %in% O[[vnT]] )
         m = fit$marginals.fitted.values[ipred]   
         
-        if ( P[["inla.mode"]] == "experimental") {
-         
-          # assume old behaviour .. add offset_scale
-          ooo = P[["data"]][ipred, vnO]   # already contain offset and offset_scale (if any)
-          for ( i in 1:length(ipred) ) {
-            m[[i]][,1] = m[[i]][,1] + ooo[i] 
+        if (!is.null(vnO)) {
+
+          if ( P[["inla.mode"]] == "experimental" ) {
+            # assume old behaviour .. add offset_scale
+            # experiemental mode also returns in link space .. inverse-link transform
+            # already contain offset and offset_scale (if any)
+            for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
+  
+          } else if ( P[["inla.mode"]] == "classic" ) {
+
+            # offsets already incorporated .. just need to revert the offset_scale, if used:
+            if (scale_offsets) {
+              if ( exists("offset_scale", O) ) {
+                message( " this part needs testing .." ) 
+                for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + O$offset_scale 
+              }
+            }    
           }
-          ooo = NULL
-
-          # experiemental mode also returns in link space .. inverse-link transform
-          m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
-
-        } else if ( P[["inla.mode"]] == "classic" ) {
-
-          # offsets already incorporated .. just need to revert the offset_scale, if used:
-          if (scale_offsets) {
-            if ( exists("offset_scale", O) ) m = apply_generic( m, function(u) {inla.tmarginal( function(x) { x + O$offset_scale }, u) } )  # apply on y not offset so inverse
-          }    
 
         }
+ 
+        if ( P[["inla.mode"]] == "experimental" ) m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
 
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
@@ -1192,12 +1198,15 @@ carstm_model_inla = function(
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) { x$latent } )
 
-          if (scale_offsets) {
-            # inla.posterior.sample ignores offsets .. add prediction offsets
-            # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
-            g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
-          } else {
-            g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+          if (!is.null(vnO)) {
+
+            if (scale_offsets) {
+              # inla.posterior.sample ignores offsets .. add prediction offsets
+              # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
+              g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
+            } else {
+              g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+            }
           }
 
           g = invlink(g)      
@@ -1221,26 +1230,28 @@ carstm_model_inla = function(
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]]  &  P[["data"]][,vnT0] %in% O[[vnT]] &  P[["data"]][,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         m = fit$marginals.fitted.values[ipred]   
 
-        if ( P[["inla.mode"]] == "experimental") {
-          
-          # assume old behaviour .. add offset_scale
-          ooo = P[["data"]][ipred, vnO]   # already contain offset and offset_scale (if any)
-          for ( i in 1:length(ipred) ) {
-            m[[i]][,1] = m[[i]][,1] + ooo[i] 
+        if (!is.null(vnO)) {
+
+          if ( P[["inla.mode"]] == "experimental" ) {
+            # assume old behaviour .. add offset_scale
+            # experiemental mode also returns in link space .. inverse-link transform
+            # already contain offset and offset_scale (if any)
+            for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
+  
+          } else if ( P[["inla.mode"]] == "classic" ) {
+
+            # offsets already incorporated .. just need to revert the offset_scale, if used:
+            if (scale_offsets) {
+              if ( exists("offset_scale", O) ) {
+                message( " this part needs testing .." ) 
+                for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + O$offset_scale 
+              }
+            }    
           }
-          ooo = NULL
-
-          # experiemental mode also returns in link space .. inverse-link transform
-          m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
-
-        } else if ( P[["inla.mode"]] == "classic" ) {
-
-          # offsets already incorporated .. just need to revert the offset_scale, if used:
-          if (scale_offsets) {
-            if ( exists("offset_scale", O) ) m = apply_generic( m, function(u) {inla.tmarginal( function(x) { x + O$offset_scale }, u) } )  # apply on y not offset so inverse
-          }    
 
         }
+ 
+        if ( P[["inla.mode"]] == "experimental" ) m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 
@@ -1265,12 +1276,16 @@ carstm_model_inla = function(
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) {x$latent } )
 
-          if (scale_offsets) {
-            # inla.posterior.sample ignores offsets .. add prediction offsets
-            # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
-            g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
-          } else {
-            g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+          if (!is.null(vnO)) {
+
+            if (scale_offsets) {
+              # inla.posterior.sample ignores offsets .. add prediction offsets
+              # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
+              g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
+            } else {
+              g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+            }
+          
           }
 
           g = invlink(g)      
