@@ -479,7 +479,7 @@ carstm_model_inla = function(
         if ( P[["inla.mode"]] == "experimental" ) {
           if ( P[["verbose"]])  {
             message( " ---> NOTE:: ---------------------------------------------------------------------------------" )
-            message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the predictions" )
+            message( " ---> NOTE:: In experimental mode, offsets need to be added to the predictions" )
             message( " ---> NOTE:: .. future INLA versions need to be tested to see if this behaviour changes" )
             message( " ---> NOTE:: ---------------------------------------------------------------------------------" )
           }  
@@ -1081,7 +1081,6 @@ carstm_model_inla = function(
         if ( P[["inla.mode"]] == "experimental" ) {
            
           # assume old behaviour .. add offset_scale
-          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the '*.fiited.values' predictions in experimental mode" )
           ooo = P[["data"]][ipred, vnO]   # already contain offset and offset_scale (if any)
           for ( i in 1:length(ipred) ) {
             m[[i]][,1] = m[[i]][,1] + ooo[i] 
@@ -1152,13 +1151,12 @@ carstm_model_inla = function(
         if ( P[["inla.mode"]] == "experimental") {
          
           # assume old behaviour .. add offset_scale
-          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the '*.fiited.values' predictions in experimental mode" )
           ooo = P[["data"]][ipred, vnO]   # already contain offset and offset_scale (if any)
           for ( i in 1:length(ipred) ) {
             m[[i]][,1] = m[[i]][,1] + ooo[i] 
           }
           ooo = NULL
-        
+
           # experiemental mode also returns in link space .. inverse-link transform
           m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
 
@@ -1226,13 +1224,12 @@ carstm_model_inla = function(
         if ( P[["inla.mode"]] == "experimental") {
           
           # assume old behaviour .. add offset_scale
-          message( " ---> NOTE:: Current and previous INLA versions require offsets to be added to the '*.fiited.values' predictions in experimental mode" )
           ooo = P[["data"]][ipred, vnO]   # already contain offset and offset_scale (if any)
           for ( i in 1:length(ipred) ) {
             m[[i]][,1] = m[[i]][,1] + ooo[i] 
           }
           ooo = NULL
-        
+
           # experiemental mode also returns in link space .. inverse-link transform
           m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
 
@@ -1242,6 +1239,7 @@ carstm_model_inla = function(
           if (scale_offsets) {
             if ( exists("offset_scale", O) ) m = apply_generic( m, function(u) {inla.tmarginal( function(x) { x + O$offset_scale }, u) } )  # apply on y not offset so inverse
           }    
+
         }
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
