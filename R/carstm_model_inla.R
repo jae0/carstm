@@ -545,7 +545,7 @@ carstm_model_inla = function(
     if (!is.null(fn_res)) {
       # then save as separate files (fit, results)
 
-      if (P[["verbose"]])  message( "Summary saved as: ", fn_res )
+      if (P[["verbose"]])  message( "Fitted model saved as: ", fn_res )
       save( fit, file=fn_fit, compress=compress )
 
     }
