@@ -88,16 +88,21 @@ carstm_model_inla = function(
     }
   }
 
+  # ncores/threads to use for inla (seee inla's documentation)
   num.threads = "1:1"
   if (exists("num.threads", O)) num.threads = O[["num.threads"]]
   if (exists("num.threads", P)) num.threads = P[["num.threads"]]
   inla.setOption(num.threads=num.threads)
 
-  num.cores =  as.numeric( unlist(strsplit(num.threads, ":") )[1] )
-  
+  # n cores to use for posterior marginals in mcapply .. can be memory intensive so make it a bit less than "num.threads" ..
+  mc.cores = as.numeric( unlist(strsplit(num.threads, ":") )[1] )
+  mc.cores = max( floor( mc.cores * 0.75 ), 1 )
+  if (exists("mc.cores", O)) mc.cores = O[["mc.cores"]]
+  if (exists("mc.cores", P)) mc.cores = P[["mc.cores"]]
+
   # local functions
-  apply_generic = function(...)  mclapply(...,   mc.cores=num.cores ) # drop-in for lapply
-  apply_simplify = function(...) simplify2array(mclapply(...,  mc.cores=num.cores ), higher = FALSE )  # drop in for sapply
+  apply_generic = function(...)  mclapply(...,   mc.cores=mc.cores ) # drop-in for lapply
+  apply_simplify = function(...) simplify2array(mclapply(...,  mc.cores=mc.cores ), higher = FALSE )  # drop in for sapply
   
   # not used, for reference
   apply_generic_serial = function(...)  lapply(...  ) # drop-in for lapply .. serial
@@ -317,7 +322,7 @@ carstm_model_inla = function(
       }
     }
   }
-
+ 
   if (is.null(space.id)) stop("Not found: space.id is a required variable")
  
   # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("space.id")
@@ -326,6 +331,15 @@ carstm_model_inla = function(
     if (!exists(vnS, O)) O[[vnS]] = as.character( space.id )  # this sequence is a master key as index matches nb matrix values
     P[["data"]][,vnS0] = as.character( P[["data"]][,vnS] ) # local copy
     P[["data"]][,vnS] = match( P[["data"]][,vnS0], O[[vnS]] )  # overwrite with numeric values that must match index of neighbourhood matrix
+ 
+    missingS = which(is.na( P[["data"]][,vnS] ))
+    if (length( missingS ) > 0 ) {
+      warning( "Data areal units and space.id (from sppoly) do not match ... this should not happen:")
+      print( head(missingS) )
+      warning( "Dropping them from analysis and assuming neighbourhood relations are OK even though this is unlikely!")
+      P[["data"]] = P[["data"]] [ -missingS , ]
+    }
+    missingS = NULL
   }
   
 
@@ -340,11 +354,17 @@ carstm_model_inla = function(
       P[["data"]][,vnT0] = as.character( P[["data"]][,vnT] ) # a copy for internal matching 
       if (vnT %in% fm$fixed_effects$vn ) {
         P[["data"]][,vnT] = match( P[["data"]][,vnT0], O[[vnT]] ) # convert to data numeric (ie. a numeric factor)
-      }
-      if (vnT %in% fm$random_effects$vn ) {
+      } else if (vnT %in% fm$random_effects$vn ) {
         P[["data"]][,vnT] = as.numeric( P[["data"]][,vnT] )  # in case it is sent as a character 
         # nothing to do .. leave alone as numeric
       } 
+      missingT = which(is.na( match( P[["data"]][,vnT0], O[[vnT]] ) ))
+      if (length( missingT ) > 0 ) {
+        warning( "Time data and time.id (from O$yrs) do not match ... mismatches are being dropped and assuming data is OK:")
+        print( head(missingT) )
+        P[["data"]] = P[["data"]] [ -missingT , ]
+      }
+      missingT = NULL
 
     }
 
@@ -368,9 +388,6 @@ carstm_model_inla = function(
   } 
   
   # internal vars, for inla
-  # if (any( grepl( vnST, fm$vars )))  P[["data"]][,vnST] = P[["data"]][,vnS]
-  # if (any( grepl( vnST, fm$vars )))  P[["data"]][,vnTS] = P[["data"]][,vnT]
-
   nre = nrow(fm$random_effects)
   if (nre > 0) {
     totestSpace = c( vnST, vnSI, vnSTI ) 
@@ -380,7 +397,11 @@ carstm_model_inla = function(
       if (exists(vntest, P[["data"]] )) next()
       # these are copies so can duplicate columns on the fly
       if (vntest %in% totestSpace) {
-        P[["data"]][,vntest] = P[["data"]][,vnS] 
+        if ( fm$random_effects$submodel[ grep( vntest, fm$random_effects$vn ) ] %in% c("group", "replicate") ) {
+          P[["data"]][,vntest] = match( P[["data"]][,vnS0], O[[vnS]] ) 
+        } else {
+          P[["data"]][,vntest] = P[["data"]][,vnS] 
+        }
         next()
       }
       if (vntest %in% totestTime)  {
