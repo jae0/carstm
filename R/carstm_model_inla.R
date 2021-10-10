@@ -88,7 +88,7 @@ carstm_model_inla = function(
     }
   }
 
-  # ncores/threads to use for inla (seee inla's documentation)
+  # ncores/threads to use for inla (see inla's documentation)
   num.threads = "1:1"
   if (exists("num.threads", O)) num.threads = O[["num.threads"]]
   if (exists("num.threads", P)) num.threads = P[["num.threads"]]
@@ -97,7 +97,6 @@ carstm_model_inla = function(
   # n cores to use for posterior marginals in mcapply .. can be memory intensive so make it a bit less than "num.threads" ..
   mc.cores = as.numeric( unlist(strsplit(num.threads, ":") )[1] )
   mc.cores = max( floor( mc.cores * 0.75 ), 1 )
-  if (exists("mc.cores", O)) mc.cores = O[["mc.cores"]]
   if (exists("mc.cores", P)) mc.cores = P[["mc.cores"]]
 
   # local functions
@@ -461,12 +460,7 @@ carstm_model_inla = function(
     }   
     
     P[["data"]][, vnO]  = lnk_function( P[["data"]][, vnO ])
-
-    if (  P[["verbose"]]  ) {
-      dev.new(); 
-      hist( invlink(yl - P[["data"]][, vnO]), "fd", main="Histogram of input variable to model with offsets"  )
-    }
-
+ 
     if (scale_offsets) {
       if (!exists("offset_scale", O))  O$offset_scale = min( P[["data"]][obs, vnO] , na.rm=TRUE )  # required to stabilize optimization
       P[["data"]][, vnO] = P[["data"]][, vnO] - O$offset_scale   # apply to all and overwrite, centering upon 0 (in user space 1)
