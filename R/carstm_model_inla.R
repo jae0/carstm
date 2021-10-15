@@ -521,10 +521,13 @@ carstm_model_inla = function(
 
     }
 
-    
+
     if ( !exists("control.inla", P ) ) P[["control.inla"]] = list( strategy='adaptive' )
     if ( !exists("control.predictor", P ) ) P[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if ( !exists("control.compute", P ) ) P[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
+
+    if ( !exists("control.mode", P ) ) P[["control.mode"]] = inla.set.control.mode.default()
+    if ( !exists("theta", O ) ) P[["control.mode"]] = c( P[["control.mode"]], list(theta = O$theta, restart=TRUE) )
 
 
     if ( P[["inla.mode"]] == "classic") {
