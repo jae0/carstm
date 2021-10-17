@@ -97,7 +97,13 @@ carstm_model_inla = function(
   # n cores to use for posterior marginals in mcapply .. can be memory intensive so make it a bit less than "num.threads" ..
   mc.cores = as.numeric( unlist(strsplit(num.threads, ":") )[1] )
   mc.cores = max( floor( mc.cores * 0.75 ), 1 )
-  if (exists("mc.cores", P)) mc.cores = P[["mc.cores"]]
+  if (exists("mc.cores", O)) {
+    mc.cores = O[["mc.cores"]]
+  }
+  if (exists("mc.cores", P)) {
+    mc.cores = P[["mc.cores"]]
+    P[["mc.cores"]] = NULL
+  }
 
   # local functions
   apply_generic = function(...)  mclapply(...,   mc.cores=mc.cores ) # drop-in for lapply
@@ -526,9 +532,12 @@ carstm_model_inla = function(
     if ( !exists("control.predictor", P ) ) P[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if ( !exists("control.compute", P ) ) P[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
 
-    if ( !exists("control.mode", P ) ) P[["control.mode"]] = inla.set.control.mode.default()
-    if ( !exists("theta", O ) ) P[["control.mode"]] = c( P[["control.mode"]], list(theta = O$theta, restart=TRUE) )
-
+    if ( !exists("control.mode", P ) ) P[["control.mode"]] = list( restart=FALSE ) 
+    if ( exists("theta", O ) ) P[["control.mode"]] = list(theta = O[["theta"]], restart=TRUE) 
+    if ( exists("theta", P ) ) {
+      P[["control.mode"]] = list(theta = P[["theta"]], restart=TRUE) 
+      P[["theta"]] = NULL
+    }
 
     if ( P[["inla.mode"]] == "classic") {
       if ( !exists("control.results", P ) ) P[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
