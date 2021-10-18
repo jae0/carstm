@@ -17,6 +17,7 @@
     plot_crs=NULL,
     plot_elements=c( "isobaths", "compass", "scale_bar" ),
     additional_features = NULL,
+    background = NULL,
     aggregate_function=mean,
     probs=c(0,0.975), 
     outformat="mapview",
@@ -47,6 +48,7 @@
       isobaths=NULL 
       managementlines = NULL
       plot_elements=NULL
+      background = NULL
       aggregate_function=mean
       probs=c(0,0.975) 
       outformat="mapview"
@@ -250,10 +252,14 @@
 
       # https://leaflet-extras.github.io/leaflet-providers/preview/
       # OpenTopoMap, Stamen.Watercolor, Stamen.Terrain, Stamen.TonerLite, Esri.OceanBasemap 
-      tmout = tmout +
-        tm_basemap(leaflet::providers$CartoDB.Positron, alpha=0.8) 
-  #     tm_basemap(leaflet::providers$Esri.OceanBasemap, alpha=0.9) +
-  #     tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, alpha=0.8) 
+      if (is.null(background)) {
+        tmout = tmout +
+          tm_basemap(leaflet::providers$CartoDB.Positron, alpha=0.8) 
+    #     tm_basemap(leaflet::providers$Esri.OceanBasemap, alpha=0.9) +
+    #     tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, alpha=0.8) 
+      } else {
+        tmout = tmout + background
+      }
     }
 
     tmout = tmout + 
