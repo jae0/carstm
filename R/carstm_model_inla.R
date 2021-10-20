@@ -673,20 +673,22 @@ browser()
 
       prcs = grep( "^Precision.*", hyps, value=TRUE )
       if (length(prcs) > 0) {
-        prec_bounds = c(1e-20, 1e20)
-        summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt( pmin( pmax(y, prec_bounds[1]), prec_bounds[2] )), x), silent=TRUE  )
 
-        precs = try( list_simplify( apply_simplify( fit$marginals.hyperpar[prcs], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
+        summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x), silent=TRUE  )
+
+        precs = try( list_simplify( apply_simplify_serial( fit$marginals.hyperpar[prcs], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
         if (any( inherits(precs, "try-error"))) {
+ 
+          # var ~ 100 
           V = fit$marginals.hyperpar[prcs]
           V = lapply(V, function( x ) {
-              x[,1] = pmax( x[,1], prec_bounds[1] ) 
-              x[,1] = pmin( x[,1], prec_bounds[2] ) 
+              x[,1] = pmax( x[,1], 1e-25 ) 
+              x[,1] = pmin( x[,1], 1e25 ) 
               x
             }
           )
 
-        precs = try( list_simplify( apply_simplify( V, FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
+          precs = try( list_simplify( apply_simplify_serial( V, FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
          
         }
         
