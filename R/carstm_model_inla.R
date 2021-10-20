@@ -111,7 +111,7 @@ carstm_model_inla = function(
   
   # not used, for reference
   apply_generic_serial = function(...)  lapply(...  ) # drop-in for lapply .. serial
-  apply_simplify_serial = function(...) simplify2array(lappy(...  ))  # drop in for sapply .. serial
+  apply_simplify_serial = function(...) simplify2array(lapply(...  ))  # drop in for sapply .. serial
 
 
   outputdir = dirname(fn_fit)
@@ -662,6 +662,10 @@ carstm_model_inla = function(
 
     }
 
+
+browser()
+
+
     if (exists( "marginals.hyperpar", fit)) {
       
       # hyperpar (variance components)
@@ -670,12 +674,22 @@ carstm_model_inla = function(
       prcs = grep( "^Precision.*", hyps, value=TRUE )
       if (length(prcs) > 0) {
 
-        summary_inv_prec =      function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(pmax(y, 1e-12)), x)         , silent=TRUE  )
-        summary_inv_prec_1024 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(pmax(y, 1e-12)), x, n=1024L), silent=TRUE  )
-        # summary_inv_prec_512 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x, n=512L) , silent=TRUE  )
+        summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(pmax(y, 1e-20)), x), silent=TRUE  )
 
         precs = try( list_simplify( apply_simplify( fit$marginals.hyperpar[prcs], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
-        if (any( inherits(precs, "try-error"))) precs = try( list_simplify( apply_simplify( fit$marginals.hyperpar[prcs], FUN=summary_inv_prec_1024 ) ), silent=TRUE )
+        if (any( inherits(precs, "try-error"))) {
+          V = fit$marginals.hyperpar[prcs]
+          V = lapply(V, function( x ) {
+              x[,1] = pmax( x[,1], 1e-20 ) 
+              x[,1] = pmin( x[,1], 1e20 ) 
+              x
+            }
+          )
+
+        precs = try( list_simplify( apply_simplify( V, FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
+         
+        }
+        
         if (any( inherits(precs, "try-error")))  {
 
           if (P[["verbose"]])  {
