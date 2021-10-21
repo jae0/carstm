@@ -387,9 +387,8 @@ carstm_model_inla = function(
 
       P[["data"]][,vnU] = match( P[["data"]][,vnU0], O[[vnU]] ) # convert to data numeric (ie. a numeric factor)
 
-      if (vnU %in% fm$random_effects$vn ) {
-        cyclic_values = levels( as.factor( O[[vnU]] ) ) 
-      } 
+      if (vnU %in% fm$random_effects$vn )   cyclic_values = 1:length(O[[vnU]])  
+
     }
   } 
   
