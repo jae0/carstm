@@ -663,8 +663,6 @@ carstm_model_inla = function(
     }
 
 
-browser()
-
 
     if (exists( "marginals.hyperpar", fit)) {
       
