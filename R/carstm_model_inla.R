@@ -378,17 +378,17 @@ carstm_model_inla = function(
 
       if (!exists(vnU, O)) if (!is.null(cyclic.id)) O[[vnU]] = as.character( cyclic.id )  # this sequence is a master key
       if (!exists(vnU, O)) if (exists("dyears", O)) O[[vnU]] = as.character( O$dyears + diff(O$dyears)[1]/2)
-      if (!exists(vnU, O)) if (exists(vnU, P[["data"]])) O[[vnU]] = as.character( sort(unique( P[["data"]][, vnU ]) ) ) 
+      if (!exists(vnU, O)) if (exists(vnU, P[["data"]])) {
+        message( "cyclic.id was not found.. assuming data contains all unique cyclic values ... this is likely not what you want.")
+        O[[vnU]] = as.character( sort(unique( P[["data"]][, vnU ]) ) ) 
+      }
 
       P[["data"]][,vnU0] = as.character( P[["data"]][,vnU] )  # a copy for internal matching 
 
-      if (vnU %in% fm$fixed_effects$vn ) {
-        P[["data"]][,vnU] = match( P[["data"]][,vnU0], O[[vnU]] ) # convert to data numeric (ie. a numeric factor)
-      }
+      P[["data"]][,vnU] = match( P[["data"]][,vnU0], O[[vnU]] ) # convert to data numeric (ie. a numeric factor)
+
       if (vnU %in% fm$random_effects$vn ) {
-        P[["data"]][,vnU] = as.numeric( P[["data"]][,vnU] )  # in case it is sent as a character 
-        cyclic_values = as.numeric( O[[vnU]] ) 
-        # nothing to do .. leave alone as numeric
+        cyclic_values = levels( as.factor( O[[vnU]] ) ) 
       } 
     }
   } 
