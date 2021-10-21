@@ -387,6 +387,7 @@ carstm_model_inla = function(
       }
       if (vnU %in% fm$random_effects$vn ) {
         P[["data"]][,vnU] = as.numeric( P[["data"]][,vnU] )  # in case it is sent as a character 
+        cyclic_values = as.numeric( O[[vnU]] ) 
         # nothing to do .. leave alone as numeric
       } 
     }
