@@ -513,10 +513,10 @@ carstm_model_inla = function(
   if (redo_fit) {
     
 
-    inlaversion = inla_version(test="21.09.13")  
-    if (inlaversion$current_version_newer_than_test ) {
-
-        if ( P[["inla.mode"]] == "experimental" ) {
+    if (!is.null(vnO)) {
+      if ( P[["inla.mode"]] == "experimental" ) {
+        inlaversion = inla_version(test="21.09.13")  
+        if (inlaversion$current_version_newer_than_test ) {
           if ( P[["verbose"]])  {
             message( " ---> NOTE:: ---------------------------------------------------------------------------------" )
             message( " ---> NOTE:: In experimental mode, offsets need to be added to the predictions" )
@@ -524,7 +524,7 @@ carstm_model_inla = function(
             message( " ---> NOTE:: ---------------------------------------------------------------------------------" )
           }  
         }  
-
+      }
     }
 
 

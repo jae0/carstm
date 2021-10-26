@@ -355,7 +355,7 @@
     if ( outfilename !="" ) {
 
       if ( map_mode=="plot") {
-        message( "You will need to tweak more settings such as anlge of compass and size of elements .." ) 
+        message( "You will need to tweak more settings such as angle of compass and size of elements .." ) 
         if (outformat=="tmap") {
           # tmap_save options:
           twidth=1000
