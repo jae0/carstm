@@ -671,8 +671,9 @@ carstm_model_inla = function(
 
       prcs = grep( "^Precision.*", hyps, value=TRUE )
       if (length(prcs) > 0) {
-
-        summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x), silent=TRUE  )
+ 
+        summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x ), silent=TRUE  )
+        summary_inv_prec2 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x, n=1024L ), silent=TRUE  )
 
         precs = try( list_simplify( apply_simplify_serial( fit$marginals.hyperpar[prcs], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
         if (any( inherits(precs, "try-error"))) {
@@ -693,7 +694,7 @@ carstm_model_inla = function(
         if (any( inherits(precs, "try-error")))  {
 
           if (P[["verbose"]])  {
-            message( "NAN and/or Inf values encountered in marginals of paramater estimates.") 
+            message( "NAN and/or Inf values encountered in marginals of some paramater estimates.") 
             message( "Try an alternate parameterization as model may be over parameterized. ")
             message( "Copying fit summaries directly rather than from marginals ... ")
           }
@@ -725,9 +726,25 @@ carstm_model_inla = function(
       }
       if (length(k) > 0) {
         ptm = try( list_simplify( apply_simplify( fit$marginals.hyperpar[k], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
+
         if (any( inherits(ptm, "try-error"))) {
-          if (P[["verbose"]])  message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
-        } else {
+          # var ~ 100 
+          V = fit$marginals.hyperpar[k]
+          V = lapply(V, function( x ) {
+              x[,1] = pmax( x[,1], 1e-25 ) 
+              x[,1] = pmin( x[,1], 1e25 ) 
+              x
+            }
+          )
+          ptm = try( list_simplify( apply_simplify( V, FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
+          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[k], FUN=function(x) inla.mmarginal( x ))
+          if (any( inherits(ptm, "try-error"))) {
+
+            if (P[["verbose"]])  message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
+            } 
+        }
+
+        if (!any( inherits(ptm, "try-error"))) {
           #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[k], FUN=function(x) inla.mmarginal( x ))
           O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], ptm[, tokeep, drop =FALSE] )
         }
