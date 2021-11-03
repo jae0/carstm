@@ -768,6 +768,7 @@ carstm_model_inla = function(
   if (any( grepl("random", toget) )) {
     if (!exists("random", O)) O[["random"]] = list()
     if (exists("marginals.random", fit)) {
+    if (length(fit[["marginals.random"]]) > 0) { 
 
       if ("random_other" %in% toget) {
         summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink, x) , silent=TRUE  )
@@ -1122,6 +1123,7 @@ carstm_model_inla = function(
         Z = g = NULL
         gc()
       }
+    }  # end test
     }  # end random effects
   }
 
@@ -1150,7 +1152,7 @@ carstm_model_inla = function(
 
     # adjusted by offset
     if (exists("marginals.fitted.values", fit)) {
-
+    if (length(fit[["marginals.fitted.values"]]) > 0 ) {
       if (P[["verbose"]])  message("Extracting predictions from marginals"  )
 
     
@@ -1439,6 +1441,7 @@ carstm_model_inla = function(
       }
 
 
+    }
     }
   }
 
