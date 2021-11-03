@@ -1129,7 +1129,6 @@ carstm_model_inla = function(
 
 
   if ("predictions"  %in% toget ) {
-
     # predictions come from marginals
     # prediction simulations come from joint posterior simulations
 
