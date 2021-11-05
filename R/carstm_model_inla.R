@@ -555,7 +555,7 @@ carstm_model_inla = function(
 
     fit  = NULL
     fit = try( do.call( inla, P ) )      
-
+ 
     if (inherits(fit, "try-error" )) {
       # message("If you are using MSWindows and you get a popup complaining about 'inla stopped working',")
       # message("try setting the flag in the following link to 1, using regedit. Be careful.")
