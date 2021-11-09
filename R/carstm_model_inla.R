@@ -20,6 +20,7 @@ carstm_model_inla = function(
   deceedance_threshold_predictions=NULL,
   improve.hyperparam.estimates=NULL,  
   posterior_simulations_to_retain="",
+  eps = 1e-16
   ... ) {
   
   if (0) {
@@ -42,6 +43,7 @@ carstm_model_inla = function(
     nposteriors=NULL
     improve.hyperparam.estimates=NULL
     posterior_simulations_to_retain=""
+    eps = 1e-16
 
     if (0) {
         # usual variable names used in aegis .. char / num
@@ -113,6 +115,7 @@ carstm_model_inla = function(
   apply_generic_serial = function(...)  lapply(...  ) # drop-in for lapply .. serial
   apply_simplify_serial = function(...) simplify2array(lapply(...  ))  # drop in for sapply .. serial
 
+  sqrt_safe = function( a, eps=eps )  sqrt( pmin( pmax( a, eps ), 1/eps ) )
 
   outputdir = dirname(fn_fit)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
@@ -161,15 +164,17 @@ carstm_model_inla = function(
 
   if ( P[["family"]] == "gaussian" ) {
     lnk_function = inla.link.identity
+    invlink = function(x) lnk_function( x,  inverse=TRUE )
   } else if ( P[["family"]] == "lognormal" ) {
     lnk_function = inla.link.log
+    invlink = function(x) lnk_function( pmax(x, eps),  inverse=TRUE )
   } else if ( grepl( ".*poisson", P[["family"]])) {
     lnk_function = inla.link.log
+    invlink = function(x) lnk_function( pmax(x, eps),  inverse=TRUE )
   } else if ( grepl( ".*binomial", P[["family"]])) {
     lnk_function = inla.link.logit
+    invlink = function(x) lnk_function( x, inverse=TRUE )
   } 
-
-  invlink = function(x) lnk_function( x,  inverse=TRUE )
 
   if ( !exists("formula", P ) ) {
     if ( P[["verbose"]] ) message( "Formula found in options, O" )
@@ -475,9 +480,7 @@ carstm_model_inla = function(
     yl = yl - P[["data"]][, vnO]
 
     if (  P[["verbose"]]  ) {
-      dev.new(); 
-      hist( invlink(yl), "fd", main="Histogram of input variable to model with offsets and offset_scale "  )
-      
+     
       dev.new()
       hist( yl, "fd", main="Histogram of input variable to model with offsets and offset_scale, on link scale"  )
     }
@@ -588,10 +591,10 @@ carstm_model_inla = function(
 
   if (P[["verbose"]]) {
     print( summary(fit) )
-    message( "   --- NOTE: parameter estimates are on link scale and not user scale")
+    # message( "   --- NOTE: parameter estimates are on link scale and not user scale")
 
-    dev.new(); 
-    hist( fit$summary.fitted.values$mean, "fd", main="Histogram of summary.fitted.values$mean from model fit"  )
+    # dev.new(); 
+    # hist( fit$summary.fitted.values$mean, "fd", main="Histogram of summary.fitted.values$mean from model fit"  )
   }
   
   # do the computations here as fit can be massive ... best not to copy, etc ..
@@ -671,9 +674,9 @@ carstm_model_inla = function(
 
       prcs = grep( "^Precision.*", hyps, value=TRUE )
       if (length(prcs) > 0) {
- 
-        summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x ), silent=TRUE  )
-        summary_inv_prec2 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt(y), x, n=1024L ), silent=TRUE  )
+
+        summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt_safe( y ), x ), silent=TRUE  )
+        summary_inv_prec2 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt_safe( y ), x, n=1024L ), silent=TRUE  )
 
         precs = try( list_simplify( apply_simplify_serial( fit$marginals.hyperpar[prcs], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
         if (any( inherits(precs, "try-error"))) {
@@ -681,8 +684,8 @@ carstm_model_inla = function(
           # var ~ 100 
           V = fit$marginals.hyperpar[prcs]
           V = lapply(V, function( x ) {
-              x[,1] = pmax( x[,1], 1e-25 ) 
-              x[,1] = pmin( x[,1], 1e25 ) 
+              x[,1] = pmax( x[,1], eps ) 
+              x[,1] = pmin( x[,1], 1/eps ) 
               x
             }
           )
@@ -699,7 +702,7 @@ carstm_model_inla = function(
             message( "Copying fit summaries directly rather than from marginals ... ")
           }
           precs = fit$summary.hyperpar[prcs,1:5]
-          precs[,c(1,3:5)] = 1/sqrt( precs[,c(1,3:5)] )
+          precs[,c(1,3:5)] = 1/sqrt_safe( precs[,c(1,3:5)] )
           rownames(precs) = gsub("Precision for", "SD", rownames(precs) )
           colnames(precs) = tokeep
           O[["summary"]][["random_effects"]] = precs
@@ -731,8 +734,8 @@ carstm_model_inla = function(
           # var ~ 100 
           V = fit$marginals.hyperpar[k]
           V = lapply(V, function( x ) {
-              x[,1] = pmax( x[,1], 1e-25 ) 
-              x[,1] = pmin( x[,1], 1e25 ) 
+              x[,1] = pmax( x[,1], eps ) 
+              x[,1] = pmin( x[,1], 1/eps ) 
               x
             }
           )
@@ -1154,7 +1157,6 @@ carstm_model_inla = function(
     if (length(fit[["marginals.fitted.values"]]) > 0 ) {
       if (P[["verbose"]])  message("Extracting predictions from marginals"  )
 
-    
       if (  O[["dimensionality"]] == "space" ) {
         ipred = which( P[["data"]]$tag=="predictions"  &  P[["data"]][,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         m = fit$marginals.fitted.values[ipred]
@@ -1197,9 +1199,9 @@ carstm_model_inla = function(
         O[["predictions"]] = W[, tokeep, drop =FALSE]
         W = NULL
 
-        if (P[["verbose"]]) {
-          dev.new(); hist( O[["predictions"]][,"mean"], "fd", main="Histogram of predictions"  )
-        }
+        # if (P[["verbose"]]) {
+        #   dev.new(); hist( O[["predictions"]][,"mean"], "fd", main="Histogram of predictions"  )
+        # }
 
         if ( "predictions" %in% posterior_simulations_to_retain ) {
           if (P[["verbose"]])  message("Extracting posterior simulations"  )
@@ -1277,9 +1279,9 @@ carstm_model_inla = function(
         O[["predictions"]] = W[,, tokeep, drop =FALSE]
         W = NULL
 
-        if (P[["verbose"]]) {
-          dev.new(); hist( O[["predictions"]][,,"mean"], "fd", main="Histogram of predictions"  )
-        }
+        # if (P[["verbose"]]) {
+        #   dev.new(); hist( O[["predictions"]][,,"mean"], "fd", main="Histogram of predictions"  )
+        # }
 
         if ( "predictions" %in% posterior_simulations_to_retain ) {
           if (P[["verbose"]])  message("Extracting posterior simulations"  )
@@ -1359,9 +1361,9 @@ carstm_model_inla = function(
         O[["predictions"]] = W[,,, tokeep, drop =FALSE]
         W = NULL
 
-        if (P[["verbose"]]) {
-          dev.new(); hist( O[["predictions"]][,,,"mean"], "fd", main="Histogram of predictions"  )
-        }
+        # if (P[["verbose"]]) {
+        #   dev.new(); hist( O[["predictions"]][,,,"mean"], "fd", main="Histogram of predictions"  )
+        # }
 
 
         if ( "predictions" %in% posterior_simulations_to_retain ) {
