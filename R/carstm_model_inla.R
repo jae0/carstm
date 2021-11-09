@@ -675,8 +675,8 @@ carstm_model_inla = function(
       prcs = grep( "^Precision.*", hyps, value=TRUE )
       if (length(prcs) > 0) {
 
-        summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt_safe( y ), x ), silent=TRUE  )
-        summary_inv_prec2 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt_safe( y ), x, n=1024L ), silent=TRUE  )
+        summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt_safe( y, eps ), x ), silent=TRUE  )
+        summary_inv_prec2 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt_safe( y, eps ), x, n=1024L ), silent=TRUE  )
 
         precs = try( list_simplify( apply_simplify_serial( fit$marginals.hyperpar[prcs], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
         if (any( inherits(precs, "try-error"))) {
@@ -697,12 +697,12 @@ carstm_model_inla = function(
         if (any( inherits(precs, "try-error")))  {
 
           if (P[["verbose"]])  {
-            message( "NAN and/or Inf values encountered in marginals of some paramater estimates.") 
+            message( "NAN and/or Inf values encountered in marginals of some parameter estimates.") 
             message( "Try an alternate parameterization as model may be over parameterized. ")
             message( "Copying fit summaries directly rather than from marginals ... ")
           }
           precs = fit$summary.hyperpar[prcs,1:5]
-          precs[,c(1,3:5)] = 1/sqrt_safe( precs[,c(1,3:5)] )
+          precs[,c(1,3:5)] = 1/sqrt_safe( precs[,c(1,3:5)], eps )
           rownames(precs) = gsub("Precision for", "SD", rownames(precs) )
           colnames(precs) = tokeep
           O[["summary"]][["random_effects"]] = precs
