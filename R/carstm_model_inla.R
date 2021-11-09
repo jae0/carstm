@@ -20,7 +20,7 @@ carstm_model_inla = function(
   deceedance_threshold_predictions=NULL,
   improve.hyperparam.estimates=NULL,  
   posterior_simulations_to_retain="",
-  eps = 1e-16
+  eps = 1e-16,
   ... ) {
   
   if (0) {
