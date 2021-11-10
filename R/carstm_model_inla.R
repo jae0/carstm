@@ -718,41 +718,98 @@ carstm_model_inla = function(
       precs = NULL
 
       # update phi's, lambda's (used in besagproper2 -- Leroux model) .. etc
-      params_to_match =  "^Rho.*|^GroupRho.*|^Phi.*|^Lambda.*|^Diagonal.*"
-      known = grep( params_to_match, hyps, value=TRUE )
+      rhos = grep( "^Rho.*|^GroupRho.*", hyps, value=TRUE )
+      phis = grep( "^Phi.*", hyps, value=TRUE )
+      other = grep( "^Lambda.*|^Diagonal.*", hyps, value=TRUE )
+
+      known = c( rhos, phis, other )
       unknown = setdiff( hyps, c(prcs, known) )
+
       if (length(unknown) > 0 ) {
         message( "Additional hyperparameters encountered. They will be treated as a normal hyperparameter (untransformed): ", unknown )
         k = unique( c(known, unknown) )
       } else {
         k = known
       }
-      if (length(k) > 0) {
-        ptm = try( list_simplify( apply_simplify( fit$marginals.hyperpar[k], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
+
+      if (length(rhos) > 0) {
+        ptm = try( list_simplify( apply_simplify( fit$marginals.hyperpar[ rhos ], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
 
         if (any( inherits(ptm, "try-error"))) {
           # var ~ 100 
-          V = fit$marginals.hyperpar[k]
+          V = fit$marginals.hyperpar[ rhos ]
           V = lapply(V, function( x ) {
-              x[,1] = pmax( x[,1], eps ) 
-              x[,1] = pmin( x[,1], 1/eps ) 
+              x[,1] = pmin( pmax( x[,1], -1 ), 1 ) 
               x
             }
           )
           ptm = try( list_simplify( apply_simplify( V, FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
-          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[k], FUN=function(x) inla.mmarginal( x ))
+          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[ rhos ], FUN=function(x) inla.mmarginal( x ))
           if (any( inherits(ptm, "try-error"))) {
 
-            if (P[["verbose"]])  message( "Model may be over parameterized. NAN and Inf values encountered. Try alt parameterizations or smaller number of n or masking negative values")
+            if (P[["verbose"]])  message( "Model may be over parameterized. NAN and Inf values encountered in rhos. Try alt parameterizations or smaller number of n or masking negative values")
             } 
         }
 
         if (!any( inherits(ptm, "try-error"))) {
-          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[k], FUN=function(x) inla.mmarginal( x ))
+          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[rhos], FUN=function(x) inla.mmarginal( x ))
           O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], ptm[, tokeep, drop =FALSE] )
         }
       }
-      k = params_to_match = known = unknown = ptm = NULL
+
+      if (length(phis) > 0) {
+        ptm = try( list_simplify( apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
+
+        if (any( inherits(ptm, "try-error"))) {
+          # var ~ 100 
+          V = fit$marginals.hyperpar[ phis ]
+          V = lapply(V, function( x ) {
+              x[,1] = pmin( pmax( x[,1], 0 ), 1 ) 
+              x
+            }
+          )
+          ptm = try( list_simplify( apply_simplify( V, FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
+          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
+          if (any( inherits(ptm, "try-error"))) {
+
+            if (P[["verbose"]])  message( "Model may be over parameterized. NAN and Inf values encountered in phis. Try alt parameterizations or smaller number of n or masking negative values")
+            } 
+        }
+
+        if (!any( inherits(ptm, "try-error"))) {
+          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
+          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], ptm[, tokeep, drop =FALSE] )
+        }
+
+      }
+      
+      if (length(other) > 0) {
+        ptm = try( list_simplify( apply_simplify( fit$marginals.hyperpar[ other ], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
+
+        if (any( inherits(ptm, "try-error"))) {
+          # var ~ 100 
+          V = fit$marginals.hyperpar[ other ]
+          V = lapply(V, function( x ) {
+              x[,1] = pmin( pmax( x[,1], -1/eps ), 1/eps ) 
+              x
+            }
+          )
+          ptm = try( list_simplify( apply_simplify( V, FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
+          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[ other ], FUN=function(x) inla.mmarginal( x ))
+          if (any( inherits(ptm, "try-error"))) {
+
+            if (P[["verbose"]])  message( "Model may be over parameterized. NAN and Inf values encountered in other. Try alt parameterizations or smaller number of n or masking negative values")
+            } 
+        }
+
+        if (!any( inherits(ptm, "try-error"))) {
+          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[ other ], FUN=function(x) inla.mmarginal( x ))
+          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], ptm[, tokeep, drop =FALSE] )
+        }
+
+      }
+      
+      k = phis = rhos = known = unknown = ptm = NULL
       gc()
 
       if (P[["verbose"]])  {
@@ -776,6 +833,7 @@ carstm_model_inla = function(
       if ("random_other" %in% toget) {
         summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink, x) , silent=TRUE  )
         raneff = setdiff( names( fit$marginals.random ), c(vnS, vnST, vnSI, vnSTI ) )
+browser()
         for (re in raneff) {
           if (P[["verbose"]])  message("Extracting random covariates from marginals:  ", re  )
           g = fit$marginals.random[[re]]
