@@ -187,7 +187,6 @@
       }
     }
 
-
     # add toplot to sppoly for final plots, but first check in case toplot is xyz data
     if (!is.null(toplot)) {
       
