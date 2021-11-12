@@ -833,7 +833,7 @@ carstm_model_inla = function(
       if ("random_other" %in% toget) {
         summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink, x) , silent=TRUE  )
         raneff = setdiff( names( fit$marginals.random ), c(vnS, vnST, vnSI, vnSTI ) )
-browser()
+
         for (re in raneff) {
           if (P[["verbose"]])  message("Extracting random covariates from marginals:  ", re  )
           g = fit$marginals.random[[re]]
