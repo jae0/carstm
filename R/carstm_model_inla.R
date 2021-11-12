@@ -20,7 +20,7 @@ carstm_model_inla = function(
   deceedance_threshold_predictions=NULL,
   improve.hyperparam.estimates=NULL,  
   posterior_simulations_to_retain="",
-  eps = 1e-16,
+  eps = 1e-32,
   ... ) {
   
   if (0) {
@@ -43,7 +43,7 @@ carstm_model_inla = function(
     nposteriors=NULL
     improve.hyperparam.estimates=NULL
     posterior_simulations_to_retain=""
-    eps = 1e-16
+    eps = 1e-32
 
     if (0) {
         # usual variable names used in aegis .. char / num
@@ -591,7 +591,7 @@ carstm_model_inla = function(
 
   if (P[["verbose"]]) {
     print( summary(fit) )
-    # message( "   --- NOTE: parameter estimates are on link scale and not user scale")
+    message( "   --- NOTE: parameter estimates are on link scale and not user scale")
 
     # dev.new(); 
     # hist( fit$summary.fitted.values$mean, "fd", main="Histogram of summary.fitted.values$mean from model fit"  )
@@ -1190,6 +1190,7 @@ carstm_model_inla = function(
 
 
   if ("predictions"  %in% toget ) {
+
     # predictions come from marginals
     # prediction simulations come from joint posterior simulations
 
