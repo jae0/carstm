@@ -29,7 +29,10 @@ carstm_filenames = function( p=list(), returnvalue="full_filename", ...  ) {
   if (!exists("outputdir", p)) {
     p$outputdir = file.path( p$modeldir, p$carstm_model_label )
     if (exists("returntype", p)) { 
-      if ( grepl( "carstm_inputs", p$returntype) ) p$outputdir = file.path( p$modeldir )  # as input data can be shared across a number of scenarios
+      if ( grepl( "carstm_inputs", p$returntype) ) {
+        p$outputdir = file.path( p$modeldir )  # as input data can be shared across a number of scenarios
+        p$fnroot = gsub( ".rdata$", paste("|", p$carstm_model_label, ".rdata", sep=""), p$fnroot) 
+      }
     } 
   }
 
