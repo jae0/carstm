@@ -660,13 +660,13 @@ carstm_model_inla = function(
         } 
       }
 
-      V = lapply( V, function(x) inla.tmarginal( invlink, x, n=4096)  )
-      V = lapply( V, make.finite  )
+      V = apply_generic( V, function(x) inla.tmarginal( invlink, x, n=4096)  )
+      V = apply_generic( V, make.finite  )
 
       if (length(fi) > 0) {
         if ( exists("data_transformation", O))  {
           V[[fi]] = inla.tmarginal( O$data_transformation$backward, V[[fi]]  ) # on user scale
-          V[[fi]] = lapply( V, make.finite  )
+          V[[fi]] = apply_generic( V, make.finite  )
         }
       }
 
@@ -695,22 +695,22 @@ carstm_model_inla = function(
       if (length(prcs) > 0) {
 
         V = fit$marginals.hyperpar[prcs]
-        V = try( lapply( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
-        V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        V = try( apply_generic( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
+        V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
 
         if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[prcs]
-          V = lapply( V, make.finite  )
-          V = lapply(V, function( x ) {
+          V = apply_generic( V, make.finite  )
+          V = apply_generic(V, function( x ) {
               x[,1] = pmax( x[,1], eps ) 
               x[,1] = pmin( x[,1], 1/eps ) 
               x
             }
           )
-          V = try( lapply( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
-          V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          V = try( apply_generic( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
+          V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
         }
         
@@ -754,19 +754,19 @@ carstm_model_inla = function(
 
       if (length(rhos) > 0) {
         V = fit$marginals.hyperpar[ rhos ]
-        V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
 
         if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[ rhos ]
-          V = lapply( V, make.finite  )
-          V = lapply(V, function( x ) {
+          V = apply_generic( V, make.finite  )
+          V = apply_generic(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], -1 ), 1 ) 
               x
             }
           )
-          V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
 
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ rhos ], FUN=function(x) inla.mmarginal( x ))
@@ -784,18 +784,18 @@ carstm_model_inla = function(
 
       if (length(phis) > 0) {
         V = fit$marginals.hyperpar[ phis ]
-        V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
  
         if (any( inherits(V, "try-error"))) {
           V = fit$marginals.hyperpar[ phis ]
-          V = lapply( V, make.finite  )
-          V = lapply(V, function( x ) {
+          V = apply_generic( V, make.finite  )
+          V = apply_generic(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], 0 ), 1 ) 
               x
             }
           )
-          V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
           if (any( inherits(V, "try-error"))) {
@@ -813,18 +813,18 @@ carstm_model_inla = function(
       
       if (length(other) > 0) {
         V = fit$marginals.hyperpar[ other ]
-        V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
 
         if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[ other ]
-          V = lapply(V, function( x ) {
+          V = apply_generic(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], -1/eps ), 1/eps ) 
               x
             }
           )
-          V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ other ], FUN=function(x) inla.mmarginal( x ))
           if (any( inherits(V, "try-error"))) {
@@ -866,8 +866,8 @@ carstm_model_inla = function(
         for (re in raneff) {
           if (P[["verbose"]])  message("Extracting random covariates from marginals:  ", re  )
           g = fit$marginals.random[[re]]
-          g = lapply( g, inla.tmarginal, fun=invlink)
-          g = lapply( g, inla.zmarginal, silent=TRUE  )
+          g = apply_generic( g, inla.tmarginal, fun=invlink)
+          g = apply_generic( g, inla.zmarginal, silent=TRUE  )
           g = list_simplify( simplify2array( g ) )
           O[["random"]] [[re]] = g[, tokeep, drop =FALSE]
           O[["random"]] [[re]]$ID = fit$summary.random[[re]]$ID
@@ -891,8 +891,8 @@ carstm_model_inla = function(
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSI) ]  # should be iid
             
             m = fit$marginals.random[[vnSI]]
-            m = lapply( m, inla.tmarginal, fun=invlink)
-            m = lapply( m, inla.zmarginal, silent=TRUE  )
+            m = apply_generic( m, inla.tmarginal, fun=invlink)
+            m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
             # single spatial effect (eg in conjucyion with besag) .. indexing not needed but here in case more complex models ..
             Z = expand.grid( space=O[[vnS]], type=model_name, stringsAsFactors =FALSE )
@@ -913,8 +913,8 @@ carstm_model_inla = function(
             O[["random"]] [[vnS]] = list()  # space as a main effect
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnS) ]
             m = fit$marginals.random[[vnS]]
-            m = lapply( m, inla.tmarginal, fun=invlink)
-            m = lapply( m, inla.zmarginal, silent=TRUE  )
+            m = apply_generic( m, inla.tmarginal, fun=invlink)
+            m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
 
             if ( model_name %in% c("bym", "bym2") ) {
@@ -1048,8 +1048,8 @@ carstm_model_inla = function(
             O[["random"]] [[vnSTI]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSTI) ]  # should be iid
             m = fit$marginals.random[[vnSTI]]
-            m = lapply( m, inla.tmarginal, fun=invlink)
-            m = lapply( m, inla.zmarginal, silent=TRUE  )
+            m = apply_generic( m, inla.tmarginal, fun=invlink)
+            m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
 
             Z = expand.grid( space=O[[vnS]], type=model_name, time=O[[vnT]], stringsAsFactors =FALSE )
@@ -1072,8 +1072,8 @@ carstm_model_inla = function(
             O[["random"]] [[vnST]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnST) ]
             m = fit$marginals.random[[vnST]]
-            m = lapply( m, inla.tmarginal, fun=invlink)
-            m = lapply( m, inla.zmarginal, silent=TRUE  )
+            m = apply_generic( m, inla.tmarginal, fun=invlink)
+            m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
 
             if ( model_name %in% c("bym", "bym2") ) {
@@ -1246,8 +1246,6 @@ carstm_model_inla = function(
 
     if (!exists("predictions", O)) O[["predictions"]] = list()
 
-    summary_predictions = function(x) inla.zmarginal( x, silent=TRUE  )
-    
     if (!exists("tag", P[["data"]])) P[["data"]]$tag="predictions" # force predictions for all data
 
     # adjusted by offset
@@ -1284,7 +1282,9 @@ carstm_model_inla = function(
         
         if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
-        m = list_simplify ( apply_simplify( m, summary_predictions ) )
+        m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+
         W = array( NA, dim=c( length(O[[vnS]]),  length(names(m)) ),  dimnames=list( space=O[[vnS]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         
@@ -1362,8 +1362,9 @@ carstm_model_inla = function(
 
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
+        m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
 
-        m = list_simplify ( apply_simplify( m, summary_predictions ) )
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
@@ -1444,7 +1445,8 @@ carstm_model_inla = function(
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 
-        m = list_simplify ( apply_simplify( m, summary_predictions ) )
+        m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
         W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), length(names(m)) ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]], stat=names(m) ) )
         names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vnT  # need to do this in a separate step ..
