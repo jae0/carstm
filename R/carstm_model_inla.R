@@ -20,7 +20,7 @@ carstm_model_inla = function(
   deceedance_threshold_predictions=NULL,
   improve.hyperparam.estimates=NULL,  
   posterior_simulations_to_retain="",
-  eps = 1e-32,
+  eps = 1e-16,
   ... ) {
   
   if (0) {
@@ -117,6 +117,12 @@ carstm_model_inla = function(
 
   sqrt_safe = function( a, eps=eps )  sqrt( pmin( pmax( a, eps ), 1/eps ) )
 
+  make.finite = function( a ) {
+    o = which( !is.finite(a[,"y"]) )
+    if ( length(o) > 0) a = a[-o,]  
+    return(a)
+  }
+
   outputdir = dirname(fn_fit)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
   
@@ -164,17 +170,15 @@ carstm_model_inla = function(
 
   if ( P[["family"]] == "gaussian" ) {
     lnk_function = inla.link.identity
-    invlink = function(x) lnk_function( x,  inverse=TRUE )
   } else if ( P[["family"]] == "lognormal" ) {
     lnk_function = inla.link.log
-    invlink = function(x) lnk_function( pmax(x, eps),  inverse=TRUE )
   } else if ( grepl( ".*poisson", P[["family"]])) {
     lnk_function = inla.link.log
-    invlink = function(x) lnk_function( pmax(x, eps),  inverse=TRUE )
   } else if ( grepl( ".*binomial", P[["family"]])) {
     lnk_function = inla.link.logit
-    invlink = function(x) lnk_function( x, inverse=TRUE )
   } 
+
+  invlink = function(x) lnk_function( x,  inverse=TRUE )
 
   if ( !exists("formula", P ) ) {
     if ( P[["verbose"]] ) message( "Formula found in options, O" )
@@ -334,7 +338,8 @@ carstm_model_inla = function(
   }
  
   if (is.null(space.id)) stop("Not found: space.id is a required variable")
- 
+  
+
   # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("space.id")
   # convert space and time to numeric codes for INLA
   if (grepl("space", O[["dimensionality"]])) {
@@ -350,6 +355,18 @@ carstm_model_inla = function(
       P[["data"]] = P[["data"]] [ -missingS , ]
     }
     missingS = NULL
+  
+    missingS = unique( setdiff( space.id, unique( P[["data"]][,vnS0] ) ) )
+    if (length(missingS) > 0) {
+      warning( "No. of areal unique units in data do not match those in sppoly .. removing and continuuing but this will possibly fail:", paste0(missingS))
+      print( "No. of areal unique units in data do not match those in sppoly .. removing and continuuing but this will possibly fail. The offending areal units are: ")
+      print ( paste0(missingS)  )
+
+      sppoly = sppoly[- which(sppoly$AUID %in% missingS), ]
+      attributes(sppoly)$W.nb  = nb_remove(attributes(sppoly)$W.nb, missingS )
+    }
+
+
   }
   
 
@@ -635,7 +652,7 @@ carstm_model_inla = function(
 
     if (exists( "marginals.fixed", fit)) {
       V = fit$marginals.fixed  # make a copy to do transformations upon
-      
+  
       fi = which( grepl("Intercept", names(V) ))
       if (length(fi) > 0) {
         if (scale_offsets) {
@@ -643,13 +660,16 @@ carstm_model_inla = function(
         } 
       }
 
-      V = lapply( V, function(x) inla.tmarginal( invlink, x)  )
+      V = lapply( V, function(x) inla.tmarginal( invlink, x, n=4096)  )
+      V = lapply( V, make.finite  )
 
       if (length(fi) > 0) {
-        if ( exists("data_transformation", O))  V[[fi]] = inla.tmarginal( O$data_transformation$backward, V[[fi]]  ) # on user scale
+        if ( exists("data_transformation", O))  {
+          V[[fi]] = inla.tmarginal( O$data_transformation$backward, V[[fi]]  ) # on user scale
+          V[[fi]] = lapply( V, make.finite  )
+        }
       }
 
- 
       W = NULL
       W = cbind ( t (apply_simplify( V, FUN=inla.zmarginal, silent=TRUE ) ) )  # 
       O[["summary"]][["fixed_effects"]] = W [, tokeep, drop =FALSE]
@@ -671,51 +691,51 @@ carstm_model_inla = function(
       
       # hyperpar (variance components)
       hyps =  rownames(fit$summary.hyperpar)
-
       prcs = grep( "^Precision.*", hyps, value=TRUE )
       if (length(prcs) > 0) {
 
-        summary_inv_prec = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt_safe( y, eps ), x ), silent=TRUE  )
-        summary_inv_prec2 = function(x) inla.zmarginal( inla.tmarginal( function(y) 1/sqrt_safe( y, eps ), x, n=1024L ), silent=TRUE  )
+        V = fit$marginals.hyperpar[prcs]
+        V = try( lapply( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
+        V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
 
-        precs = try( list_simplify( apply_simplify_serial( fit$marginals.hyperpar[prcs], FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
-        if (any( inherits(precs, "try-error"))) {
- 
+        if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[prcs]
+          V = lapply( V, make.finite  )
           V = lapply(V, function( x ) {
               x[,1] = pmax( x[,1], eps ) 
               x[,1] = pmin( x[,1], 1/eps ) 
               x
             }
           )
-
-          precs = try( list_simplify( apply_simplify_serial( V, FUN=summary_inv_prec ) ), silent=TRUE )  # prone to integration errors ..
-         
+          V = try( lapply( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
+          V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
         }
         
-        if (any( inherits(precs, "try-error")))  {
+        if (any( inherits(V, "try-error")))  {
 
           if (P[["verbose"]])  {
             message( "NAN and/or Inf values encountered in marginals of some parameter estimates.") 
             message( "Try an alternate parameterization as model may be over parameterized. ")
             message( "Copying fit summaries directly rather than from marginals ... ")
           }
-          precs = fit$summary.hyperpar[prcs,1:5]
-          precs[,c(1,3:5)] = 1/sqrt_safe( precs[,c(1,3:5)], eps )
-          rownames(precs) = gsub("Precision for", "SD", rownames(precs) )
-          colnames(precs) = tokeep
-          O[["summary"]][["random_effects"]] = precs
+          V = fit$summary.hyperpar[prcs,1:5]
+          V[,c(1,3:5)] = 1/sqrt_safe( V[,c(1,3:5)], eps )
+          rownames(V) = gsub("Precision for", "SD", rownames(V) )
+          colnames(V) = tokeep
+          O[["summary"]][["random_effects"]] = V
 
         } else {
-          # precs[,"mode"] =  1/sqrt( fit$summary.hyperpar[prcs,"mode"]  )
-          toadd = setdiff( colnames(O[["summary"]]), colnames(precs) )
-          precs[,toadd] = NA
-          rownames(precs) = gsub("Precision for", "SD", rownames(precs) )
-          O[["summary"]][["random_effects"]] = precs[, tokeep, drop =FALSE]
+          # V[,"mode"] =  1/sqrt( fit$summary.hyperpar[prcs,"mode"]  )
+          toadd = setdiff( colnames(O[["summary"]]), colnames(V) )
+          V[,toadd] = NA
+          rownames(V) = gsub("Precision for", "SD", rownames(V) )
+          O[["summary"]][["random_effects"]] = V[, tokeep, drop =FALSE]
         }
       }
-      precs = NULL
+      V = NULL
 
       # update phi's, lambda's (used in besagproper2 -- Leroux model) .. etc
       rhos = grep( "^Rho.*|^GroupRho.*", hyps, value=TRUE )
@@ -733,60 +753,70 @@ carstm_model_inla = function(
       }
 
       if (length(rhos) > 0) {
-        ptm = try( list_simplify( apply_simplify( fit$marginals.hyperpar[ rhos ], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
+        V = fit$marginals.hyperpar[ rhos ]
+        V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
 
-        if (any( inherits(ptm, "try-error"))) {
+        if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[ rhos ]
+          V = lapply( V, make.finite  )
           V = lapply(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], -1 ), 1 ) 
               x
             }
           )
-          ptm = try( list_simplify( apply_simplify( V, FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
-          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[ rhos ], FUN=function(x) inla.mmarginal( x ))
-          if (any( inherits(ptm, "try-error"))) {
+          V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
+
+          #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ rhos ], FUN=function(x) inla.mmarginal( x ))
+          if (any( inherits(V, "try-error"))) {
 
             if (P[["verbose"]])  message( "Model may be over parameterized. NAN and Inf values encountered in rhos. Try alt parameterizations or smaller number of n or masking negative values")
             } 
         }
 
-        if (!any( inherits(ptm, "try-error"))) {
-          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[rhos], FUN=function(x) inla.mmarginal( x ))
-          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], ptm[, tokeep, drop =FALSE] )
+        if (!any( inherits(V, "try-error"))) {
+          #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[rhos], FUN=function(x) inla.mmarginal( x ))
+          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], V[, tokeep, drop =FALSE] )
         }
       }
 
       if (length(phis) > 0) {
-        ptm = try( list_simplify( apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
-
-        if (any( inherits(ptm, "try-error"))) {
-          # var ~ 100 
+        V = fit$marginals.hyperpar[ phis ]
+        V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
+ 
+        if (any( inherits(V, "try-error"))) {
           V = fit$marginals.hyperpar[ phis ]
+          V = lapply( V, make.finite  )
           V = lapply(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], 0 ), 1 ) 
               x
             }
           )
-          ptm = try( list_simplify( apply_simplify( V, FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
-          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
-          if (any( inherits(ptm, "try-error"))) {
+          V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
+          #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
+          if (any( inherits(V, "try-error"))) {
 
             if (P[["verbose"]])  message( "Model may be over parameterized. NAN and Inf values encountered in phis. Try alt parameterizations or smaller number of n or masking negative values")
             } 
         }
 
-        if (!any( inherits(ptm, "try-error"))) {
-          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
-          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], ptm[, tokeep, drop =FALSE] )
+        if (!any( inherits(V, "try-error"))) {
+          #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
+          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], V[, tokeep, drop =FALSE] )
         }
 
       }
       
       if (length(other) > 0) {
-        ptm = try( list_simplify( apply_simplify( fit$marginals.hyperpar[ other ], FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
+        V = fit$marginals.hyperpar[ other ]
+        V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
 
-        if (any( inherits(ptm, "try-error"))) {
+        if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[ other ]
           V = lapply(V, function( x ) {
@@ -794,22 +824,23 @@ carstm_model_inla = function(
               x
             }
           )
-          ptm = try( list_simplify( apply_simplify( V, FUN=function(x) inla.zmarginal( x, silent=TRUE  ) ) ), silent=TRUE )
-          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[ other ], FUN=function(x) inla.mmarginal( x ))
-          if (any( inherits(ptm, "try-error"))) {
+          V = try( lapply( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
+          #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ other ], FUN=function(x) inla.mmarginal( x ))
+          if (any( inherits(V, "try-error"))) {
 
             if (P[["verbose"]])  message( "Model may be over parameterized. NAN and Inf values encountered in other. Try alt parameterizations or smaller number of n or masking negative values")
             } 
         }
 
-        if (!any( inherits(ptm, "try-error"))) {
-          #  alternatively: ptm[,"mode"] = apply_simplify( fit$marginals.hyperpar[ other ], FUN=function(x) inla.mmarginal( x ))
-          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], ptm[, tokeep, drop =FALSE] )
+        if (!any( inherits(V, "try-error"))) {
+          #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ other ], FUN=function(x) inla.mmarginal( x ))
+          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], V[, tokeep, drop =FALSE] )
         }
 
       }
       
-      k = phis = rhos = known = unknown = ptm = NULL
+      k = phis = rhos = known = unknown = V = NULL
       gc()
 
       if (P[["verbose"]])  {
@@ -831,13 +862,14 @@ carstm_model_inla = function(
     if (length(fit[["marginals.random"]]) > 0) { 
 
       if ("random_other" %in% toget) {
-        summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink, x) , silent=TRUE  )
         raneff = setdiff( names( fit$marginals.random ), c(vnS, vnST, vnSI, vnSTI ) )
-
         for (re in raneff) {
           if (P[["verbose"]])  message("Extracting random covariates from marginals:  ", re  )
           g = fit$marginals.random[[re]]
-          O[["random"]] [[re]] = list_simplify ( apply_simplify( g, summary_inv_random ) )  [, tokeep, drop =FALSE]
+          g = lapply( g, inla.tmarginal, fun=invlink)
+          g = lapply( g, inla.zmarginal, silent=TRUE  )
+          g = list_simplify( simplify2array( g ) )
+          O[["random"]] [[re]] = g[, tokeep, drop =FALSE]
           O[["random"]] [[re]]$ID = fit$summary.random[[re]]$ID
         }
         g = raneff = NULL
@@ -846,9 +878,6 @@ carstm_model_inla = function(
 
       if ("random_spatial" %in% toget) {
         # space only
-        summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink, x) , silent=TRUE  )
-
-
         bym = iid = NULL
         matchto = list( space=O[[vnS]] )
         matchfrom0 = NULL  # used for matching spatial effects in exceed/deceed .. required as bym2 uses 2x nsp for by and iid
@@ -860,8 +889,11 @@ carstm_model_inla = function(
           if ( exists(vnSI, fit$marginals.random) ) {
             O[["random"]] [[vnSI]] = list()  # space as a main effect
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSI) ]  # should be iid
-            m = list_simplify ( apply_simplify( fit$marginals.random[[vnSI]], summary_inv_random ) )
-
+            
+            m = fit$marginals.random[[vnSI]]
+            m = lapply( m, inla.tmarginal, fun=invlink)
+            m = lapply( m, inla.zmarginal, silent=TRUE  )
+            m = list_simplify( simplify2array( m ) )
             # single spatial effect (eg in conjucyion with besag) .. indexing not needed but here in case more complex models ..
             Z = expand.grid( space=O[[vnS]], type=model_name, stringsAsFactors =FALSE )
 
@@ -880,7 +912,10 @@ carstm_model_inla = function(
           if ( exists(vnS, fit$marginals.random) ) {
             O[["random"]] [[vnS]] = list()  # space as a main effect
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnS) ]
-            m = list_simplify ( apply_simplify( fit$marginals.random[[vnS]], summary_inv_random ) )
+            m = fit$marginals.random[[vnS]]
+            m = lapply( m, inla.tmarginal, fun=invlink)
+            m = lapply( m, inla.zmarginal, silent=TRUE  )
+            m = list_simplify( simplify2array( m ) )
 
             if ( model_name %in% c("bym", "bym2") ) {
               # bym2 effect: bym and iid simultaneously
@@ -1000,8 +1035,6 @@ carstm_model_inla = function(
 
       if ("random_spatiotemporal"  %in% toget ) {
         # space-time
-        summary_inv_random = function(x) inla.zmarginal( inla.tmarginal( invlink, x) , silent=TRUE  )
-
         g = NULL
         
         bym = iid = NULL
@@ -1014,7 +1047,10 @@ carstm_model_inla = function(
           if (exists(vnSTI, fit$marginals.random )) {
             O[["random"]] [[vnSTI]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSTI) ]  # should be iid
-            m = list_simplify ( apply_simplify( fit$marginals.random[[vnSTI]], summary_inv_random ) )
+            m = fit$marginals.random[[vnSTI]]
+            m = lapply( m, inla.tmarginal, fun=invlink)
+            m = lapply( m, inla.zmarginal, silent=TRUE  )
+            m = list_simplify( simplify2array( m ) )
 
             Z = expand.grid( space=O[[vnS]], type=model_name, time=O[[vnT]], stringsAsFactors =FALSE )
 
@@ -1035,7 +1071,10 @@ carstm_model_inla = function(
 
             O[["random"]] [[vnST]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnST) ]
-            m = list_simplify ( apply_simplify( fit$marginals.random[[vnST]], summary_inv_random ) )
+            m = fit$marginals.random[[vnST]]
+            m = lapply( m, inla.tmarginal, fun=invlink)
+            m = lapply( m, inla.zmarginal, silent=TRUE  )
+            m = list_simplify( simplify2array( m ) )
 
             if ( model_name %in% c("bym", "bym2") ) {
               # bym2 effect: bym and iid with annual results
