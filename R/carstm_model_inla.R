@@ -551,6 +551,7 @@ carstm_model_inla = function(
     if ( !exists("control.inla", P ) ) P[["control.inla"]] = list( strategy='adaptive' )
     if ( !exists("control.predictor", P ) ) P[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if ( !exists("control.compute", P ) ) P[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
+    if ( !exists("control.fixed", P ) ) P[["control.fixed"]] = H$fixed
 
     if ( !exists("control.mode", P ) ) P[["control.mode"]] = list( restart=FALSE ) 
     if ( exists("theta", O ) ) P[["control.mode"]] = list(theta = O[["theta"]], restart=TRUE) 
@@ -565,6 +566,7 @@ carstm_model_inla = function(
     }
 
 
+    # control.fixed=H$fixed
     # control.fixed= list(mean.intercept=0, prec.intercept=0.001, mean=0, prec=0.001),
     # control.inla = list( strategy='adaptive', int.strategy='eb' )
 
@@ -1243,7 +1245,6 @@ carstm_model_inla = function(
       # summary.fitted.values == predictions with offsets  (including offset_scale)
       # marginals.fitted.values == predictions with offsets  (including offset_scale)
       # posterior simulations == predictions needs offsets but excluding offset_scale, if any 
-
     if (!exists("predictions", O)) O[["predictions"]] = list()
 
     if (!exists("tag", P[["data"]])) P[["data"]]$tag="predictions" # force predictions for all data
@@ -1336,7 +1337,7 @@ carstm_model_inla = function(
       if (O[["dimensionality"]] == "space-time"  ) {
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]] & P[["data"]][,vnT0] %in% O[[vnT]] )
         m = fit$marginals.fitted.values[ipred]   
-        
+ 
         if (!is.null(vnO)) {
 
           if ( P[["inla.mode"]] == "experimental" ) {
@@ -1357,6 +1358,7 @@ carstm_model_inla = function(
           }
 
         }
+
  
         if ( P[["inla.mode"]] == "experimental" ) m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
 
