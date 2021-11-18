@@ -67,7 +67,7 @@ carstm_model_inla = function(
   if (DS=="modelled_fit") {
     if (!is.null(fn_fit)) {
       fit  = NULL
-      message("Loading fit: ", fn_fit )
+#      message("Loading fit: ", fn_fit )
       if (file.exists(fn_fit)) load( fn_fit )
       if (is.null(fit)) message("modelled fit not found.")
     }
@@ -76,14 +76,14 @@ carstm_model_inla = function(
 
   if (DS=="modelled_summary") {  # model.*modelled
     if (!is.null(fn_res)) {
-      message("Loading  data summary:  ", fn_res )
+#      message("Loading  data summary:  ", fn_res )
       O = NULL
       if (file.exists(fn_res)) load( fn_res)
       if (is.null(O)) message(" summary not found.")
       return( O )
     } else {
       fit  = NULL
-      message("Loading results from fit: ", fn_fit )
+#      message("Loading results from fit: ", fn_fit )
       if (file.exists(fn_fit)) load( fn_fit )
       if (!is.null(fit)) if (exists( "results", fit)) return( fit$results )
       message("modelled results not found. .. try to run extraction: '' ")
