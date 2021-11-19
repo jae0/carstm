@@ -20,7 +20,7 @@ carstm_model_inla = function(
   deceedance_threshold_predictions=NULL,
   improve.hyperparam.estimates=NULL,  
   posterior_simulations_to_retain="",
-  eps = 1e-16,
+  eps = 1e-32,
   ... ) {
   
   if (0) {
@@ -658,6 +658,7 @@ carstm_model_inla = function(
         }
       }
 
+ 
       W = NULL
       W = cbind ( t (apply_simplify( V, FUN=inla.zmarginal, silent=TRUE ) ) )  # 
       O[["summary"]][["fixed_effects"]] = W [, tokeep, drop =FALSE]
@@ -679,6 +680,7 @@ carstm_model_inla = function(
       
       # hyperpar (variance components)
       hyps =  rownames(fit$summary.hyperpar)
+
       prcs = grep( "^Precision.*", hyps, value=TRUE )
       if (length(prcs) > 0) {
 
@@ -1228,6 +1230,7 @@ carstm_model_inla = function(
       # summary.fitted.values == predictions with offsets  (including offset_scale)
       # marginals.fitted.values == predictions with offsets  (including offset_scale)
       # posterior simulations == predictions needs offsets but excluding offset_scale, if any 
+
     if (!exists("predictions", O)) O[["predictions"]] = list()
 
     if (!exists("tag", P[["data"]])) P[["data"]]$tag="predictions" # force predictions for all data
