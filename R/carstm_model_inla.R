@@ -358,15 +358,10 @@ carstm_model_inla = function(
   
     missingS = unique( setdiff( space.id, unique( P[["data"]][,vnS0] ) ) )
     if (length(missingS) > 0) {
-      warning( "No. of areal unique units in data do not match those in sppoly .. removing and continuuing but this will possibly fail:", paste0(missingS))
-      print( "No. of areal unique units in data do not match those in sppoly .. removing and continuuing but this will possibly fail. The offending areal units are: ")
+      warning( "No. of areal unique units in data do not match those in sppoly .. continuuing but this will possibly fail:", paste0(missingS))
+      print( "No. of areal unique units in data do not match those in sppoly ..  continuuing but this will possibly fail. The offending areal units are: ")
       print ( paste0(missingS)  )
-
-      sppoly = sppoly[- which(sppoly$AUID %in% missingS), ]
-      attributes(sppoly)$W.nb  = nb_remove(attributes(sppoly)$W.nb, missingS )
     }
-
-
   }
   
 
