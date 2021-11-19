@@ -117,12 +117,6 @@ carstm_model_inla = function(
 
   sqrt_safe = function( a, eps=eps )  sqrt( pmin( pmax( a, eps ), 1/eps ) )
 
-  make.finite = function( a ) {
-    o = which( !is.finite(a[,"y"]) )
-    if ( length(o) > 0) a = a[-o,]  
-    return(a)
-  }
-
   outputdir = dirname(fn_fit)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
   
@@ -339,7 +333,6 @@ carstm_model_inla = function(
  
   if (is.null(space.id)) stop("Not found: space.id is a required variable")
   
-
   # fiddling of AU and TU inputs: for bym2, etc, they need to be numeric, matching numerics of polygon id ("space.id")
   # convert space and time to numeric codes for INLA
   if (grepl("space", O[["dimensionality"]])) {
@@ -358,8 +351,8 @@ carstm_model_inla = function(
   
     missingS = unique( setdiff( space.id, unique( P[["data"]][,vnS0] ) ) )
     if (length(missingS) > 0) {
-      warning( "No. of areal unique units in data do not match those in sppoly .. continuuing but this will possibly fail:", paste0(missingS))
-      print( "No. of areal unique units in data do not match those in sppoly ..  continuuing but this will possibly fail. The offending areal units are: ")
+      warning( "No. of areal unique units in data do not match those in sppoly .. continuuing but this will not end well:", paste0(missingS))
+      print( "No. of areal unique units in data do not match those in sppoly ..  continuuing but this will not end well. The offending areal units are: ")
       print ( paste0(missingS)  )
     }
   }
@@ -658,12 +651,10 @@ carstm_model_inla = function(
       }
 
       V = apply_generic( V, function(x) inla.tmarginal( invlink, x, n=4096)  )
-      V = apply_generic( V, make.finite  )
 
       if (length(fi) > 0) {
         if ( exists("data_transformation", O))  {
           V[[fi]] = inla.tmarginal( O$data_transformation$backward, V[[fi]]  ) # on user scale
-          V[[fi]] = apply_generic( V, make.finite  )
         }
       }
 
@@ -699,7 +690,6 @@ carstm_model_inla = function(
         if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[prcs]
-          V = apply_generic( V, make.finite  )
           V = apply_generic(V, function( x ) {
               x[,1] = pmax( x[,1], eps ) 
               x[,1] = pmin( x[,1], 1/eps ) 
@@ -757,7 +747,6 @@ carstm_model_inla = function(
         if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[ rhos ]
-          V = apply_generic( V, make.finite  )
           V = apply_generic(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], -1 ), 1 ) 
               x
@@ -786,7 +775,6 @@ carstm_model_inla = function(
  
         if (any( inherits(V, "try-error"))) {
           V = fit$marginals.hyperpar[ phis ]
-          V = apply_generic( V, make.finite  )
           V = apply_generic(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], 0 ), 1 ) 
               x
