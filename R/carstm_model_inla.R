@@ -351,9 +351,9 @@ carstm_model_inla = function(
   
     missingS = unique( setdiff( space.id, unique( P[["data"]][,vnS0] ) ) )
     if (length(missingS) > 0) {
-      warning( "No. of areal unique units in data do not match those in sppoly .. continuuing but this will not end well:", paste0(missingS))
+      warning( "No. of areal unique units in data do not match those in sppoly .. continuuing but this will not end well:", paste0(missingS, sep=", "))
       print( "No. of areal unique units in data do not match those in sppoly ..  continuuing but this will not end well. The offending areal units are: ")
-      print ( paste0(missingS)  )
+      print ( paste0(missingS, sep=", ")  )
     }
   }
   
@@ -433,9 +433,9 @@ carstm_model_inla = function(
     }
   }
  
-  # on user scale
+
   ii = which(is.finite(P[["data"]][ , vnY ]))
-  
+
   if ( P[["verbose"]] ) {
     dev.new()
     hist( P[["data"]][ ii, vnY ], main="Histogram of input variable to model" )
@@ -460,8 +460,19 @@ carstm_model_inla = function(
   # get hyper param scalings
 
   # temp Y var on link scale:
-  yl = lnk_function( P[["data"]][, vnY ] )   # necessary in case of log(0)
+  # on user scale
+  yl = P[["data"]][, vnY ]
 
+  if ( grepl( ".*binomial", P[["family"]])) {
+    # for binomial, prob=0,1, becomes infinite so minor fix for hypers
+    tweak = 0.05 # tail truncation prob
+    if (exists("habitat_quantile", O)) tweak = O[["habitat_quantile"]]
+    yl [ yl==1 ] = 1 - tweak
+    yl [ yl==0 ] = tweak
+  }
+  
+  yl = lnk_function( yl )   # necessary in case of log(0)
+  
   # offsets need to be close to 1 in user scale ( that is log(1)==0 in internal scale ) in experimental mode .. rescale  
   
   if ( !is.null(vnO) )  {
