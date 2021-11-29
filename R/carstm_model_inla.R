@@ -108,6 +108,7 @@ carstm_model_inla = function(
   }
 
   # local functions
+  list_to_dataframe = function(Y) data.frame(lapply(Y, function(x) Reduce(c, x)))
   apply_generic = function(...)  mclapply(...,   mc.cores=mc.cores ) # drop-in for lapply
   apply_simplify = function(...) simplify2array(mclapply(...,  mc.cores=mc.cores ), higher = FALSE )  # drop in for sapply
   
@@ -672,7 +673,7 @@ carstm_model_inla = function(
  
       W = NULL
       W = cbind ( t (apply_simplify( V, FUN=inla.zmarginal, silent=TRUE ) ) )  # 
-      O[["summary"]][["fixed_effects"]] = W [, tokeep, drop =FALSE]
+      O[["summary"]][["fixed_effects"]] = list_to_dataframe( W [, tokeep, drop =FALSE] )
       W = NULL
       V = NULL
 
@@ -837,6 +838,8 @@ carstm_model_inla = function(
         }
 
       }
+
+      O[["summary"]][["random_effects"]] = list_to_dataframe(  O[["summary"]][["random_effects"]] )
       
       k = phis = rhos = known = unknown = V = NULL
       gc()
@@ -869,6 +872,7 @@ carstm_model_inla = function(
           g = list_simplify( simplify2array( g ) )
           O[["random"]] [[re]] = g[, tokeep, drop =FALSE]
           O[["random"]] [[re]]$ID = fit$summary.random[[re]]$ID
+          O[["random"]] [[re]] = list_to_dataframe( O[["random"]] [[re]] )
         }
         g = raneff = NULL
       }
