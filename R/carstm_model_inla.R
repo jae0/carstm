@@ -172,15 +172,20 @@ carstm_model_inla = function(
 
   if ( P[["family"]] == "gaussian" ) {
     lnk_function = inla.link.identity
+    lnk_function_predictions = lnk_function
   } else if ( P[["family"]] == "lognormal" ) {
     lnk_function = inla.link.log
+    lnk_function_predictions = lnk_function
   } else if ( grepl( ".*poisson", P[["family"]])) {
     lnk_function = inla.link.log
+    lnk_function_predictions = lnk_function
   } else if ( grepl( ".*binomial", P[["family"]])) {
     lnk_function = inla.link.logit
+    lnk_function_predictions = inla.link.identity  # binomial seems to be treated differently by INLA
   } 
 
   invlink = function(x) lnk_function( x,  inverse=TRUE )
+  invlink_pred = function(x) lnk_function_predictions( x,  inverse=TRUE )
 
   if ( !exists("formula", P ) ) {
     if ( P[["verbose"]] ) message( "Formula found in options, O" )
@@ -1274,7 +1279,7 @@ carstm_model_inla = function(
             # experiemental mode also returns in link space .. inverse-link transform
             # already contain offset and offset_scale (if any)
             for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
-  
+
           } else if ( P[["inla.mode"]] == "classic" ) {
 
             # offsets already incorporated .. just need to revert the offset_scale, if used:
@@ -1288,8 +1293,8 @@ carstm_model_inla = function(
 
         }
  
-        if ( P[["inla.mode"]] == "experimental" ) m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
-        
+        m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
+
         if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
@@ -1327,7 +1332,8 @@ carstm_model_inla = function(
             }
           }
 
-          g = invlink(g)      
+          g = invlink_pred(g)      
+
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), nposteriors ),  dimnames=list( space=O[[vnS]], sim=1:nposteriors ) )
           names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
@@ -1350,11 +1356,15 @@ carstm_model_inla = function(
         if (!is.null(vnO)) {
 
           if ( P[["inla.mode"]] == "experimental" ) {
-            # assume old behaviour .. add offset_scale
-            # experiemental mode also returns in link space .. inverse-link transform
-            # already contain offset and offset_scale (if any)
-            for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
+            if (exists("control.mode", P)) {
+              # do nothing 
+            } else {
   
+              # assume old behaviour .. add offset_scale
+              # experiemental mode also returns in link space .. inverse-link transform
+              # already contain offset and offset_scale (if any)
+              for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
+            }   
           } else if ( P[["inla.mode"]] == "classic" ) {
 
             # offsets already incorporated .. just need to revert the offset_scale, if used:
@@ -1368,9 +1378,7 @@ carstm_model_inla = function(
 
         }
 
- 
-        if ( P[["inla.mode"]] == "experimental" ) m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
-
+        m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
@@ -1410,7 +1418,8 @@ carstm_model_inla = function(
             }
           }
 
-          g = invlink(g)      
+          g = invlink_pred(g)      
+
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], sim=1:nposteriors ) )
           names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
@@ -1434,11 +1443,16 @@ carstm_model_inla = function(
         if (!is.null(vnO)) {
 
           if ( P[["inla.mode"]] == "experimental" ) {
-            # assume old behaviour .. add offset_scale
-            # experiemental mode also returns in link space .. inverse-link transform
-            # already contain offset and offset_scale (if any)
-            for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
+            if (exists("control.mode", P)) {
+              # do nothing 
+            } else {
   
+            # assume old behaviour .. add offset_scale
+              # experiemental mode also returns in link space .. inverse-link transform
+              # already contain offset and offset_scale (if any)
+              for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
+            }
+
           } else if ( P[["inla.mode"]] == "classic" ) {
 
             # offsets already incorporated .. just need to revert the offset_scale, if used:
@@ -1452,7 +1466,7 @@ carstm_model_inla = function(
 
         }
  
-        if ( P[["inla.mode"]] == "experimental" ) m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
+        m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 
@@ -1495,7 +1509,8 @@ carstm_model_inla = function(
           
           }
 
-          g = invlink(g)      
+          g = invlink_pred(g)      
+
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]], sim=1:nposteriors ) )
           names(dimnames(W))[1] = vnS  # need to do this in a separate step ..
