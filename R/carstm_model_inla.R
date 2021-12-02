@@ -1364,15 +1364,11 @@ carstm_model_inla = function(
         if (!is.null(vnO)) {
 
           if ( P[["inla.mode"]] == "experimental" ) {
-            if (exists("control.mode", P)) {
-              # do nothing 
-            } else {
+            # assume old behaviour .. add offset_scale
+            # experiemental mode also returns in link space .. inverse-link transform
+            # already contain offset and offset_scale (if any)
+            for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
   
-              # assume old behaviour .. add offset_scale
-              # experiemental mode also returns in link space .. inverse-link transform
-              # already contain offset and offset_scale (if any)
-              for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
-            }   
           } else if ( P[["inla.mode"]] == "classic" ) {
 
             # offsets already incorporated .. just need to revert the offset_scale, if used:
@@ -1453,16 +1449,11 @@ carstm_model_inla = function(
         if (!is.null(vnO)) {
 
           if ( P[["inla.mode"]] == "experimental" ) {
-            if (exists("control.mode", P)) {
-              # do nothing 
-            } else {
-  
             # assume old behaviour .. add offset_scale
-              # experiemental mode also returns in link space .. inverse-link transform
-              # already contain offset and offset_scale (if any)
-              for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
-            }
-
+            # experiemental mode also returns in link space .. inverse-link transform
+            # already contain offset and offset_scale (if any)
+            for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
+  
           } else if ( P[["inla.mode"]] == "classic" ) {
 
             # offsets already incorporated .. just need to revert the offset_scale, if used:
