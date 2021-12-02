@@ -20,6 +20,7 @@ carstm_model_inla = function(
   deceedance_threshold_predictions=NULL,
   improve.hyperparam.estimates=NULL,  
   posterior_simulations_to_retain="",
+  spatiotemporal_errors=FALSE,
   eps = 1e-32,
   ... ) {
   
@@ -89,6 +90,8 @@ carstm_model_inla = function(
       message("modelled results not found. .. try to run extraction: '' ")
     }
   }
+
+  if (!spatiotemporal_errors) toget = setdiff( toget, "random_spatiotemporal")
 
   # ncores/threads to use for inla (see inla's documentation)
   num.threads = "1:1"
