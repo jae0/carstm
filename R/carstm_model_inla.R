@@ -674,7 +674,8 @@ carstm_model_inla = function(
         } 
       }
 
-      V = apply_generic( V, function(x) inla.tmarginal( invlink, x, n=4096)  )
+      test =0.5
+      if (invlink(test) != test ) V = apply_generic( V, function(x) inla.tmarginal( invlink, x, n=4096)  )
 
       if (length(fi) > 0) {
         if ( exists("data_transformation", O))  {
@@ -880,7 +881,8 @@ carstm_model_inla = function(
         for (re in raneff) {
           if (P[["verbose"]])  message("Extracting random covariates from marginals:  ", re  )
           g = fit$marginals.random[[re]]
-          g = apply_generic( g, inla.tmarginal, fun=invlink)
+          test =0.5
+          if (invlink(test) != test )  g = apply_generic( g, inla.tmarginal, fun=invlink)
           g = apply_generic( g, inla.zmarginal, silent=TRUE  )
           g = list_simplify( simplify2array( g ) )
           O[["random"]] [[re]] = g[, tokeep, drop =FALSE]
@@ -906,7 +908,8 @@ carstm_model_inla = function(
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSI) ]  # should be iid
             
             m = fit$marginals.random[[vnSI]]
-            m = apply_generic( m, inla.tmarginal, fun=invlink)
+            test =0.5
+            if (invlink(test) != test ) m = apply_generic( m, inla.tmarginal, fun=invlink)
             m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
             # single spatial effect (eg in conjucyion with besag) .. indexing not needed but here in case more complex models ..
@@ -928,7 +931,8 @@ carstm_model_inla = function(
             O[["random"]] [[vnS]] = list()  # space as a main effect
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnS) ]
             m = fit$marginals.random[[vnS]]
-            m = apply_generic( m, inla.tmarginal, fun=invlink)
+            test =0.5
+            if (invlink(test) != test ) m = apply_generic( m, inla.tmarginal, fun=invlink)
             m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
 
@@ -1063,7 +1067,8 @@ carstm_model_inla = function(
             O[["random"]] [[vnSTI]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSTI) ]  # should be iid
             m = fit$marginals.random[[vnSTI]]
-            m = apply_generic( m, inla.tmarginal, fun=invlink)
+            test =0.5
+            if (invlink(test) != test ) m = apply_generic( m, inla.tmarginal, fun=invlink)
             m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
 
@@ -1087,7 +1092,8 @@ carstm_model_inla = function(
             O[["random"]] [[vnST]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnST) ]
             m = fit$marginals.random[[vnST]]
-            m = apply_generic( m, inla.tmarginal, fun=invlink)
+            test =0.5
+            if (invlink(test) != test ) m = apply_generic( m, inla.tmarginal, fun=invlink)
             m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
 
@@ -1293,7 +1299,8 @@ carstm_model_inla = function(
 
         }
  
-        m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
+        test =0.5
+        if (invlink_pred(test) != test ) m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
 
         if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
@@ -1332,7 +1339,8 @@ carstm_model_inla = function(
             }
           }
 
-          g = invlink_pred(g)      
+          test =0.5
+          if (invlink_pred(test) != test ) g = invlink_pred(g)      
 
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), nposteriors ),  dimnames=list( space=O[[vnS]], sim=1:nposteriors ) )
@@ -1378,7 +1386,8 @@ carstm_model_inla = function(
 
         }
 
-        m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
+        test =0.5
+        if (invlink_pred(test) != test )  m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
@@ -1418,7 +1427,8 @@ carstm_model_inla = function(
             }
           }
 
-          g = invlink_pred(g)      
+          test =0.5
+          if (invlink_pred(test) != test ) g = invlink_pred(g)      
 
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], sim=1:nposteriors ) )
@@ -1466,7 +1476,8 @@ carstm_model_inla = function(
 
         }
  
-        m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
+        test =0.5
+        if (invlink_pred(test) != test )  m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 
@@ -1509,7 +1520,8 @@ carstm_model_inla = function(
           
           }
 
-          g = invlink_pred(g)      
+          test =0.5
+          if (invlink_pred(test) != test ) g = invlink_pred(g)      
 
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]], sim=1:nposteriors ) )
