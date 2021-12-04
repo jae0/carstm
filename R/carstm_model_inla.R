@@ -20,7 +20,6 @@ carstm_model_inla = function(
   deceedance_threshold_predictions=NULL,
   improve.hyperparam.estimates=NULL,  
   posterior_simulations_to_retain="",
-  spatiotemporal_errors=FALSE,
   eps = 1e-32,
   ... ) {
   
@@ -90,8 +89,6 @@ carstm_model_inla = function(
       message("modelled results not found. .. try to run extraction: '' ")
     }
   }
-
-  if (!spatiotemporal_errors) toget = setdiff( toget, "random_spatiotemporal")
 
   # ncores/threads to use for inla (see inla's documentation)
   num.threads = "1:1"
@@ -1342,8 +1339,7 @@ carstm_model_inla = function(
             }
           }
 
-          test =0.5
-          if (invlink_pred(test) != test ) g = invlink_pred(g)      
+          g = invlink(g)  ## yes posterior sims are on link space      
 
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), nposteriors ),  dimnames=list( space=O[[vnS]], sim=1:nposteriors ) )
@@ -1426,8 +1422,7 @@ carstm_model_inla = function(
             }
           }
 
-          test =0.5
-          if (invlink_pred(test) != test ) g = invlink_pred(g)      
+          g = invlink(g)  ## yes posterior sims are on link space      
 
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], sim=1:nposteriors ) )
@@ -1514,8 +1509,7 @@ carstm_model_inla = function(
           
           }
 
-          test =0.5
-          if (invlink_pred(test) != test ) g = invlink_pred(g)      
+          g = invlink(g)  ## yes posterior sims are on link space      
 
           if ( exists("data_transformation", O))  g = O$data_transformation$backward( g  )
           W = array( NA, dim=c( length(O[[vnS]]), length(O[[vnT]]), length(O[[vnU]]), nposteriors ),  dimnames=list( space=O[[vnS]], time=O[[vnT]], cyclic=O[[vnU]], sim=1:nposteriors ) )
