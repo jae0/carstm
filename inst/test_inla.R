@@ -230,3 +230,53 @@ plot( mC$summary.random$region$mean ~ mE$summary.random$region$mean    ) # issue
 
 plot( mC$summary.random$region.struct$mean ~ mE$summary.random$region.struct$mean    ) # issue: link scale with no offset
 
+
+
+
+
+
+
+if (0) {
+
+    # to get priors ::
+    # taken from INLA:::plot.inla
+ 
+    fit= mC2
+
+    prior_xy = INLA:::inla.get.prior.xy
+    inla.extract.prior = INLA:::inla.extract.prior
+    fix_varname = INLA:::inla.nameunfix
+    prep_hypers = INLA:::inla.all.hyper.postprocess
+    all.hyper <- prep_hypers( fit$all.hyper )
+
+    # fixed effects:
+    i=1 # loop
+    fix <- fit$marginals.fixed
+    labels.fix <- names(fit$marginals.fixed)
+    m <- inla.smarginal(fix[[i]])
+    vn =  fix_varname(labels.fix[i])
+    plot( m, type = "l", main = paste("PostDens [", vn, "]", sep = ""),   xlab = "", ylab = "")
+    xy <- (  prior_xy (section = "fixed", hyperid = labels.fix[i], all.hyper = all.hyper, range = range(m$x), debug = FALSE ))
+    lines(xy, col = "blue")
+
+
+tolower(id[2])
+
+    # random effects 
+    i = 1
+    hyper <- fit$marginals.hyperpar
+    hh <- hyper[[i]]
+    label <-  fix_varname(names(hyper)[i])
+    m <- inla.smarginal(hh)
+    plot(m, type = "l", ylab = "", xlab = "")
+    title(main = paste("PostDens [", label, "]", sep = ""))
+    id <- unlist(strsplit(attr(hyper[[i]], "hyperid"), "\\|"))
+    xy <- ( prior_xy (section = "random", 
+      hyperid = id[1], all.hyper = all.hyper, 
+      range = range(m$x), intern = FALSE, debug = FALSE))
+    lines(xy, col = "blue")
+
+}
+
+
+  

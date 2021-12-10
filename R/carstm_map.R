@@ -223,7 +223,7 @@
     
     } else {
       # no data sent, assume it is an element of sppoly
-      if (!exists(vn, sppoly)) stop( paste("variable: ", vn, "not found in sppoly ..."))
+      if (!exists(vn, sppoly)) message( paste("variable: ", vn, "not found in sppoly ..."))
 
       if  ( exists("breaks", ellps)) {
         breaks = ellps[["breaks"]] 
