@@ -10,53 +10,42 @@
     dta = carstm_results_unpack( X, vns ) 
     dev.new()
 
+    if (dtype=="fit") {
+      xv = dta$ID
+      yv = transf(dta$mean)
+      yv_lb = transf(dta[,"0.025quant"])
+      yv_ub = transf(dta[,"0.975quant"])
+    }
+
+    if (dtype=="res") {
+      xv = dta$ID
+      yv = transf(dta$mean)
+      yv_lb = transf(dta[,"quant0.025"])
+      yv_ub = transf(dta[,"quant0.975"])
+    } 
+
+    if (dtype=="sims") {
+      # vn = "habitat"
+      # dta = RES[[mf]][[vn]] # aggregate summaries 
+      xv = dta$ID
+      yv = transf(dta$mean)
+      yv_lb = transf(dta[,"quant0.025"])
+      yv_ub = transf(dta[,"quant0.975"])
+    }
+
     if (subtype=="xy") {
-      if (dtype=="fit") {
-        plot( transf(dta$mean) ~ ID, dta, ... )
-        lines( transf(dta[,4]) ~ ID, dta, col="gray", lty="dashed")
-        lines( transf(dta[,6]) ~ ID, dta, col="gray", lty="dashed")
-      }
-
-      if (dtype=="res") {
-        plot( transf(mean) ~ ID , dta, ... )
-        lines( transf(quant0.025) ~ ID, dta, col="gray", lty="dashed")
-        lines( transf(quant0.975) ~ ID, dta, col="gray", lty="dashed")
-      }
-
-      if (dtype=="sims") {
-        plot( transf(mean) ~ ID , dta, ... )
-        lines( transf(quant0.025) ~ ID, dta, col="gray", lty="dashed")
-        lines( transf(quant0.975) ~ ID, dta, col="gray", lty="dashed")
-
-        vn = "habitat"
-        ppa = RES[[mf]][[vn]] # aggregate summaries 
-
-        units = attr( ppa, "units")
-        plot( ppa[["mean"]] ~ RES$yr, lty=1, lwd=2.5, col="slategray", type="b", main=mf, ylab="Probability", xlab="Year", ylim=c(0.2,0.8), pch=19  )
-        lines( ppa[["mean"]] ~ RES$yr, lty=1, lwd=2.5, col="slategray" )
-        lines( ppa[["quant0.025"]] ~ RES$yr, lty="dotted", lwd=1, col="slategray"  )
-        lines( ppa[["quant0.975"]] ~ RES$yr, lty="dotted", lwd=1, col="slategray"  )
-        abline( h=0.5, lty="dashed",  col="slategray" )
-      
-
-      }
-
+      plot( yv ~ xv,  ... )
+      lines( yv_lb ~ xv, col="gray", lty="dashed")
+      lines( yv_ub ~ xv, col="gray", lty="dashed")
     }
 
     if (subtype=="errorbar" ){
-      if (dtype=="fit") {
-        x = dta$ID
-        y = transf(dta$mean)
-        y0 = transf(dta[,4])
-        y1 = transf(dta[,6])
-
-        plot( y ~ x,  ...)
-        arrows(x0=x, y0=y0, x1=x, y1=y1, code=3, angle=90, length=0.1)
-        axis(2 )
-        par(las=2, mgp=c(3,0,-4), mai=c(2,1,1,1) )
-        axis(1, at=x, labels=errorbar_labels, lty="blank", lwd=0.2 )
-        abline( h=0.5, lty="dashed",  col="slategray" )
-      }
+      xv = 1:nrow(dta)
+      loffset = xv[1] * 0.075 
+      plot( yv ~ xv, axes=FALSE, xlim=range(xv)+c(-0.25, 0.25), ...)
+      axis(2)
+      arrows(x0=xv, y0=yv_lb, x1=xv, y1=yv_ub, code=3, angle=90, length=0.1)
+      text( x=I(xv+loffset), y=yv, labels=errorbar_labels, adj=0.5, offset=4, srt=90 )
     }
 
     if (!is.null(h)) {
