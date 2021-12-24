@@ -128,14 +128,25 @@ carstm_model_inla = function(
   marginal_clean = function (marginal)  {
     # modified from INLA:::inla.marginal.fix
       eps <- ( .Machine[["double.eps"]] ) 
-      idx = which( is.na(marginal[, 2L]) )
-      if (length(idx) > 0) marginal <- marginal[-idx, ]
+
       idx = which( !is.finite(marginal[, 2L]) )
       if (length(idx) > 0) marginal <- marginal[-idx, ]
+
       idx = which( marginal[, 2L] < eps ) 
       if (length(idx) > 0) marginal[idx, 2L] = 0L
-      idx <- which(abs(marginal[, 2L]/max(marginal[, 2L])) > eps)
+
+      idx = which( !is.finite(marginal[, 1L]) )
+      if (length(idx) > 0) marginal <- marginal[-idx, ]
+
+      idx = which( marginal[, 1L] < eps ) 
+      if (length(idx) > 0) marginal =  marginal[-idx, ]
+
+      idx = which( marginal[, 1L] > 1/eps ) 
+      if (length(idx) > 0) marginal =  marginal[-idx, ]
+
+      idx <- which(abs(marginal[, 2L]/max(marginal[, 2L])) > (eps*2) )
       if (length(idx) > 0) marginal =  marginal[idx, ] 
+
       return(marginal)
   }
 
@@ -1395,6 +1406,7 @@ carstm_model_inla = function(
             # assume old behaviour .. add offset_scale
             # experiemental mode also returns in link space .. inverse-link transform
             # already contain offset and offset_scale (if any)
+            
             for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
   
           } else if ( P[["inla.mode"]] == "classic" ) {

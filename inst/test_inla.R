@@ -1,128 +1,27 @@
-library(INLA)
 
-data(Seeds)
+# some tests of INLA and CARSTM
 
+# how INLA treats offsets are not always clear or consistent
+# CARSTM tries to handle them: the following tests should succeed so long as INLA does not change base behaviour
 
-fitc = glm ( r ~ x1 + offset(log(n)), 
-  data=Seeds, 
-  family="poisson" 
-)
-summary(fitc)
-Coefficients:
-             Estimate Std. Error   z value Pr(>|z|)
-(Intercept) -0.636577   0.057735 -11.02584  < 2e-16
-x1          -0.119091   0.106761  -1.11549  0.26464
+library(carstm)
+# loadfunctions("carstm")
 
-fit1 = glm ( r ~ x1, offset = log(n),
-  data=Seeds, 
-  family="poisson" 
-)
-summary(fit1)
-Coefficients:
-             Estimate Std. Error   z value Pr(>|z|)
-(Intercept) -0.636577   0.057735 -11.02584  < 2e-16
-x1          -0.119091   0.106761  -1.11549  0.26464
+carstm_test_inla("gaussian")
 
-fit2 = inla ( r ~ x1 + offset(log(n)), 
-  data=Seeds, 
-  family="poisson"  ,
-  control.compute = list(config = TRUE), 
-  control.predictor = list(compute=TRUE, link=1)
-)
-summary(fit2)
-Fixed effects:
-              mean    sd 0.025quant 0.5quant 0.975quant   mode kld
-(Intercept) -0.637 0.058     -0.752   -0.636     -0.525 -0.635   0
-x1          -0.119 0.107     -0.331   -0.118      0.088 -0.116   0
+carstm_test_inla("poisson")
+
+carstm_test_inla("binomial")
 
 
-fit3 = inla ( r ~ x1, offset=log(n),
-  data=Seeds, 
-  family="poisson" ,
-  control.compute = list(config = TRUE), 
-  control.predictor = list(compute=TRUE, link=1)
-)
-summary(fit3)
-Fixed effects:
-              mean    sd 0.025quant 0.5quant 0.975quant   mode kld
-(Intercept) -0.637 0.058     -0.752   -0.636     -0.525 -0.635   0
-x1          -0.119 0.107     -0.331   -0.118      0.088 -0.116   0
-
-
-fit4 = inla ( r ~ x1, E=n,
-  data=Seeds, 
-  family="poisson",
-  control.compute = list(config = TRUE), 
-  control.predictor = list(compute=TRUE, link=1)
-)
-summary(fit4)
-Fixed effects:
-              mean    sd 0.025quant 0.5quant 0.975quant   mode kld
-(Intercept) -0.637 0.058     -0.752   -0.636     -0.525 -0.635   0
-x1          -0.119 0.107     -0.331   -0.118      0.088 -0.116   0
-
-
-# so far, all good!
-
-fit2e = inla ( r ~ x1 + offset(log(n)), 
-  data=Seeds, 
-  family="poisson"  ,
-  control.compute = list(config = TRUE), 
-  control.predictor = list(compute=TRUE, link=1),
-  inla.mode="experimental"
-)
-summary(fit2e)
-
-
-fit3e = inla ( r ~ x1, offset=log(n),
-  data=Seeds, 
-  family="poisson" ,
-  control.compute = list(config = TRUE), 
-  control.predictor = list(compute=TRUE, link=1)
-)
-summary(fit3e)
-
-
-fit4e = inla ( r ~ x1, E=n,
-  data=Seeds, 
-  family="poisson",
-  control.compute = list(config = TRUE), 
-  control.predictor = list(compute=TRUE, link=1)
-)
-summary(fit4e)
-
----
-
-plot( predict( fitc, type="response" ) ~ predict( fit1, type="response" ) ) # all good
-plot( predict( fitc, type="response" ) ~ fit2$summary.fitted.values$mean ) # all good
-plot( predict( fitc, type="response" ) ~ fit3$summary.fitted.values$mean ) # all good
-plot( predict( fitc, type="response" ) ~ fit3e$summary.fitted.values$mean ) # all good
-plot( predict( fitc, type="response" ) ~ fit4$summary.fitted.values$mean ) # not so good .. why?
-plot( predict( fitc, type="response" ) ~ fit4e$summary.fitted.values$mean ) # not so good .. why?
-
-
-
-posterior_means = function( x, n=1000 ) {
-  pp = inla.posterior.sample.eval( function() Predictor, inla.posterior.sample( n, x ) )
-  return(rowMeans( pp ))
-}
-
-p0 = predict( fitc, type="link" )
-p1 = predict( fit1, type="link" )
-p2 = posterior_means(fit2) 
-p3 = posterior_means(fit3) 
-p3e = posterior_means(fit3e) 
-p4 = posterior_means(fit4) 
-p4e = posterior_means(fit4e) 
-
-plot(p0 ~ p1)
-plot(p0 ~ p2)
-plot(p0 ~ p3)
-plot(p0 ~ p3e)
-plot(p0 ~ p4)
-plot(p0 ~ p4e)
 
 # ---- 
+# NOTE key difference: 
+# classical mode: predictions on user scale, incorporating offects 
+# experimental mode:  predictions are on user scale, NOT incorporating offects  
+
+
+library(INLA)
 
 data(Germany)
 g = system.file("demodata/germany.graph", package="INLA")
@@ -130,14 +29,16 @@ source(system.file("demodata/Bym-map.R", package="INLA"))
 Germany = cbind(Germany,region.struct=Germany$region)
 Germany$logE = log(Germany$E)
 
+obsrate = Germany$Y / Germany$E
+
 formula1 = Y ~ f(region.struct,model="besag",graph=g) + f(region,model="iid")
 formula2 = Y ~ offset(logE) + f(region.struct,model="besag",graph=g) + f(region,model="iid")
  
 # NOTE: all models give same parameter estimates
 
-posterior_means = function( x, n=1000 ) {
+posterior_means = function( x, n=100 ) {
   pp = inla.posterior.sample.eval( function() Predictor, inla.posterior.sample( n, x ) )
-  return(rowMeans( pp ))
+  return(rowMeans( exp(pp) ))
 }
  
 
@@ -145,42 +46,41 @@ posterior_means = function( x, n=1000 ) {
 mC2 = inla(formula2, family="poisson", data=Germany, 
     inla.mode="classic", 
     control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
-
     control.fixed=list(prec.intercept=1),
     control.predictor = list(compute=TRUE, link=1)
 )
 pC2 = posterior_means(mC2)  # range of pC2 larger
-plot( pC0_fitted  ~ mC2$summary.fitted.values$mean ) #  ??? not sure what is going on
-plot( pC0_fitted  ~ pC2 ) # ??? not sure what is going on
+pC2marg  = unlist( sapply( mC2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
+plot( Germany$Y ~ mC2$summary.fitted.values$mean  ) #  ??? not sure what is going on
+plot( Germany$Y ~ pC2 ) # ??? not sure what is going on
+plot( Germany$Y ~ pC2marg ) # ??? not sure what is going on
 
- 
 
 mE0 = inla(formula1, family="poisson", data=Germany, E=E, 
     inla.mode="experimental", 
-    control.compute = list(config = TRUE), 
+    control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
     control.fixed=list(prec.intercept=1),
     control.predictor = list(compute=TRUE, link=1)
 )
 pE0 = posterior_means(mE0)
-plot( pC0_fitted ~ mE0$summary.fitted.values$mean ) # fitted.values  on link scale
-plot( pC0_fitted ~ pE0 )  # posterior samples on link scale
+pE0marg  = unlist( sapply( mE0$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
+plot( obsrate ~ mE0$summary.fitted.values$mean ) # fitted.values  on link scale
+plot( obsrate ~ pE0 )  # posterior samples on link scale
+plot( obsrate ~ pE0marg ) # ??? not sure what is going on
 
  
 mE2 = inla(formula2, family="poisson", data=Germany, 
     inla.mode="experimental", 
-    control.compute = list(config = TRUE), 
+    control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
     control.fixed=list(prec.intercept=1),
     control.predictor = list(compute=TRUE, link=1)
 )
 pE2 = posterior_means(mE2)
-plot( pC0_fitted ~ mE2$summary.fitted.values$mean ) # fitted.values on link scale
-plot( pC0_fitted ~ pE2 )  # ??? not sure what is going on 
-
-
-
-
-
-
+pE2marg  = unlist( sapply( mE2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
+plot( obsrate ~ mE2$summary.fitted.values$mean ) # fitted.values on link scale
+plot( Germany$Y ~ pE2 )  # ??? not sure what is going on 
+plot( obsrate ~ pE2marg ) # ??? not sure what is going on
+ 
 
 
 data(Germany)
@@ -204,7 +104,7 @@ mC = inla( Y ~ f(region.struct,model="besag",graph=g) + f(region,model="iid") + 
 mE = inla( Y ~ f(region.struct,model="besag",graph=g) + f(region,model="iid") + offset(logE), 
   family="poisson",   
   data=Germany, 
-  control.compute = list(config = TRUE), 
+  control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
   control.fixed=list(prec.intercept=1),
   control.predictor = list(compute=TRUE, link=1),
   inla.mode="experimental"
@@ -217,7 +117,7 @@ plot( mC$summary.fitted.values$mean ~ I(exp(mE$summary.fitted.values$mean)*Germa
 
 posterior_means = function( x, n=1000 ) {
   pp = inla.posterior.sample.eval( function() Predictor, inla.posterior.sample( n, x ) )
-  return(rowMeans( pp ))
+  return(rowMeans( exp(pp) ))
 }
 
 pC = posterior_means(mC)
@@ -232,51 +132,4 @@ plot( mC$summary.random$region.struct$mean ~ mE$summary.random$region.struct$mea
 
 
 
-
-
-
-
-if (0) {
-
-    # to get priors ::
-    # taken from INLA:::plot.inla
  
-    fit= mC2
-
-    prior_xy = INLA:::inla.get.prior.xy
-    inla.extract.prior = INLA:::inla.extract.prior
-    fix_varname = INLA:::inla.nameunfix
-    prep_hypers = INLA:::inla.all.hyper.postprocess
-    all.hyper <- prep_hypers( fit$all.hyper )
-
-    # fixed effects:
-    i=1 # loop
-    fix <- fit$marginals.fixed
-    labels.fix <- names(fit$marginals.fixed)
-    m <- inla.smarginal(fix[[i]])
-    vn =  fix_varname(labels.fix[i])
-    plot( m, type = "l", main = paste("PostDens [", vn, "]", sep = ""),   xlab = "", ylab = "")
-    xy <- (  prior_xy (section = "fixed", hyperid = labels.fix[i], all.hyper = all.hyper, range = range(m$x), debug = FALSE ))
-    lines(xy, col = "blue")
-
-
-tolower(id[2])
-
-    # random effects 
-    i = 1
-    hyper <- fit$marginals.hyperpar
-    hh <- hyper[[i]]
-    label <-  fix_varname(names(hyper)[i])
-    m <- inla.smarginal(hh)
-    plot(m, type = "l", ylab = "", xlab = "")
-    title(main = paste("PostDens [", label, "]", sep = ""))
-    id <- unlist(strsplit(attr(hyper[[i]], "hyperid"), "\\|"))
-    xy <- ( prior_xy (section = "random", 
-      hyperid = id[1], all.hyper = all.hyper, 
-      range = range(m$x), intern = FALSE, debug = FALSE))
-    lines(xy, col = "blue")
-
-}
-
-
-  
