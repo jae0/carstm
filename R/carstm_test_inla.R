@@ -2,6 +2,8 @@ carstm_test_inla = function( family = "poisson" ) {
 
   library(INLA)
   data(Seeds)
+  
+  Seeds$rate = Seeds$r/ Seeds$n
 
   if (family=="poisson") {
 
@@ -25,12 +27,15 @@ carstm_test_inla = function( family = "poisson" ) {
       control.predictor = list(compute=TRUE, link=1)
     )
 
+
+#### form used in carstm
+
     fit2e = inla ( r ~ x1 + offset(log(n)), data=Seeds, family="poisson"  ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
       control.predictor = list(compute=TRUE, link=1),
       inla.mode="experimental"
     )
-
+#####
 
     fit3e = inla ( r ~ x1, offset=log(n), data=Seeds,  family="poisson" ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
@@ -117,8 +122,8 @@ carstm_test_inla = function( family = "poisson" ) {
 
     # predictions from marginals
 
-    pfit2  = unlist( sapply( fit2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
-    pfit2e = unlist( sapply( fit2e$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
+    pfit2  = unlist( sapply( fit2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )  
+    pfit2e = unlist( sapply( fit2e$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] ) 
 
     pfit3 = unlist( sapply( fit3$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
     pfit3e = unlist( sapply( fit3e$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
@@ -128,15 +133,22 @@ carstm_test_inla = function( family = "poisson" ) {
 
 
     # predictions from posterior distributions
-    posterior_means = function( x, n=100 ) {
+    posterior_means = function( x, n=500 ) {
       pp = inla.posterior.sample.eval( function() Predictor, inla.posterior.sample( n, x ) )
       return(rowMeans( exp( pp ) ))
+    }
+
+    posterior_means2 = function( x, n=500 ) {
+      pp = inla.posterior.sample( n, x, selection=list(Predictor=0)  )
+      oo = apply( simplify2array( lapply( pp, function(x) { exp(x$latent) } ) ), 1, mean)
+      return( oo )
     }
 
     p0 = predict( fitc, type="response" )
     p1 = predict( fit1, type="response" )
     p2 = posterior_means(fit2) 
-    p2e = posterior_means(fit2e) 
+    p2e = posterior_means(fit2e)  # captures offset information
+    p2e2 = posterior_means2(fit2e) # captures offset information
     p3 = posterior_means(fit3) 
     p3e = posterior_means(fit3e) 
     p4 = posterior_means(fit4) 
@@ -144,16 +156,20 @@ carstm_test_inla = function( family = "poisson" ) {
 
     # all predictions
     u = cbind(
+    
       p0,
       p1,
-      
-      fit2$summary.fitted.values$mean,
-      pfit2,
-      p2,
+      # "classic"  .. .. incorporates offset in all computations
+      fit2$summary.fitted.values$mean,  # with offset
+      pfit2, # with offset
+      p2,    # with offset
 
-      fit2e$summary.fitted.values$mean * Seeds$n, # experimental mode requires offset
-      pfit2e * Seeds$n ,
-      p2e,
+#### "experimental" ... used by default in carstm
+      fit2e$summary.fitted.values$mean * Seeds$n, # no offset
+      pfit2e * Seeds$n ,#  no offset
+      p2e,  # with offset
+      p2e2, # with offset
+####
 
       fit3$summary.fitted.values$mean,
       pfit3,
@@ -177,7 +193,7 @@ carstm_test_inla = function( family = "poisson" ) {
     o [ abs(o-1) <= 0.001 ] = 1
     o [ abs(o-1) > 0.001 ] = 99999
     print(o)
-    print(u)
+    print( round( (u - rowMeans(u))/ rowMeans(u) , 4 ) )  
     if (any(o != 1)) {
       warning("\nThere has been a change in INLA's internals in terms of predcition scale!\n")
     } else {
@@ -198,11 +214,13 @@ carstm_test_inla = function( family = "poisson" ) {
       control.predictor = list(compute=TRUE, link=1)
     )
 
+####
     fit2e = inla ( r ~ n + as.factor(x1), data=Seeds, family="gaussian" ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
       control.predictor = list(compute=TRUE, link=1),
       inla.mode="experimental"
     )
+#####
 
     if (0) {
 
@@ -292,7 +310,7 @@ carstm_test_inla = function( family = "poisson" ) {
     o [ abs(o-1) <= 0.001 ] = 1
     o [ abs(o-1) > 0.001 ] = 99999
     print(o)
-    print(u)
+    print( round( (u - rowMeans(u))/ rowMeans(u) , 4 ) )  
     if (any(o != 1)) {
       warning("\nThere has been a change in INLA's internals in terms of predcition scale!\n")
     } else {
@@ -313,12 +331,13 @@ carstm_test_inla = function( family = "poisson" ) {
       control.predictor = list(compute=TRUE, link=1)
     )
 
+####
     fit2e = inla ( Y ~ as.factor(x1), data=Seeds, family="binomial"  ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
       control.predictor = list(compute=TRUE, link=1),
       inla.mode="experimental"
     )
- 
+####
 
     if (0) {
 
@@ -391,7 +410,7 @@ carstm_test_inla = function( family = "poisson" ) {
       pfit2,
       p2,
 
-      fit2e$summary.fitted.values$mean , # experimental mode requires offset
+      fit2e$summary.fitted.values$mean , 
       pfit2e ,
       p2e
     )
@@ -401,7 +420,7 @@ carstm_test_inla = function( family = "poisson" ) {
     o [ abs(o-1) <= 0.001 ] = 1
     o [ abs(o-1) > 0.001 ] = 99999
     print(o)
-    print(u)
+    print( round( (u - rowMeans(u))/ rowMeans(u) , 4 ) )  
     if (any(o != 1)) {
       warning("\nThere was been a change in INLA's internals in terms of predcition scale!\n")
     } else {

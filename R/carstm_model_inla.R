@@ -9,8 +9,6 @@ carstm_model_inla = function(
   fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
   fn_res=NULL, 
   compress=TRUE,
-  scale_offsets = FALSE,
-  offset_scale = NULL,
   redo_fit = TRUE,
   toget = c("summary", "fixed_effects", "random_other", "random_spatial", "random_spatiotemporal" , "predictions"), 
   nposteriors=NULL, 
@@ -198,19 +196,28 @@ carstm_model_inla = function(
   if ( P[["family"]] == "gaussian" ) {
     lnk_function = inla.link.identity
     lnk_function_predictions = lnk_function
+    invlink_id  =  "identity"
+    invlink_pred_id  =  "identity"
   } else if ( P[["family"]] == "lognormal" ) {
     lnk_function = inla.link.log
     lnk_function_predictions = lnk_function
+    invlink_id  =  "exp"
+    invlink_pred_id  =  "exp"
   } else if ( grepl( ".*poisson", P[["family"]])) {
     lnk_function = inla.link.log
-    lnk_function_predictions = lnk_function
+    lnk_function_predictions = inla.link.identity
+    invlink_id  =  "exp"
+    invlink_pred_id  =  "identity"
   } else if ( grepl( ".*binomial", P[["family"]])) {
     lnk_function = inla.link.logit
     lnk_function_predictions = inla.link.identity  # binomial seems to be treated differently by INLA
+    invlink_id  =  "logit"
+    invlink_pred_id  =  "identity"
   } 
 
   invlink = function(x) lnk_function( x,  inverse=TRUE )
   invlink_pred = function(x) lnk_function_predictions( x,  inverse=TRUE )
+
 
   if ( !exists("formula", P ) ) {
     if ( P[["verbose"]] ) message( "Formula found in options, O" )
@@ -526,18 +533,8 @@ carstm_model_inla = function(
     
     P[["data"]][, vnO]  = lnk_function( P[["data"]][, vnO ])
  
-    if (scale_offsets) {
-      if (!exists("offset_scale", O))  O$offset_scale = min( P[["data"]][obs, vnO] , na.rm=TRUE )  # required to stabilize optimization
-      P[["data"]][, vnO] = P[["data"]][, vnO] - O$offset_scale   # apply to all and overwrite, centering upon 0 (in user space 1)
-    }
     obs = NULL
     yl = yl - P[["data"]][, vnO]
-
-    if (  P[["verbose"]]  ) {
-     
-      dev.new()
-      hist( yl, "fd", main="Histogram of input variable to model with offsets and offset_scale, on link scale"  )
-    }
 
   } 
 
@@ -694,17 +691,8 @@ carstm_model_inla = function(
       V = fit$marginals.fixed  # make a copy to do transformations upon
   
       fi = which( grepl("Intercept", names(V) ))
-      if (length(fi) > 0) {
-        if (scale_offsets) {
-          if ( exists("offset_scale", O))  {
-            V[[fi]] = inla.tmarginal( function(x) { x - O$offset_scale }, V[[fi]])  # on link scale .. as being applied on y, opposite
-            V[[fi]] = marginal_clean(V[[fi]]) 
-          }
-        } 
-      }
 
-      test =0.5
-      if (invlink(test) != test ) V = apply_generic( V, function(x)  inla.tmarginal( invlink, x, n=4096)   )
+      if (invlink_id !=" identity" ) V = apply_generic( V, function(x)  inla.tmarginal( invlink, x, n=4096)   )
       V = apply_generic( V, marginal_clean )
 
       if (length(fi) > 0) {
@@ -914,8 +902,7 @@ carstm_model_inla = function(
         for (re in raneff) {
           if (P[["verbose"]])  message("Extracting marginal effects of random covariates:  ", re  )
           g = fit$marginals.random[[re]]
-          test =0.5
-          if (invlink(test) != test )  g = apply_generic( g, inla.tmarginal, fun=invlink)
+          if (invlink_id !=" identity" )  g = apply_generic( g, inla.tmarginal, fun=invlink)
           g = apply_generic( g, marginal_clean ) 
           g = apply_generic( g, inla.zmarginal, silent=TRUE  )
           g = list_simplify( simplify2array( g ) )
@@ -942,8 +929,7 @@ carstm_model_inla = function(
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSI) ]  # should be iid
             
             m = fit$marginals.random[[vnSI]]
-            test =0.5
-            if (invlink(test) != test ) m = apply_generic( m, inla.tmarginal, fun=invlink)
+            if (invlink_id !=" identity" ) m = apply_generic( m, inla.tmarginal, fun=invlink)
             m = apply_generic( m, marginal_clean ) 
             m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
@@ -966,8 +952,7 @@ carstm_model_inla = function(
             O[["random"]] [[vnS]] = list()  # space as a main effect
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnS) ]
             m = fit$marginals.random[[vnS]]
-            test =0.5
-            if (invlink(test) != test ) m = apply_generic( m, inla.tmarginal, fun=invlink)
+            if (invlink_id !=" identity" ) m = apply_generic( m, inla.tmarginal, fun=invlink)
             m = apply_generic( m, marginal_clean ) 
             m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
@@ -1103,8 +1088,7 @@ carstm_model_inla = function(
             O[["random"]] [[vnSTI]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSTI) ]  # should be iid
             m = fit$marginals.random[[vnSTI]]
-            test =0.5
-            if (invlink(test) != test ) m = apply_generic( m, inla.tmarginal, fun=invlink)
+            if (invlink_id !=" identity" ) m = apply_generic( m, inla.tmarginal, fun=invlink)
             m = apply_generic( m, marginal_clean ) 
             m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
@@ -1129,8 +1113,7 @@ carstm_model_inla = function(
             O[["random"]] [[vnST]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnST) ]
             m = fit$marginals.random[[vnST]]
-            test =0.5
-            if (invlink(test) != test ) m = apply_generic( m, inla.tmarginal, fun=invlink)
+            if (invlink_id !=" identity" ) m = apply_generic( m, inla.tmarginal, fun=invlink)
             m = apply_generic( m, inla.zmarginal, silent=TRUE  )
             m = list_simplify( simplify2array( m ) )
 
@@ -1287,20 +1270,10 @@ carstm_model_inla = function(
 
 
   if ("predictions"  %in% toget ) {
+    # see carstm_test_inla.R .. model "fit2e"
 
     # predictions come from marginals
     # prediction simulations come from joint posterior simulations
-
-    # in experimental mode (should use offset_scale if offsets deviate from 1):
-      # summary.fitted.values == predictions with no offsets at all (none, not even the offset_scale) .. only needs main offsets
-      # marginals.fitted.values == predictions with no offsets at all (none, not even the offset_scale)  .. only needs main offsets
-      # posterior simulations == predictions with no offsets at all ... needs offsets but excluding offset_scale, if any 
-
-
-    # in classic mode ( there is no not need to use offset_scale ):
-      # summary.fitted.values == predictions with offsets  (including offset_scale)
-      # marginals.fitted.values == predictions with offsets  (including offset_scale)
-      # posterior simulations == predictions needs offsets but excluding offset_scale, if any 
 
     if (!exists("predictions", O)) O[["predictions"]] = list()
 
@@ -1316,28 +1289,12 @@ carstm_model_inla = function(
         m = fit$marginals.fitted.values[ipred]
 
         if (!is.null(vnO)) {
-
           if ( P[["inla.mode"]] == "experimental" ) {
-            # assume old behaviour .. add offset_scale
-            # experiemental mode also returns in link space .. inverse-link transform
-            # already contain offset and offset_scale (if any)
             for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
-
-          } else if ( P[["inla.mode"]] == "classic" ) {
-
-            # offsets already incorporated .. just need to revert the offset_scale, if used:
-            if (scale_offsets) {
-              if ( exists("offset_scale", O) ) {
-                message( " this part needs testing .." ) 
-                for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + O$offset_scale 
-              }
-            }    
-          }
-
+          } 
         }
  
-        test =0.5
-        if (invlink_pred(test) != test ) {
+        if (invlink_pred_id  != "identity"  ) {
           m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
           m = apply_generic( m, marginal_clean ) 
         }
@@ -1369,15 +1326,9 @@ carstm_model_inla = function(
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) {x$latent } )
 
-          if (!is.null(vnO)) {
-            if (scale_offsets) {
-              # inla.posterior.sample ignores offsets .. add prediction offsets
-              # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
-              g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
-            } else {
-              g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
-            }
-          }
+          # if (!is.null(vnO)) {
+          #     g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+          # }
 
           g = invlink(g)  ## yes posterior sims are on link space      
 
@@ -1403,27 +1354,12 @@ carstm_model_inla = function(
         if (!is.null(vnO)) {
 
           if ( P[["inla.mode"]] == "experimental" ) {
-            # assume old behaviour .. add offset_scale
-            # experiemental mode also returns in link space .. inverse-link transform
-            # already contain offset and offset_scale (if any)
-            
             for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
-  
-          } else if ( P[["inla.mode"]] == "classic" ) {
-
-            # offsets already incorporated .. just need to revert the offset_scale, if used:
-            if (scale_offsets) {
-              if ( exists("offset_scale", O) ) {
-                message( " this part needs testing .." ) 
-                for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + O$offset_scale 
-              }
-            }    
-          }
+          } 
 
         }
 
-        test =0.5
-        if (invlink_pred(test) != test ) {
+        if (invlink_pred_id  != "identity"  ) {
           m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
           m = apply_generic( m, marginal_clean )
         } 
@@ -1455,16 +1391,9 @@ carstm_model_inla = function(
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) { x$latent } )
 
-          if (!is.null(vnO)) {
-
-            if (scale_offsets) {
-              # inla.posterior.sample ignores offsets .. add prediction offsets
-              # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
-              g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
-            } else {
-              g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
-            }
-          }
+          # if (!is.null(vnO)) {
+          #   g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+          # }
 
           g = invlink(g)  ## yes posterior sims are on link space      
 
@@ -1491,26 +1420,12 @@ carstm_model_inla = function(
         if (!is.null(vnO)) {
 
           if ( P[["inla.mode"]] == "experimental" ) {
-            # assume old behaviour .. add offset_scale
-            # experiemental mode also returns in link space .. inverse-link transform
-            # already contain offset and offset_scale (if any)
             for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
-  
-          } else if ( P[["inla.mode"]] == "classic" ) {
-
-            # offsets already incorporated .. just need to revert the offset_scale, if used:
-            if (scale_offsets) {
-              if ( exists("offset_scale", O) ) {
-                message( " this part needs testing .." ) 
-                for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + O$offset_scale 
-              }
-            }    
-          }
+          } 
 
         }
  
-        test =0.5
-        if (invlink_pred(test) != test )  {
+        if (invlink_pred_id  != "identity"  )  {
           m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
           m = apply_generic( m, marginal_clean )
         }
@@ -1544,17 +1459,9 @@ carstm_model_inla = function(
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) {x$latent } )
 
-          if (!is.null(vnO)) {
-
-            if (scale_offsets) {
-              # inla.posterior.sample ignores offsets .. add prediction offsets
-              # P[["data"]][ipred, vnO] already contains offset and offset_scale (if any) .. remove offset_scale to apply prediction offset only
-              g = apply( g, 2, function(x) x - ( P[["data"]][ipred, vnO] + O$offset_scale ) )
-            } else {
-              g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
-            }
-          
-          }
+          # if (!is.null(vnO)) {
+          #   g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
+          # }
 
           g = invlink(g)  ## yes posterior sims are on link space      
 

@@ -7,6 +7,7 @@
 library(carstm)
 # loadfunctions("carstm")
 
+# these are simple regression tests
 carstm_test_inla("gaussian")
 
 carstm_test_inla("poisson")
@@ -16,7 +17,9 @@ carstm_test_inla("binomial")
 
 
 # ---- 
-# NOTE key difference: 
+# testing of slightly more complex, "bym" models
+
+# NOTE key difference:  .. trying to account for this divergent behaviour causes a lot of the complexity within carstm
 # classical mode: predictions on user scale, incorporating offects 
 # experimental mode:  predictions are on user scale, NOT incorporating offects  
 
@@ -38,9 +41,13 @@ formula2 = Y ~ offset(logE) + f(region.struct,model="besag",graph=g) + f(region,
 
 posterior_means = function( x, n=100 ) {
   pp = inla.posterior.sample.eval( function() Predictor, inla.posterior.sample( n, x ) )
-  return(rowMeans( exp(pp) ))
+  return(rowMeans( exp(pp) ))  # marginals link is log/exp
 }
  
+
+# mC2 = "classic" mode for model with offsets
+# mE0 = "experiemental" mode for model with NO offsets
+# mE2 = "experiemental" mode for model with offsets
 
 # eta* = A ( eta + offset )
 mC2 = inla(formula2, family="poisson", data=Germany, 
@@ -51,11 +58,14 @@ mC2 = inla(formula2, family="poisson", data=Germany,
 )
 pC2 = posterior_means(mC2)  # range of pC2 larger
 pC2marg  = unlist( sapply( mC2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
-plot( Germany$Y ~ mC2$summary.fitted.values$mean  ) #  ??? not sure what is going on
-plot( Germany$Y ~ pC2 ) # ??? not sure what is going on
-plot( Germany$Y ~ pC2marg ) # ??? not sure what is going on
 
+# NOTE the varying offset and sacle issues:
+  plot( Germany$Y ~ mC2$summary.fitted.values$mean  ) #  summary.fitted.values$mean is on user scale with offset .. prediction is count
+  plot( Germany$Y ~ pC2 ) # posterior samples are on link scale .. which are then exponentiated and with offsets .. prediction is count
+  plot( Germany$Y ~ pC2marg ) # marginals are again on user scale with offsets .. prediction is count
+  
 
+# no offets in formula
 mE0 = inla(formula1, family="poisson", data=Germany, E=E, 
     inla.mode="experimental", 
     control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
@@ -64,11 +74,14 @@ mE0 = inla(formula1, family="poisson", data=Germany, E=E,
 )
 pE0 = posterior_means(mE0)
 pE0marg  = unlist( sapply( mE0$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
-plot( obsrate ~ mE0$summary.fitted.values$mean ) # fitted.values  on link scale
-plot( obsrate ~ pE0 )  # posterior samples on link scale
-plot( obsrate ~ pE0marg ) # ??? not sure what is going on
 
+# NOTE the varying offset and sacle issues:
+  plot( obsrate ~ mE0$summary.fitted.values$mean ) # fitted.values on user scale and ignores offsets for prediction p.. prediction is rate
+  plot( obsrate ~ pE0 )  # posterior samples on link scale that are inverted (log/exp) and ignores offsets for prediction .. prediction is rate
+  plot( obsrate ~ pE0marg ) # posterior marginals also on user scale and ignores offsets for prediction  .. prediction is rate
+  
  
+ # has offsets in formula
 mE2 = inla(formula2, family="poisson", data=Germany, 
     inla.mode="experimental", 
     control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
@@ -77,59 +90,9 @@ mE2 = inla(formula2, family="poisson", data=Germany,
 )
 pE2 = posterior_means(mE2)
 pE2marg  = unlist( sapply( mE2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
-plot( obsrate ~ mE2$summary.fitted.values$mean ) # fitted.values on link scale
-plot( Germany$Y ~ pE2 )  # ??? not sure what is going on 
-plot( obsrate ~ pE2marg ) # ??? not sure what is going on
- 
 
-
-data(Germany)
-g = system.file("demodata/germany.graph", package="INLA")
-source(system.file("demodata/Bym-map.R", package="INLA"))
-Germany = cbind(Germany,region.struct=Germany$region)
-Germany$logE = log(Germany$E)
-
-
-# specifying offsets directly in the formula gives strange predictions
-mC = inla( Y ~ f(region.struct,model="besag",graph=g) + f(region,model="iid") + offset(logE), 
-  family="poisson",   
-  data=Germany, 
-  control.compute = list(config = TRUE, return.marginals.predictor=TRUE) , 
-  control.fixed=list(prec.intercept=1),
-  control.predictor = list(compute=TRUE, link=1),
-  inla.mode="classic"
-)
-
-# specifying offsets directly in the formula gives strange predictions
-mE = inla( Y ~ f(region.struct,model="besag",graph=g) + f(region,model="iid") + offset(logE), 
-  family="poisson",   
-  data=Germany, 
-  control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
-  control.fixed=list(prec.intercept=1),
-  control.predictor = list(compute=TRUE, link=1),
-  inla.mode="experimental"
-)
-
-plot( mC$summary.fitted.values$mean ~ mE$summary.fitted.values$mean    ) # issue: link scale with no offset
-plot( mC$summary.fitted.values$mean ~ I(exp(mE$summary.fitted.values$mean)*Germany$E )   )
-
-
-
-posterior_means = function( x, n=1000 ) {
-  pp = inla.posterior.sample.eval( function() Predictor, inla.posterior.sample( n, x ) )
-  return(rowMeans( exp(pp) ))
-}
-
-pC = posterior_means(mC)
-pE = posterior_means(mE)
-plot( pC ~ pE  )
-plot( mC$summary.fitted.values$mean ~ exp(pC)   )
-plot( I(exp(mE$summary.fitted.values$mean)*Germany$E )  ~ exp(pE) )
-
-plot( mC$summary.random$region$mean ~ mE$summary.random$region$mean    ) # issue: link scale with no offset
-
-plot( mC$summary.random$region.struct$mean ~ mE$summary.random$region.struct$mean    ) # issue: link scale with no offset
-
-
-
- 
+# NOTE the varying offset and sacle issues:
+  plot( obsrate ~ mE2$summary.fitted.values$mean ) # fitted.values on user scale and ignores offsets for prediction .. prediction is rate even when offsets given
+  plot( Germany$Y ~ pE2 )  # posterior means incorporates given offsets and predicts a count 
+  plot( obsrate ~ pE2marg ) #   posterior marginals also on user scale and ignores offsets for prediction  .. prediction is rate
+   
