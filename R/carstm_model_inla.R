@@ -644,8 +644,9 @@ carstm_model_inla = function(
 
   if (P[["verbose"]]) {
     print( summary(fit) )
-    message( "   --- NOTE: parameter estimates are on link scale and not user scale")
+    message( "   --- NOTE: parameter estimates are on link scale and not user scale.\n")
 
+    message( "   --- NOTE: even if the model fit completes, failure of extraction is possible when NAN or INF are encountered... this means that your model / data probably needs tbe changed.\n" )
     # dev.new(); 
     # hist( fit$summary.fitted.values$mean, "fd", main="Histogram of summary.fitted.values$mean from model fit"  )
   }
@@ -753,8 +754,8 @@ carstm_model_inla = function(
         if (any( inherits(V, "try-error")))  {
 
           if (P[["verbose"]])  {
-            message( "NAN and/or Inf values encountered in marginals of some parameter estimates.") 
-            message( "Try an alternate parameterization as model may be over parameterized. ")
+            message( "NAN or Inf values encountered in marginals.") 
+            message( "Try an alternate parameterization as model may be over parameterized or degenerate. ")
             message( "Copying fit summaries directly rather than from marginals ... ")
           }
           V = fit$summary.hyperpar[prcs,1:5]
@@ -818,17 +819,18 @@ carstm_model_inla = function(
       }
 
       if (length(phis) > 0) {
+
         V = fit$marginals.hyperpar[ phis ]
         V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
  
         if (any( inherits(V, "try-error"))) {
           V = fit$marginals.hyperpar[ phis ]
-          V = apply_generic(V, function( x ) {
+          V = try( apply_generic(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], 0 ), 1 ) 
               x
             }
-          )
+          ) )
           V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
@@ -854,11 +856,11 @@ carstm_model_inla = function(
         if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[ unknown ]
-          V = apply_generic(V, function( x ) {
+          V = try( apply_generic(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], -1/eps ), 1/eps ) 
               x
             }
-          )
+          ) )
           V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ unknown ], FUN=function(x) inla.mmarginal( x ))
@@ -899,16 +901,27 @@ carstm_model_inla = function(
 
       if ("random_other" %in% toget) {
         raneff = setdiff( names( fit$marginals.random ), c(vnS, vnST, vnSI, vnSTI ) )
+
         for (re in raneff) {
           if (P[["verbose"]])  message("Extracting marginal effects of random covariates:  ", re  )
           g = fit$marginals.random[[re]]
-          if (invlink_id !=" identity" )  g = apply_generic( g, inla.tmarginal, fun=invlink)
-          g = apply_generic( g, marginal_clean ) 
-          g = apply_generic( g, inla.zmarginal, silent=TRUE  )
-          g = list_simplify( simplify2array( g ) )
-          O[["random"]] [[re]] = g[, tokeep, drop =FALSE]
-          O[["random"]] [[re]]$ID = fit$summary.random[[re]]$ID
-          O[["random"]] [[re]] = list_to_dataframe( O[["random"]] [[re]] )
+          if (invlink_id !=" identity" )  g = try( apply_generic( g, inla.tmarginal, fun=invlink) )
+          g = try( apply_generic( g, marginal_clean ) ) 
+          g = try( apply_generic( g, inla.zmarginal, silent=TRUE  ) )
+          g = try( list_simplify( simplify2array( g ) ) )
+         
+          if (!any( inherits(g, "try-error"))) {
+            message( "Error encountered in marginals .. copying directly from INLA summary instead:")
+            g = fit$summary.random[[re]]
+            colnames(g) = c( "ID", "mean", "sd", "quant0.025", "quant0.5", "quant0.975", "mode", "kld" )
+            O[["random"]] [[re]] = g[, tokeep, drop =FALSE]
+            O[["random"]] [[re]]$ID = fit$summary.random[[re]]$ID
+            O[["random"]] [[re]] = list_to_dataframe( O[["random"]] [[re]] )
+          } else {
+            O[["random"]] [[re]] = g[, tokeep, drop =FALSE]
+            O[["random"]] [[re]]$ID = fit$summary.random[[re]]$ID
+            O[["random"]] [[re]] = list_to_dataframe( O[["random"]] [[re]] )
+          }
         }
         g = raneff = NULL
       }
@@ -929,11 +942,17 @@ carstm_model_inla = function(
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSI) ]  # should be iid
             
             m = fit$marginals.random[[vnSI]]
-            if (invlink_id !=" identity" ) m = apply_generic( m, inla.tmarginal, fun=invlink)
-            m = apply_generic( m, marginal_clean ) 
-            m = apply_generic( m, inla.zmarginal, silent=TRUE  )
-            m = list_simplify( simplify2array( m ) )
-            # single spatial effect (eg in conjucyion with besag) .. indexing not needed but here in case more complex models ..
+            if (invlink_id !=" identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            m = try( apply_generic( m, marginal_clean ) )
+            m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
+            m = try( list_simplify( simplify2array( m ) ) )
+            # single spatial effect (eg in conjuction with besag) .. indexing not needed but here in case more complex models ..
+            if (!any( inherits(m, "try-error"))) {
+              message( "Error encountered in marginals .. copying directly from INLA summary instead:")
+              m = fit$summary.random[[vnSI]]
+              colnames(m) = c( "ID", "mean", "sd", "quant0.025", "quant0.5", "quant0.975", "mode", "kld" )
+            } 
+            
             Z = expand.grid( space=O[[vnS]], type=model_name, stringsAsFactors =FALSE )
 
             iid =  which(Z$type==model_name)
@@ -952,10 +971,15 @@ carstm_model_inla = function(
             O[["random"]] [[vnS]] = list()  # space as a main effect
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnS) ]
             m = fit$marginals.random[[vnS]]
-            if (invlink_id !=" identity" ) m = apply_generic( m, inla.tmarginal, fun=invlink)
-            m = apply_generic( m, marginal_clean ) 
-            m = apply_generic( m, inla.zmarginal, silent=TRUE  )
-            m = list_simplify( simplify2array( m ) )
+            if (invlink_id !=" identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            m = try( apply_generic( m, marginal_clean ) ) 
+            m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
+            m = try( list_simplify( simplify2array( m ) ) )
+            if (!any( inherits(m, "try-error"))) {
+              message( "Error encountered in marginals .. copying directly from INLA summary instead:")
+              m = fit$summary.random[[vnS]]
+              colnames(m) = c( "ID", "mean", "sd", "quant0.025", "quant0.5", "quant0.975", "mode", "kld" )
+            } 
 
             if ( model_name %in% c("bym", "bym2") ) {
               # bym2 effect: bym and iid simultaneously
@@ -1088,10 +1112,15 @@ carstm_model_inla = function(
             O[["random"]] [[vnSTI]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSTI) ]  # should be iid
             m = fit$marginals.random[[vnSTI]]
-            if (invlink_id !=" identity" ) m = apply_generic( m, inla.tmarginal, fun=invlink)
-            m = apply_generic( m, marginal_clean ) 
-            m = apply_generic( m, inla.zmarginal, silent=TRUE  )
-            m = list_simplify( simplify2array( m ) )
+            if (invlink_id !=" identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            m = try( apply_generic( m, marginal_clean ) )
+            m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
+            m = try( list_simplify( simplify2array( m ) ) )
+            if (!any( inherits(m, "try-error"))) {
+              message( "Error encountered in marginals .. copying directly from INLA summary instead:")
+              m = fit$summary.random[[vnSTI]]
+              colnames(m) = c( "ID", "mean", "sd", "quant0.025", "quant0.5", "quant0.975", "mode", "kld" )
+            } 
 
             Z = expand.grid( space=O[[vnS]], type=model_name, time=O[[vnT]], stringsAsFactors =FALSE )
 
@@ -1113,9 +1142,14 @@ carstm_model_inla = function(
             O[["random"]] [[vnST]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnST) ]
             m = fit$marginals.random[[vnST]]
-            if (invlink_id !=" identity" ) m = apply_generic( m, inla.tmarginal, fun=invlink)
-            m = apply_generic( m, inla.zmarginal, silent=TRUE  )
-            m = list_simplify( simplify2array( m ) )
+            if (invlink_id !=" identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
+            m = try( list_simplify( simplify2array( m ) ) )
+            if (!any( inherits(m, "try-error"))) {
+              message( "Error encountered in marginals .. copying directly from INLA summary instead:")
+              m = fit$summary.random[[vnST]]
+              colnames(m) = c( "ID", "mean", "sd", "quant0.025", "quant0.5", "quant0.975", "mode", "kld" )
+            } 
 
             if ( model_name %in% c("bym", "bym2") ) {
               # bym2 effect: bym and iid with annual results
@@ -1289,9 +1323,11 @@ carstm_model_inla = function(
         m = fit$marginals.fitted.values[ipred]
 
         if (!is.null(vnO)) {
+
           if ( P[["inla.mode"]] == "experimental" ) {
             for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
           } 
+
         }
  
         if (invlink_pred_id  != "identity"  ) {
