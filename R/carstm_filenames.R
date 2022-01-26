@@ -11,18 +11,12 @@ carstm_filenames = function( p=list(), returnvalue="full_filename", ...  ) {
 
   if (!exists("fnroot", p)) {
     p$fnroot = paste(
-      p$areal_units_fn,
+      gsub( ".rdata$", "", p$areal_units_fn),
       p$returntype,
       p$variabletomodel,
       p$carstm_modelengine, 
       sep="~"
     )
-    if (exists( "inputdata_spatial_discretization_planar_km", p )) {
-      p$fnroot = paste( p$fnroot, round(p$inputdata_spatial_discretization_planar_km*1000), sep="~"  )  # m
-    }
-    if (exists("inputdata_temporal_discretization_yr", p)) {
-      p$fnroot = paste( p$fnroot, round(p$inputdata_temporal_discretization_yr*365),  sep="~" )  # convert to days
-    }
     p$fnroot = paste( p$fnroot, "rdata", sep="." )
   }
 
