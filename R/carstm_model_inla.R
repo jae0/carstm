@@ -553,8 +553,7 @@ carstm_model_inla = function(
   )  # on data /user scale not internal link
   
   mqi = NULL
-
-
+  
   H = hyperparameters(  reference_sd = O[["data_range_internal"]][["sd"]], alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped .. but use of pc.priors that shrink to 0
   
   O$priors = H
@@ -611,8 +610,9 @@ carstm_model_inla = function(
       message("Running model fit using the following data and options: \n")
       str(P)
     }
-    
+
     P[[".parent.frame"]]=environment()
+    
     fit  = NULL
     fit = try( do.call( inla, P ) )      
  
