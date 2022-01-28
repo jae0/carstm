@@ -915,7 +915,7 @@ carstm_model_inla = function(
           g = try( apply_generic( g, inla.zmarginal, silent=TRUE  ) )
           g = try( list_simplify( simplify2array( g ) ) )
          
-          if (!any( inherits(g, "try-error"))) {
+          if (any( inherits(g, "try-error"))) {
             message( "Error encountered in marginals .. copying directly from INLA summary instead:")
             g = fit$summary.random[[re]]
             colnames(g) = c( "ID", "mean", "sd", "quant0.025", "quant0.5", "quant0.975", "mode", "kld" )
@@ -952,7 +952,7 @@ carstm_model_inla = function(
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
             m = try( list_simplify( simplify2array( m ) ) )
             # single spatial effect (eg in conjuction with besag) .. indexing not needed but here in case more complex models ..
-            if (!any( inherits(m, "try-error"))) {
+            if (any( inherits(m, "try-error"))) {
               message( "Error encountered in marginals .. copying directly from INLA summary instead:")
               m = fit$summary.random[[vnSI]]
               colnames(m) = c( "ID", "mean", "sd", "quant0.025", "quant0.5", "quant0.975", "mode", "kld" )
@@ -980,7 +980,7 @@ carstm_model_inla = function(
             m = try( apply_generic( m, marginal_clean ) ) 
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
             m = try( list_simplify( simplify2array( m ) ) )
-            if (!any( inherits(m, "try-error"))) {
+            if (any( inherits(m, "try-error"))) {
               message( "Error encountered in marginals .. copying directly from INLA summary instead:")
               m = fit$summary.random[[vnS]]
               colnames(m) = c( "ID", "mean", "sd", "quant0.025", "quant0.5", "quant0.975", "mode", "kld" )
@@ -1121,7 +1121,7 @@ carstm_model_inla = function(
             m = try( apply_generic( m, marginal_clean ) )
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
             m = try( list_simplify( simplify2array( m ) ) )
-            if (!any( inherits(m, "try-error"))) {
+            if (any( inherits(m, "try-error"))) {
               message( "Error encountered in marginals .. copying directly from INLA summary instead:")
               m = fit$summary.random[[vnSTI]]
               colnames(m) = c( "ID", "mean", "sd", "quant0.025", "quant0.5", "quant0.975", "mode", "kld" )
@@ -1150,7 +1150,7 @@ carstm_model_inla = function(
             if (invlink_id !=" identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
             m = try( list_simplify( simplify2array( m ) ) )
-            if (!any( inherits(m, "try-error"))) {
+            if (any( inherits(m, "try-error"))) {
               message( "Error encountered in marginals .. copying directly from INLA summary instead:")
               m = fit$summary.random[[vnST]]
               colnames(m) = c( "ID", "mean", "sd", "quant0.025", "quant0.5", "quant0.975", "mode", "kld" )
