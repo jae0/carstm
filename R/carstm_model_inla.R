@@ -565,6 +565,8 @@ carstm_model_inla = function(
 
   if ( !exists("inla.mode", P ) ) P[["inla.mode"]] = "experimental"
 
+  if (exists( "debug", P)) if (P[["debug"]]) browser()
+
   if (redo_fit) {
     
 
@@ -689,6 +691,7 @@ carstm_model_inla = function(
     # parameters
     # back-transform from marginals
 
+    if (exists( "debug", P)) if (P[["debug"]]) browser()
 
     if (exists( "marginals.fixed", fit)) {
       V = fit$marginals.fixed  # make a copy to do transformations upon
@@ -1307,6 +1310,8 @@ carstm_model_inla = function(
 
   if ("predictions"  %in% toget ) {
     # see carstm_test_inla.R .. model "fit2e"
+
+    if (exists( "debug", P)) if (P[["debug"]]) browser()
 
     # predictions come from marginals
     # prediction simulations come from joint posterior simulations
