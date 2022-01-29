@@ -62,6 +62,8 @@ carstm_model_inla = function(
 
   P = list(...)  # INLA options to be passed directly to it  
 
+  if (exists( "debug", P)) if (P[["debug"]]) browser()
+
   if (DS=="modelled_fit") {
     if (!is.null(fn_fit)) {
       fit  = NULL
@@ -123,31 +125,8 @@ carstm_model_inla = function(
 
   sqrt_safe = function( a, eps=eps )  sqrt( pmin( pmax( a, eps ), 1/eps ) )
 
-  marginal_clean = function (marginal)  {
-    # modified from INLA:::inla.marginal.fix
-      eps <- ( .Machine[["double.eps"]] ) 
-
-      idx = which( !is.finite(marginal[, 2L]) )
-      if (length(idx) > 0) marginal <- marginal[-idx, ]
-
-      idx = which( marginal[, 2L] < eps ) 
-      if (length(idx) > 0) marginal[idx, 2L] = 0L
-
-      idx = which( !is.finite(marginal[, 1L]) )
-      if (length(idx) > 0) marginal <- marginal[-idx, ]
-
-      idx = which( marginal[, 1L] < eps ) 
-      if (length(idx) > 0) marginal =  marginal[-idx, ]
-
-      idx = which( marginal[, 1L] > 1/eps ) 
-      if (length(idx) > 0) marginal =  marginal[-idx, ]
-
-      idx <- which(abs(marginal[, 2L]/max(marginal[, 2L])) > (eps*2) )
-      if (length(idx) > 0) marginal =  marginal[idx, ] 
-
-      return(marginal)
-  }
-
+  marginal_clean =  INLA:::inla.marginal.fix(marginal)
+ 
   outputdir = dirname(fn_fit)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
   
@@ -565,10 +544,10 @@ carstm_model_inla = function(
 
   if ( !exists("inla.mode", P ) ) P[["inla.mode"]] = "experimental"
 
-  if (exists( "debug", P)) if (P[["debug"]]=="fit") browser()
 
   if (redo_fit) {
-    
+
+    if (exists( "debug", P)) if (P[["debug"]]=="fit") browser()
 
     if (!is.null(vnO)) {
       if ( P[["inla.mode"]] == "experimental" ) {
