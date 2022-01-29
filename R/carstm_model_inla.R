@@ -553,7 +553,8 @@ carstm_model_inla = function(
   )  # on data /user scale not internal link
   
   mqi = NULL
-  
+
+
   H = hyperparameters(  reference_sd = O[["data_range_internal"]][["sd"]], alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped .. but use of pc.priors that shrink to 0
   
   O$priors = H
@@ -564,7 +565,7 @@ carstm_model_inla = function(
 
   if ( !exists("inla.mode", P ) ) P[["inla.mode"]] = "experimental"
 
-  if (exists( "debug", P)) if (P[["debug"]]) browser()
+  if (exists( "debug", P)) if (P[["debug"]]=="fit") browser()
 
   if (redo_fit) {
     
@@ -610,9 +611,8 @@ carstm_model_inla = function(
       message("Running model fit using the following data and options: \n")
       str(P)
     }
-
-    P[[".parent.frame"]]=environment()
     
+    P[[".parent.frame"]]=environment()
     fit  = NULL
     fit = try( do.call( inla, P ) )      
  
@@ -681,6 +681,8 @@ carstm_model_inla = function(
   if (is.null(exceedance_threshold_predictions)) if (exists("exceedance_threshold_predictions", O)) exceedance_threshold_predictions = O[["exceedance_threshold_predictions"]]
 
 
+  if (exists( "debug", P)) if (P[["debug"]]=="summary") browser()
+
   if ( "summary" %in% toget) {
 
     if (P[["verbose"]])  message("Extracting parameter summaries"  )
@@ -691,14 +693,13 @@ carstm_model_inla = function(
     # parameters
     # back-transform from marginals
 
-    if (exists( "debug", P)) if (P[["debug"]]) browser()
 
     if (exists( "marginals.fixed", fit)) {
       V = fit$marginals.fixed  # make a copy to do transformations upon
   
       fi = which( grepl("Intercept", names(V) ))
 
-      if (invlink_id !=" identity" ) V = apply_generic( V, function(x)  inla.tmarginal( invlink, x, n=4096)   )
+      if (invlink_id != "identity" ) V = apply_generic( V, function(x)  inla.tmarginal( invlink, x, n=4096)   )
       V = apply_generic( V, marginal_clean )
 
       if (length(fi) > 0) {
@@ -898,19 +899,23 @@ carstm_model_inla = function(
     }
     
   }
-  
+
+
   if (any( grepl("random", toget) )) {
     if (!exists("random", O)) O[["random"]] = list()
     if (exists("marginals.random", fit)) {
     if (length(fit[["marginals.random"]]) > 0) { 
 
       if ("random_other" %in% toget) {
+
+        if (exists( "debug", P)) if (P[["debug"]]=="random_covariates") browser()
+
         raneff = setdiff( names( fit$marginals.random ), c(vnS, vnST, vnSI, vnSTI ) )
 
         for (re in raneff) {
           if (P[["verbose"]])  message("Extracting marginal effects of random covariates:  ", re  )
           g = fit$marginals.random[[re]]
-          if (invlink_id !=" identity" )  g = try( apply_generic( g, inla.tmarginal, fun=invlink) )
+          if (invlink_id != "identity" )  g = try( apply_generic( g, inla.tmarginal, fun=invlink) )
           g = try( apply_generic( g, marginal_clean ) ) 
           g = try( apply_generic( g, inla.zmarginal, silent=TRUE  ) )
           g = try( list_simplify( simplify2array( g ) ) )
@@ -934,6 +939,9 @@ carstm_model_inla = function(
 
       if ("random_spatial" %in% toget) {
         # space only
+
+        if (exists( "debug", P)) if (P[["debug"]]=="random_spatial") browser()
+
         bym = iid = NULL
         matchto = list( space=O[[vnS]] )
         matchfrom0 = NULL  # used for matching spatial effects in exceed/deceed .. required as bym2 uses 2x nsp for by and iid
@@ -947,7 +955,7 @@ carstm_model_inla = function(
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSI) ]  # should be iid
             
             m = fit$marginals.random[[vnSI]]
-            if (invlink_id !=" identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, marginal_clean ) )
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
             m = try( list_simplify( simplify2array( m ) ) )
@@ -976,7 +984,7 @@ carstm_model_inla = function(
             O[["random"]] [[vnS]] = list()  # space as a main effect
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnS) ]
             m = fit$marginals.random[[vnS]]
-            if (invlink_id !=" identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, marginal_clean ) ) 
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
             m = try( list_simplify( simplify2array( m ) ) )
@@ -1104,6 +1112,9 @@ carstm_model_inla = function(
 
       if ("random_spatiotemporal"  %in% toget ) {
         # space-time
+    
+        if (exists( "debug", P)) if (P[["debug"]]=="predictions") browser()
+    
         g = NULL
         
         bym = iid = NULL
@@ -1117,7 +1128,7 @@ carstm_model_inla = function(
             O[["random"]] [[vnSTI]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSTI) ]  # should be iid
             m = fit$marginals.random[[vnSTI]]
-            if (invlink_id !=" identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, marginal_clean ) )
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
             m = try( list_simplify( simplify2array( m ) ) )
@@ -1147,7 +1158,7 @@ carstm_model_inla = function(
             O[["random"]] [[vnST]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnST) ]
             m = fit$marginals.random[[vnST]]
-            if (invlink_id !=" identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
             m = try( list_simplify( simplify2array( m ) ) )
             if (any( inherits(m, "try-error"))) {
@@ -1311,7 +1322,7 @@ carstm_model_inla = function(
   if ("predictions"  %in% toget ) {
     # see carstm_test_inla.R .. model "fit2e"
 
-    if (exists( "debug", P)) if (P[["debug"]]) browser()
+    if (exists( "debug", P)) if (P[["debug"]]=="predictions") browser()
 
     # predictions come from marginals
     # prediction simulations come from joint posterior simulations
