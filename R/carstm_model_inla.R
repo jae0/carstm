@@ -125,7 +125,7 @@ carstm_model_inla = function(
 
   sqrt_safe = function( a, eps=eps )  sqrt( pmin( pmax( a, eps ), 1/eps ) )
 
-  marginal_clean =  INLA:::inla.marginal.fix(marginal)
+  marginal_clean =  INLA:::inla.marginal.fix  
  
   outputdir = dirname(fn_fit)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
@@ -532,8 +532,7 @@ carstm_model_inla = function(
   )  # on data /user scale not internal link
   
   mqi = NULL
-
-
+  
   H = hyperparameters(  reference_sd = O[["data_range_internal"]][["sd"]], alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped .. but use of pc.priors that shrink to 0
   
   O$priors = H
@@ -592,6 +591,7 @@ carstm_model_inla = function(
     }
     
     P[[".parent.frame"]]=environment()
+    
     fit  = NULL
     fit = try( do.call( inla, P ) )      
  
