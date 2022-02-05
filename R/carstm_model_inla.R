@@ -490,7 +490,7 @@ carstm_model_inla = function(
   if ( grepl( ".*binomial", P[["family"]])) {
     # for binomial, prob=0,1, becomes infinite so minor fix for hypers
     tweak = 0.05 # tail truncation prob
-    if (exists("habitat_quantile", O)) tweak = O[["habitat_quantile"]]
+    if (exists("habitat.threshold.quantile", O)) tweak = O[["habitat.threshold.quantile"]]
     yl [ yl==1 ] = 1 - tweak
     yl [ yl==0 ] = tweak
   }
@@ -576,7 +576,7 @@ carstm_model_inla = function(
     }
 
     if ( P[["inla.mode"]] == "classic") {
-      if ( !exists("control.results", P ) ) P[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
+      # if ( !exists("control.results", P ) ) P[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
       P[["control.compute"]]["return.marginals.predictor"] = NULL  # location of this option has moved ... might move again
     }
 
