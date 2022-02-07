@@ -800,6 +800,10 @@ carstm_model_inla = function(
         if (!any( inherits(V, "try-error"))) {
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[rhos], FUN=function(x) inla.mmarginal( x ))
           O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], V[, tokeep, drop =FALSE] )
+        } else{
+          V = fit$summary.hyperpar[rhos, 1:5]
+          colnames(V) = tokeep
+          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], V[, tokeep, drop =FALSE] )
         }
       }
 
@@ -820,13 +824,16 @@ carstm_model_inla = function(
           V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
           if (any( inherits(V, "try-error"))) {
-
             if (P[["verbose"]])  message( "Model may be over parameterized. NAN and Inf values encountered in phis. Try alt parameterizations or smaller number of n or masking negative values")
             } 
         }
 
         if (!any( inherits(V, "try-error"))) {
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
+          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], V[, tokeep, drop =FALSE] )
+        } else{
+          V = fit$summary.hyperpar[phis, 1:5]
+          colnames(V) = tokeep
           O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], V[, tokeep, drop =FALSE] )
         }
 
@@ -858,7 +865,12 @@ carstm_model_inla = function(
         if (!any( inherits(V, "try-error"))) {
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ unknown ], FUN=function(x) inla.mmarginal( x ))
           O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], V[, tokeep, drop =FALSE] )
+        } else{
+          V = fit$summary.hyperpar[unknown, 1:5]
+          colnames(V) = tokeep
+          O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], V[, tokeep, drop =FALSE] )
         }
+
 
       }
 
