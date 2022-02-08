@@ -824,6 +824,7 @@ carstm_model_inla = function(
           V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
           if (any( inherits(V, "try-error"))) {
+
             if (P[["verbose"]])  message( "Model may be over parameterized. NAN and Inf values encountered in phis. Try alt parameterizations or smaller number of n or masking negative values")
             } 
         }
