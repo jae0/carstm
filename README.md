@@ -2,7 +2,9 @@
 carstm provides a sequence of examples with supporting functions that examines abundance estimation of snow crab and groundfish (Atlantic cod) in
 Maritimes groundfish survey strata. The approach is easily generalizable to all species. The main sequence of example models and scripts are found in inst\scripts\* for the projects: bio.snowcrab and aegis.surveys, and leverages the https::\github.com\jae0\aegis data and GIS handing routines.
 
-For Atlantoc cod, carstm replicates the standard analysis which is known as "stratanal", a basic stratified average estimate. This is shown to be equivalent to a Gaussian linear fixed effects model. Thereafter, a model-based approach is used to incrementally improve upon the assumptions of the model, focussing upon the distributional model (Poisson, overdispersed Poisson), adding environmental covariates and then employing an INLA-based ICAR (intrinsic conditionally autoregressive models; "bym2") approach towards accounting for areal unit modelling and an AR1 temporal autocorrelation assuming separability of the spacetime autocorrelation.
+I recommend using the paradiso solver (https://www.pardiso-project.org/). You will need to request an academic license. It will make this much faster and less memory intensive. Combined with INLA's experimental mode (as of version 22.01.25 and possibly earlier), resource requirements are more operational. 
+
+For Atlantic cod, carstm replicates the standard analysis which is known as "stratanal", a basic stratified average estimate. This is shown to be equivalent to a Gaussian linear fixed effects model. Thereafter, a model-based approach is used to incrementally improve upon the assumptions of the model, focussing upon the distributional model (Poisson, overdispersed Poisson), adding environmental covariates and then employing an INLA-based ICAR (intrinsic conditionally autoregressive models; "bym2") approach towards accounting for areal unit modelling and an AR1 temporal autocorrelation assuming separability of the spacetime autocorrelation.
 
 
 ```
@@ -11,6 +13,11 @@ For Atlantoc cod, carstm replicates the standard analysis which is known as "str
 
   # Prepare data:
   require(INLA)
+
+  inla.pardiso.check()  # get it if you can and turn it on with:
+
+  # inla.setOption(pardiso.license="~/paradiso.license" )  # point "pardiso.license" to the physical location of your license
+
   data(Germany)
   g = system.file("demodata/germany.graph", package="INLA")
   source(system.file("demodata/Bym-map.R", package="INLA"))
