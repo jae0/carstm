@@ -576,8 +576,8 @@ carstm_model_inla = function(
     }
 
     if ( P[["inla.mode"]] == "classic") {
-      # if ( !exists("control.results", P ) ) P[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
-      P[["control.compute"]]["return.marginals.predictor"] = NULL  # location of this option has moved ... might move again
+      if ( !exists("control.results", P ) ) P[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
+      # P[["control.compute"]]["return.marginals.predictor"] = NULL  # location of this option has moved ... might move again
     }
 
 
