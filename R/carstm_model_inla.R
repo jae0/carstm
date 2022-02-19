@@ -62,7 +62,7 @@ carstm_model_inla = function(
 
   P = list(...)  # INLA options to be passed directly to it  
 
-  if (exists( "debug", P)) if (P[["debug"]]) browser()
+  if (exists( "debug", P)) if (is.character(P[["debug"]])) if (is.logical(P[["debug"]])) if (P[["debug"]]) browser()
 
   if (DS=="modelled_fit") {
     if (!is.null(fn_fit)) {
@@ -546,7 +546,7 @@ carstm_model_inla = function(
 
   if (redo_fit) {
 
-    if (exists( "debug", P)) if (P[["debug"]]=="fit") browser()
+    if (exists( "debug", P)) if (is.character(P[["debug"]])) if (P[["debug"]]=="fit") browser()
 
     if (!is.null(vnO)) {
       if ( P[["inla.mode"]] == "experimental" ) {
@@ -660,7 +660,7 @@ carstm_model_inla = function(
   if (is.null(exceedance_threshold_predictions)) if (exists("exceedance_threshold_predictions", O)) exceedance_threshold_predictions = O[["exceedance_threshold_predictions"]]
 
 
-  if (exists( "debug", P)) if (P[["debug"]]=="summary") browser()
+  if (exists( "debug", P)) if (is.character(P[["debug"]])) if (P[["debug"]]=="summary") browser()
 
   if ( "summary" %in% toget) {
 
@@ -900,7 +900,7 @@ carstm_model_inla = function(
 
       if ("random_other" %in% toget) {
 
-        if (exists( "debug", P)) if (P[["debug"]]=="random_covariates") browser()
+        if (exists( "debug", P))  if (is.character(P[["debug"]])) if (P[["debug"]]=="random_covariates") browser()
 
         raneff = setdiff( names( fit$marginals.random ), c(vnS, vnST, vnSI, vnSTI ) )
 
@@ -932,7 +932,7 @@ carstm_model_inla = function(
       if ("random_spatial" %in% toget) {
         # space only
 
-        if (exists( "debug", P)) if (P[["debug"]]=="random_spatial") browser()
+        if (exists( "debug", P)) if (is.character(P[["debug"]])) if (P[["debug"]]=="random_spatial") browser()
 
         bym = iid = NULL
         matchto = list( space=O[[vnS]] )
@@ -1105,7 +1105,7 @@ carstm_model_inla = function(
       if ("random_spatiotemporal"  %in% toget ) {
         # space-time
     
-        if (exists( "debug", P)) if (P[["debug"]]=="predictions") browser()
+        if (exists( "debug", P)) if (is.character(P[["debug"]])) if (P[["debug"]]=="random_spatiotemporal") browser()
     
         g = NULL
         
@@ -1314,7 +1314,7 @@ carstm_model_inla = function(
   if ("predictions"  %in% toget ) {
     # see carstm_test_inla.R .. model "fit2e"
 
-    if (exists( "debug", P)) if (P[["debug"]]=="predictions") browser()
+    if (exists( "debug", P)) if (is.character(P[["debug"]])) if (P[["debug"]]=="predictions") browser()
 
     # predictions come from marginals
     # prediction simulations come from joint posterior simulations

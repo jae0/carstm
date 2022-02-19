@@ -18,6 +18,7 @@ For Atlantic cod, carstm replicates the standard analysis which is known as "str
 
   # inla.setOption(pardiso.license="~/paradiso.license" )  # point "pardiso.license" to the physical location of your license
 
+
   data(Germany)
   g = system.file("demodata/germany.graph", package="INLA")
   source(system.file("demodata/Bym-map.R", package="INLA"))
