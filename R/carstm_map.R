@@ -253,7 +253,7 @@
       # OpenTopoMap, Stamen.Watercolor, Stamen.Terrain, Stamen.TonerLite, Esri.OceanBasemap 
       if (is.null(background)) {
         tmout = tmout +
-          tm_basemap(leaflet::providers$CartoDB.Positron, alpha=0.8) 
+          tm_basemap(leaflet::providers$CartoDB.PositronNoLabels, alpha=0.8) 
     #     tm_basemap(leaflet::providers$Esri.OceanBasemap, alpha=0.9) +
     #     tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, alpha=0.8) 
       } else {
