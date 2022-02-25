@@ -1,6 +1,4 @@
-
-## TODO:: worth doing evaluations using parallel mode
-
+ 
   carstm_map = function( 
     res=NULL, 
     toplot=NULL,
@@ -14,127 +12,76 @@
     smatch=NULL, 
     tmatch=NULL, 
     umatch=NULL, 
-    plot_crs=NULL,
     plot_elements=c( "isobaths", "compass", "scale_bar" ),
     additional_features = NULL,
-    background = NULL,
     aggregate_function=mean,
     probs=c(0,0.975), 
-    outformat="mapview",
-    outfilename="",
-    map_mode="view",
-    width=9, height=7, bg='white', pointsize=12, pres=300,
-    vwidth = 1600,  # in points
-    vheight=1200,
-    depths = c(50, 100, 200, 400),
-    digits=3,
-    tmap_zoom=6, 
-    id = "space", 
+    outfilename=NULL,
+    digits = 3,
     ...) {
-
-
-    if (0) {
-      res = NULL
-      toplot=NULL
-      space = "space"
-      time= "time"
-      cyclic="cyclic"
-      stat_var="mean"
-      sppoly=NULL
-      smatch=NULL 
-      tmatch=NULL 
-      plot_crs=NULL
-      coastline=NULL 
-      isobaths=NULL 
-      managementlines = NULL
-      plot_elements=NULL
-      background = NULL
-      aggregate_function=mean
-      probs=c(0,0.975) 
-      outformat="mapview"
-      map_mode="view"
-      width=9; height=7; bg='white'; pointsize=12; pres=300
-      depths = c(50, 100, 200, 400)
-      digits=3
-      tmap_zoom=6  
  
-      ellps=list()
-
-      p = aegis.bathymetry::bathymetry_parameters( project_class="carstm" )  # defaults are hard coded
-      res = carstm_model( p=p, DS="carstm_modelled_summary"  ) # to load currently saved results
-      # require(fields)
-      
-      vn = "predictions" 
-      vn = c("random", "space", "combined") 
-      
-      carstm_map(  
-          res = res, vn = vn,
-          plot_elements=c( "isobaths", "coastline", "compass", "scale_bar"  ),
-          palette = "viridis",
-          title = "Bathymetry predicted"
-      )
-
- 
- 
-    }
-
+    # thin wrapper around tmap plot mode
 
     ellps = list(...)
 
     require(sf)
     require(tmap)
 
-  
-    # tmap_save options:
-    width=1000
-    height=800
-    asp=0
-    if (exists("width", ellps) )   width = ellps[["width"]]
-    if (exists("height", ellps) )   height = ellps[["height"]]
-    if (exists("asp", ellps) )   asp = ellps[["asp"]]
+    id = ifelse( exists("id", ellps), ellps[["id"]], "space" )
+ 
+     # tmap_save options:
+    outformat = ifelse( exists("outformat", ellps),  ellps[["outformat"]], "tmap" )
+    pointsize = ifelse( exists("pointsize", ellps),   ellps[["pointsize"]], 12 )
+    width_pts = ifelse( exists("width_pts", ellps),  ellps[["width_pts"]], 1200 )
+    height_pts = ifelse( exists("height_pts", ellps),  ellps[["height_pts"]], 800 )
+    pres = ifelse( exists("pres", ellps),  ellps[["pres"]], 300 )
+    asp = ifelse( exists("asp", ellps),  ellps[["asp"]], 0 )
+    width_in = ifelse( exists("width_in", ellps),  ellps[["width_in"]], 9 )
+    height_in = ifelse( exists("height_in", ellps),  ellps[["height_in"]], 7 )
+    bg = ifelse( exists("bg", ellps),  ellps[["bg"]], 'white' )
 
     # tmap plotting options:
-    bbox = NULL
-    breaks = NULL
-    style = "cont"; 
-    palette =  "YlOrRd"
-    title =  "" 
-    showNA =  FALSE 
-    lwd =  0.25 
-    border.alpha =  0.75
-    alpha =   0.95
-    legend.is.portrait = TRUE   
-    compass_position = c( 0.925, 0.1 )  # (left-right, top-bottom)  
-    compass_north = 0
-    scale_bar_position = c( 0.75, "BOTTOM" )
-    if ( map_mode=="view") scale_bar_position= c("left", "bottom" )
-    legend_position = c("left", "top" )
-    scale = 2
-    legend_title.size=1.1
-    legend_text.size=0.9
-    legend.width = ifelse( map_mode=="plot", 0.25, 100 )  # plot_mode uses fractions .. view_mode uses pixels
-    scale_bar_width = ifelse( map_mode=="plot", 0.1, 125 )
+    
+    if ( exists("compass.position", ellps) ) {
+      compass.position =  ellps[["compass.position"]] 
+    } else {
+      compass.position = c("right", "TOP" )
+    }
 
-    if (exists("bbox", ellps) )   bbox = ellps[["bbox"]]
+    if ( exists("scale_bar.position", ellps) ) {
+      scale_bar.position =  ellps[["scale_bar.position"]] 
+    } else {
+      scale_bar.position = c("RIGHT", "BOTTOM" )
+    }
+
+    if ( exists("legend.position", ellps) ) {
+      legend.position =  ellps[["legend.position"]] 
+    } else {
+      legend.position = c("LEFT", "top" )
+    }
  
-    if (exists("breaks", ellps) )   breaks = ellps[["breaks"]]
-    if (exists("style", ellps) )   style = ellps[["style"]]
-    if (exists("palette", ellps) )   palette = ellps[["palette"]]
-    if (exists("title", ellps) )   title = ellps[["title"]]
-    if (exists("showNA", ellps) )   showNA = ellps[["showNA"]]
-    if (exists("lwd", ellps) )   lwd = ellps[["lwd"]]
-    if (exists("border.alpha", ellps) )  border.alpha = ellps[["border.alpha"]]
-    if (exists("alpha", ellps) )   alpha = ellps[["alpha"]]
-    if (exists("legend.is.portrait", ellps) )   legend.is.portrait = ellps[["legend.is.portrait"]]
-    if (exists("compass_position", ellps) )   compass_position = ellps[["compass_position"]]
-    if (exists("compass_north", ellps) ) compass_north = ellps[["compass_north"]]
-    if (exists("scale_bar_position", ellps) )   scale_bar_position = ellps[["scale_bar_position"]]
-    if (exists("legend_position", ellps) )   legend_position = ellps[["legend_position"]]
-    if (exists("scale", ellps) )   scale = ellps[["scale"]]
-    if (exists("legend_title.size", ellps) )  legend_title.size = ellps[["legend_title.size"]]
-    if (exists("legend_text.size", ellps) )    legend_text.size = ellps[["legend_text.size"]]
-    if (exists("legend.width", ellps) )   legend.width = ellps[["legend.width"]]
 
+    scale = ifelse( exists("scale", ellps),  ellps[["scale"]],  2 )
+
+    style = ifelse( exists("style", ellps),   ellps[["style"]],  "cont" )
+    palette = ifelse( exists("palette", ellps),   ellps[["palette"]],  "YlOrRd" )
+    title = ifelse( exists("title", ellps),   ellps[["title"]],  "" )
+    showNA = ifelse( exists("showNA", ellps),   ellps[["showNA"]],  FALSE )
+    lwd = ifelse( exists("lwd", ellps),  ellps[["lwd"]],  0.04  )
+    border.alpha = ifelse( exists("border.alpha", ellps),  ellps[["border.alpha"]],  0.7 )
+    alpha = ifelse( exists("alpha", ellps),   ellps[["alpha"]],  0.9 )
+
+
+    compass.north = ifelse( exists("compass.north", ellps),  ellps[["compass.north"]],  0 )
+
+    scale_bar.width = ifelse( exists("scale_bar.width", ellps),  ellps[["scale_bar.width"]], 0.1 )
+
+    legend.title.size = ifelse( exists("legend.title.size", ellps),  ellps[["legend.title.size"]],  1 )
+    legend.text.size = ifelse( exists("legend.text.size", ellps),   ellps[["legend.text.size"]],  1 )
+    legend.width = ifelse( exists("legend.width", ellps),  ellps[["legend.width"]], 0.75 )
+
+    legend.is.portrait = ifelse( exists("legend.is.portrait", ellps),   ellps[["legend.is.portrait"]],  TRUE )
+ 
 
     # if toplot not passed, create from res if given
     if (is.null(toplot)) {
@@ -172,11 +119,16 @@
         }
       } 
     }
-
     # prepare sppoly
     if (is.null(sppoly)) stop( "sppoly is required")
 
-    if (is.null(plot_crs)) plot_crs = st_crs( sppoly )
+    # cannot use ifelse as it is not a singleton
+    if( exists("plot_crs", ellps)) {
+      plot_crs = ellps[["plot_crs"]] 
+    } else {
+      plot_crs = st_crs( sppoly )
+    } 
+ 
     sppoly = st_transform( sppoly, crs=st_crs(plot_crs) )
 
     if (!exists(space, sppoly)) {
@@ -238,159 +190,64 @@
 
     }
 
-    if (exists("id", ellps) )   id = ellps[["id"]]
-    # sppoly = st_cast(sppoly, "POLYGON" )
     sppoly = st_make_valid(sppoly)
 
-    
-    tmap_mode( map_mode )
-    
-    tmout = NULL
-
-    if ( map_mode=="view") {
-
-      # https://leaflet-extras.github.io/leaflet-providers/preview/
-      # OpenTopoMap, Stamen.Watercolor, Stamen.Terrain, Stamen.TonerLite, Esri.OceanBasemap 
-      if (is.null(background)) {
-        tmout = tmout +
-          tm_basemap(leaflet::providers$CartoDB.PositronNoLabels, alpha=0.8) 
-    #     tm_basemap(leaflet::providers$Esri.OceanBasemap, alpha=0.9) +
-    #     tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, alpha=0.8) 
-      } else {
-        tmout = tmout + background
-      }
-    }
-
-    tmout = tmout + 
-      tm_shape( sppoly, projection=plot_crs ) +
+    tmout = NULL  
+ 
+    tmout =  tmout + 
+      tm_shape( sppoly, projection = plot_crs ) +
       tm_polygons( 
-        col=vn_label, 
+        col = vn_label, 
         title= title,
         style = style,
         palette = palette,
         breaks = breaks,
         midpoint = NA ,
-        border.col = "lightgray",
+        border.col = "gray30",
         colorNA = NULL,
         id = id,
         showNA =showNA,
         lwd = lwd,  
         border.alpha =border.alpha,
         alpha =alpha, 
-        legend.is.portrait = legend.is.portrait ) +
-
-    if ( map_mode=="view") {
-      tmout = tmout + 
-        tm_facets(ncol = 2, sync = TRUE) 
-        # tm_facets(as.layers = TRUE) 
-    }
-
+        legend.is.portrait = legend.is.portrait ) 
+ 
     if (!is.null(additional_features) ) {
       # e.g. management lines, etc
       tmout = tmout + additional_features 
     }
 
-    if ("rnaturalearth_countries" %in% plot_elements ) {
-        if (!require("rnaturalearth"))  install.packages("rnaturalearth")
-        if (!require("rnaturalearthdata"))  install.packages("rnaturalearthdata")
-          if (0) {
-            # or install directly
-            devtools::install_github("ropenscilabs/rnaturalearth")
-            devtools::install_github("ropenscilabs/rnaturalearthdata")
-            install.packages("rnaturalearthhires",
-                 repos = "http://packages.ropensci.org",
-                 type = "source")
-          }
-
-      require("rnaturalearth")
-      require("rnaturalearthhires")
-      require("rnaturalearthdata")
-      world = ne_countries(type = 'countries', scale = 'large', returnclass="sf")
+    if ("compass" %in% plot_elements ) {
       tmout = tmout + 
-        tm_shape( world, projection=plot_crs ) + 
-        tm_borders( col="gray", alpha=0.75)  
-    }
-
-    if ("coastline" %in% plot_elements ) {
-      coastline = aegis.coastline::coastline_db( DS="eastcoast_gadm", project_to=plot_crs ) 
-      tmout = tmout + 
-        tm_shape( coastline, projection=plot_crs ) +
-        tm_polygons( col="grey80", alpha=0.1 ) 
-    }
-
-    if ("isobaths" %in% plot_elements ) {
-      isobaths = aegis.bathymetry::isobath_db( depths=depths, project_to=plot_crs  )
-      tmout = tmout + 
-        tm_shape( isobaths, projection=plot_crs ) +
-        tm_lines( col="lightgray", alpha=0.75) 
-    }
-
-
-    if (map_mode=="plot"){
-      if ("compass" %in% plot_elements ) {
-        tmout = tmout + 
-          tm_compass( position=compass_position, size=1) 
-      }
+        tm_compass( position=compass.position, size=1) 
+      message( "You will need to tweak more settings such as angle of compass .." ) 
     }
 
     if ("scale_bar" %in% plot_elements ) {
       tmout = tmout + 
-        tm_scale_bar( position=scale_bar_position, width=scale_bar_width, text.size=0.7)  
+        tm_scale_bar( position=scale_bar.position, width=scale_bar.width, text.size=0.5)  
     }
 
-    if ( map_mode=="plot") {
-      tmout = tmout + 
-        tm_layout( frame=FALSE, legend.position=legend_position, scale=scale ) 
-    }
+    tmout = tmout + 
+      tm_layout( frame=FALSE, legend.position=legend.position, scale=scale, legend.title.size=legend.title.size,
+        legend.text.size =legend.text.size, legend.width=legend.width ) 
 
-    if ( map_mode=="view") {
-      tmout = tmout + 
-        tm_view(set.view = tmap_zoom, view.legend.position=legend_position  ) +
-        tm_layout( frame=FALSE ) 
-    }
 
-     
+    if ( !is.null(outfilename) ) {
 
-    if ( outfilename !="" ) {
+      if (outformat=="tmap") {
+        tmap_save( tmout, outfilename, width=width_pts, height=height_pts, asp=asp, dpi=pres, scale=scale*0.4)
+      }
 
-      if ( map_mode=="plot") {
-        message( "You will need to tweak more settings such as angle of compass and size of elements .." ) 
-        if (outformat=="tmap") {
-          # tmap_save options:
-          twidth=1000
-          theight=800
-          tasp=0
-          if (exists("twidth", ellps) )   twidth = ellps[["twidth"]]
-          if (exists("theight", ellps) )   theight = ellps[["theight"]]
-          if (exists("tasp", ellps) )   tasp = ellps[["tasp"]]
-          tmap_save( tmout, outfilename, width=twidth, height=theight, asp=tasp )
-          print(outfilename)
-          return(tmout)
-        }
-        if (outformat %in% c("pdf", "svg", "png")){
-          if (outformat=="pdf") pdf( file=outfilename, width=width, height=height, bg=bg, pointsize=pointsize )
-          if (outformat=="svg") svg( filename=outfilename, width=width, height=height, bg=bg, pointsize=pointsize   )
-          if (outformat=="png") png( filename=outfilename, width=vwidth, height=vheight, pointsize=pointsize, res=pres )
-            print(tmout)
-          dev.off()
-          print(outfilename)
-        }
-      } 
+      if (outformat %in% c("pdf", "svg", "png")){
+        if (outformat=="pdf") pdf( file=outfilename, width=width_in, height=height_in, bg=bg, pointsize=pointsize )
+        if (outformat=="svg") svg( filename=outfilename, width=width_in, height=height_in, bg=bg, pointsize=pointsize   )
+        if (outformat=="png") png( filename=outfilename, width=width_pts, height=height_pts, pointsize=pointsize, res=pres )
+          print(tmout)
+        dev.off()
+      }
 
-      if ( map_mode=="view") {
-        if (outformat=="mapview") {
-
-          if (!require(mapview)) install.packages("mapview")
-          if (!require(webshot)) {
-            install.packages("webshot")
-            webshot::install_phantomjs()
-          }
-          require(mapview)
-          mapshot( tmap_leaflet(tmout), file=outfilename, vwidth = vwidth, vheight = vheight )
-          print(outfilename)
-          return(tmout)
-        }
-      } 
+      print(outfilename)
     }
  
     return(tmout)
