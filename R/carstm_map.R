@@ -67,9 +67,9 @@
     palette = ifelse( exists("palette", ellps),   ellps[["palette"]],  "YlOrRd" )
     title = ifelse( exists("title", ellps),   ellps[["title"]],  "" )
     showNA = ifelse( exists("showNA", ellps),   ellps[["showNA"]],  FALSE )
-    lwd = ifelse( exists("lwd", ellps),  ellps[["lwd"]],  0.04  )
-    border.alpha = ifelse( exists("border.alpha", ellps),  ellps[["border.alpha"]],  0.7 )
-    alpha = ifelse( exists("alpha", ellps),   ellps[["alpha"]],  0.9 )
+    lwd = ifelse( exists("lwd", ellps),  ellps[["lwd"]],  0.02  )
+    border.alpha = ifelse( exists("border.alpha", ellps),  ellps[["border.alpha"]],  0.75 )
+    alpha = ifelse( exists("alpha", ellps),   ellps[["alpha"]],  0.975 )
 
 
     compass.north = ifelse( exists("compass.north", ellps),  ellps[["compass.north"]],  0 )
