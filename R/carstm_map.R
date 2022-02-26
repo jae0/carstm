@@ -17,6 +17,7 @@
     aggregate_function=mean,
     probs=c(0,0.975), 
     outfilename=NULL,
+    outscale=1,
     digits = 3,
     ...) {
  
@@ -30,6 +31,7 @@
     id = ifelse( exists("id", ellps), ellps[["id"]], "space" )
  
      # tmap_save options:
+    outscale = ifelse( exists("outscale", ellps),  ellps[["outscale"]],  0.4 )  # to match screen to file outputs (not same)
     outformat = ifelse( exists("outformat", ellps),  ellps[["outformat"]], "tmap" )
     pointsize = ifelse( exists("pointsize", ellps),   ellps[["pointsize"]], 12 )
     width_pts = ifelse( exists("width_pts", ellps),  ellps[["width_pts"]], 1200 )
@@ -62,6 +64,7 @@
  
 
     scale = ifelse( exists("scale", ellps),  ellps[["scale"]],  2 )
+
 
     style = ifelse( exists("style", ellps),   ellps[["style"]],  "cont" )
     palette = ifelse( exists("palette", ellps),   ellps[["palette"]],  "YlOrRd" )
@@ -236,7 +239,7 @@
     if ( !is.null(outfilename) ) {
 
       if (outformat=="tmap") {
-        tmap_save( tmout, outfilename, width=width_pts, height=height_pts, asp=asp, dpi=pres, scale=scale*0.4)
+        tmap_save( tmout, outfilename, width=width_pts, height=height_pts, asp=asp, dpi=pres, scale=scale*outscale)
       }
 
       if (outformat %in% c("pdf", "svg", "png")){
