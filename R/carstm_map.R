@@ -220,7 +220,7 @@
     if ("compass" %in% plot_elements ) {
       tmout = tmout + 
         tm_compass( position=compass.position, size=1) 
-      message( "You will need to tweak more settings such as angle of compass .." ) 
+      message( "You might need to tweak  angle of compass .. send 'north=xx" ) 
     }
 
     if ("scale_bar" %in% plot_elements ) {
