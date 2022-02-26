@@ -1,8 +1,8 @@
- 
-  carstm_map = function( 
-    res=NULL, 
+
+  carstm_map = function(
+    res=NULL,
     toplot=NULL,
-    vn=NULL, 
+    vn=NULL,
     vn_label=NULL,
     space = "space",
     time= "time",
@@ -13,9 +13,8 @@
     tmatch=NULL, 
     umatch=NULL, 
     plot_elements=c( "isobaths", "compass", "scale_bar" ),
-    additional_features = NULL,
     aggregate_function=mean,
-    probs=c(0,0.975), 
+    probs=c(0,0.975),
     outfilename=NULL,
     outscale=1,
     digits = 3,
@@ -86,30 +85,31 @@
     legend.is.portrait = ifelse( exists("legend.is.portrait", ellps),   ellps[["legend.is.portrait"]],  TRUE )
  
 
+
     # if toplot not passed, create from res if given
     if (is.null(toplot)) {
-      
+
       if (!is.null(res)) {
         vv = 0
-        toplot = carstm_results_unpack( res, vn ) 
-        vv = which(dimnames(toplot)$stat == stat_var) 
+        toplot = carstm_results_unpack( res, vn )
+        vv = which(dimnames(toplot)$stat == stat_var)
         if ( exists("sppoly", res)) {
           if (is.null(sppoly)) sppoly = res[["sppoly"]]
         }
         if (exists(space, res)) {
           suid = res[[space]]
-          if (is.null(smatch)) smatch = suid 
-          js = match( as.character( sppoly[["AUID"]] ), smatch )  # should match exactly but in case sppoly is a subset 
+          if (is.null(smatch)) smatch = suid
+          js = match( as.character( sppoly[["AUID"]] ), smatch )  # should match exactly but in case sppoly is a subset
         }
         if (exists(time, res)) {
           tuid = res[[time]]
           if (is.null(tmatch)) tmatch = tuid
-          jt = match( tmatch, res[[time]] )  
-        } 
+          jt = match( tmatch, res[[time]] )
+        }
         if (exists(cyclic, res)) {
           uuid = res[[cyclic]]
           if (is.null(umatch)) umatch = uuid
-          ju = match( umatch, res[[cyclic]] )  
+          ju = match( umatch, res[[cyclic]] )
         }
 
         data_dimensionality = ifelse (is.vector(toplot), 1, length(dim(toplot) ) )
@@ -120,8 +120,9 @@
         } else if (data_dimensionality==4) {
           toplot = toplot[ js, jt, ju, vv ] # year/subyear
         }
-      } 
+      }
     }
+
     # prepare sppoly
     if (is.null(sppoly)) stop( "sppoly is required")
 
@@ -136,15 +137,16 @@
 
     if (!exists(space, sppoly)) {
       if (exists("AUID", sppoly)) {
-        sppoly[, space] = as.character(sppoly[["AUID"]])  
+        sppoly[, space] = as.character(sppoly[["AUID"]])
       } else {
         sppoly[, space] = as.character(1:nrow(sppoly))
       }
     }
 
+
     # add toplot to sppoly for final plots, but first check in case toplot is xyz data
     if (!is.null(toplot)) {
-      
+
       ndata = ifelse ( is.vector(toplot), length(toplot), nrow(toplot) )
       if (ndata != nrow(sppoly) ) {
         # must have lon,lat in toplot
@@ -153,16 +155,16 @@
         toplot_id = st_points_in_polygons( pts=res, polys=sppoly[, space], varname=space )
         toplot = tapply( toplot[[vn]], toplot_id, aggregate_function, na.rm=TRUE )
       }
- 
+
       if  ( exists("breaks", ellps)) {
-        breaks = ellps[["breaks"]] 
+        breaks = ellps[["breaks"]]
         er = range(breaks)
-      } else{ 
+      } else{
         er = quantile( toplot, probs=probs, na.rm=TRUE )
-        # breaks = signif( seq( er[1], er[2], length.out=7), 2) 
+        # breaks = signif( seq( er[1], er[2], length.out=7), 2)
         breaks = pretty( er )
       }
-      
+
       toplot[ which(toplot < er[1]) ] = er[1] # set levels higher than max datarange to max datarange
       toplot[ which(toplot > er[2]) ] = er[2] # set levels higher than max datarange to max datarange
       toplot = round( toplot, digits=digits)
@@ -175,15 +177,15 @@
         sppoly = cbind(sppoly, toplot )
       }
       vn_label = gsub(" ", ".", vn_label)
-    
+
     } else {
       # no data sent, assume it is an element of sppoly
       if (!exists(vn, sppoly)) message( paste("variable: ", vn, "not found in sppoly ..."))
 
       if  ( exists("breaks", ellps)) {
-        breaks = ellps[["breaks"]] 
+        breaks = ellps[["breaks"]]
         er = range(breaks)
-      } else{ 
+      } else{
         er = range( sppoly[[vn]],   na.rm=TRUE )
         breaks = pretty( er )
       }
@@ -195,8 +197,10 @@
 
     sppoly = st_make_valid(sppoly)
 
-    tmout = NULL  
- 
+    tmap_mode( "plot" )
+
+    tmout = NULL
+
     tmout =  tmout + 
       tm_shape( sppoly, projection = plot_crs ) +
       tm_polygons( 
@@ -206,19 +210,20 @@
         palette = palette,
         breaks = breaks,
         midpoint = NA ,
-        border.col = "gray30",
+        border.col = "lightgray",
         colorNA = NULL,
         id = id,
         showNA =showNA,
-        lwd = lwd,  
+        lwd = lwd,
         border.alpha =border.alpha,
-        alpha =alpha, 
-        legend.is.portrait = legend.is.portrait ) 
+        alpha =alpha,
+        legend.is.portrait = legend.is.portrait )
  
-    if (!is.null(additional_features) ) {
+    if ( exists("additional_features", ellps) ) {
       # e.g. management lines, etc
-      tmout = tmout + additional_features 
+      tmout = tmout + ellps[["additional_features"]]  
     }
+
 
     if ("compass" %in% plot_elements ) {
       tmout = tmout + 
@@ -227,11 +232,11 @@
     }
 
     if ("scale_bar" %in% plot_elements ) {
-      tmout = tmout + 
-        tm_scale_bar( position=scale_bar.position, width=scale_bar.width, text.size=0.5)  
+      tmout = tmout +
+        tm_scale_bar( position=scale_bar.position, width=scale_bar.width, text.size=0.5)
     }
 
-    tmout = tmout + 
+    tmout = tmout +
       tm_layout( frame=FALSE, legend.position=legend.position, scale=scale, legend.title.size=legend.title.size,
         legend.text.size =legend.text.size, legend.width=legend.width ) 
 
