@@ -8,7 +8,6 @@
       vns = vn
     }
     dta = carstm_results_unpack( X, vns ) 
-    dev.new()
 
     if (dtype=="fit") {
       xv = dta$ID

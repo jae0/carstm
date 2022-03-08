@@ -281,71 +281,7 @@ carstm_model_inla = function(
     }
   }
 
-
-  if (is.null(space.id)) {
-    if (!is.null(sppoly))  {
-      aa = attributes(sppoly)
-      if (!is.null(aa)) {
-        if ( exists("region.id", aa) ) {
-          space.id =  as.character( aa$region.id )
-        }
-      }
-    }
-  }
  
-  if (is.null(space.id)) {
-    if (!is.null(sppoly))  {
-      aa = attributes(sppoly)
-      if (!is.null(aa)) {
-        if ( exists("nb", aa) ) {
-          if ( exists("space.id", attributes(aa$nb) )) {
-            space.id =  as.character( slot( aa$nb, "space.id" ) )
-          }
-        }
-      }
-    }
-  }
-
-  if (is.null(space.id)) {
-    if (!is.null(sppoly))  {
-      aa = attributes(sppoly)
-      if (!is.null(aa)) {
-        if ( exists("nb", aa) ) {
-          if ( exists("region.id", attributes(aa$nb) )) {
-            space.id =  as.character( slot( aa$nb, "region.id" ) )
-          }
-        }
-      }
-    }
-  }
-
-  if (is.null(space.id)) {
-    if (!is.null(sppoly))  {
-      aa = attributes(sppoly)
-      if (!is.null(aa)) {
-        if ( exists("W.nb", aa) ) {
-          if ( exists("region.id", attributes(aa$W.nb) )) {
-            space.id =  as.character( slot( aa$W.nb, "space.id" ) )
-          }
-        }
-      }
-    }
-  }
-
-  if (is.null(space.id)) {
-    if (!is.null(sppoly))  {
-      aa = attributes(sppoly)
-      if (!is.null(aa)) {
-        if ( exists("W.nb", aa) ) {
-          if ( exists("region.id", attributes(aa$W.nb) )) {
-            space.id =  as.character( slot( aa$W.nb, "region.id" ) )
-          }
-        }
-      }
-    }
-  }
-
-
   if (is.null(space.id)) {
     if (!is.null(sppoly)) {
       if (exists("AUID", sppoly)) {
@@ -533,7 +469,7 @@ carstm_model_inla = function(
   
   mqi = NULL
   
-  H = hyperparameters(  reference_sd = O[["data_range_internal"]][["sd"]], alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped .. but use of pc.priors that shrink to 0
+  H = inla_hyperparameters(  reference_sd = O[["data_range_internal"]][["sd"]], alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped .. but use of pc.priors that shrink to 0
   
   O$priors = H
 
