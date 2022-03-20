@@ -1,4 +1,4 @@
-carstm_filenames = function( p=list(), returnvalue="full_filename", ...  ) {
+carstm_filenames = function( p=list(), returnvalue="full_filename", fn=NULL, ...  ) {
 
   p = parameters_add(p, list(...)) # add passed args to parameter list, priority to args
 
@@ -30,6 +30,15 @@ carstm_filenames = function( p=list(), returnvalue="full_filename", ...  ) {
   if (returnvalue=="file_root") return(p$fnroot)
   if (returnvalue=="output_directory") return(p$outputdir)
   if (returnvalue=="areal_units_filename") return(p$areal_units_fn)
+  if (returnvalue=="filename") {
+      areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
+      aufns = carstm_filenames( p=pN, returntype="carstm_modelled_fit", areal_units_fn=areal_units_fn )
+      # same file naming as in carstm ..
+      outputdir = dirname( aufns )
+      if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
+      outfn = paste( gsub(".rdata", "", aufns), fn, "rdata", sep="." )
+    return( outfn )   
+  }  
 
   return(p)
 }
