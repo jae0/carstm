@@ -1,6 +1,6 @@
 
 carstm_model = function( p=list(), data=NULL, dimensionality=NULL,  
-  sppoly =NULL, space.id = NULL, time.id = NULL, cyclic.id=NULL, areal_units_fn=NULL, DS="redo", 
+  sppoly =NULL, space.id = NULL, time.id = NULL, cyclic.id=NULL, areal_units_fn=NULL, DS="redo", posterior_simulations_to_retain="",
   improve.hyperparam.estimates=FALSE, compress=TRUE, fn_fit=NULL, fn_res=NULL, 
    ... ) {
 
