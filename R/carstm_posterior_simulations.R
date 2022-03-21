@@ -1,6 +1,6 @@
 
 carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=NULL, sppoly=NULL, 
-  wgts_max=NULL, N_max=NULL, B_max=NULL, max_value=NULL, degree_day=FALSE, redo=FALSE ) {
+  wgts_max=NULL, N_max=NULL, B_max=NULL, max_value=NULL, degree_day=FALSE  ) {
 
   operation = NULL
   
@@ -11,7 +11,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   if (!is.null(pB)) operation = c( operation, "biomass" )
  
   if (is.null(operation)) {
-    if (!redo) stop( "The operation is ambiguous, check parameters." )
+    stop( "The operation is ambiguous, check parameters." )
   }
 
   gen = NULL
