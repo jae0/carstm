@@ -46,9 +46,9 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   if ( "presence_absence" %in% operation ) {
     pa = carstm_model( p=pH, DS="carstm_modelled_summary", sppoly=sppoly  )
     pa = pa[[ "predictions_posterior_simulations" ]]
-    pa[!is.finite(pa)] = NA
+    j = which( !is.finite(pa) )
+    if (length(j) > 0 ) pa[j] = NA
     # pa = inverse.logit(pa)
-    # pa[!is.finite(pa)] = NA
     attr( pa, "unit") = "probability"
     if (length(operation)==1) return(pa)
   }
@@ -57,7 +57,8 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   if ( "meansize" %in% operation) {
     wgts = carstm_model( p=pW, DS="carstm_modelled_summary", sppoly=sppoly  )
     wgts = wgts[[ "predictions_posterior_simulations"  ]]
-    wgts[!is.finite(wgts)] = NA
+    j = which( !is.finite(wgts) )
+    if (length(j) > 0 ) wgts[j] = NA
     if ( !is.null(wgts_max) ) {
       i = which( wgts > wgts_max )
       if (length(i) > 0 ) wgts[ i ] = wgts_max
@@ -70,7 +71,8 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   if ( "biomass" %in% operation) {
     biom = carstm_model( p=pB, DS="carstm_modelled_summary", sppoly=sppoly  )
     biom = biom[[ "predictions_posterior_simulations" ]] 
-    biom[!is.finite(biom)] = NA
+    j = which( !is.finite(biom) )
+    if (length(j) > 0 ) biom[j] = NA
     if ( !is.null( B_max ) ) {
       i = which( biom > B_max )
       if (length(i) > 0 ) biom[ i ] = B_max
@@ -84,7 +86,8 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   if ( "number" %in% operation ) {
     nums = carstm_model( p=pN, DS="carstm_modelled_summary", sppoly=sppoly  )
     nums = nums[[ "predictions_posterior_simulations" ]]    
-    nums[!is.finite(nums)] = NA
+    j = which( !is.finite(nums) )
+    if (length(j) > 0 ) nums[j] = NA
     if ( !is.null(N_max) ) {
       i = which( nums > N_max )
       if (length(i) > 0 ) nums[ i ] = N_max
