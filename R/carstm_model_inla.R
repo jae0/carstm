@@ -187,6 +187,11 @@ carstm_model_inla = function(
     lnk_function_predictions = inla.link.identity
     invlink_id  =  "exp"
     invlink_pred_id  =  "identity"
+  } else if ( grepl( ".*nbinomial", P[["family"]])) {
+    lnk_function = inla.link.log
+    lnk_function_predictions = inla.link.identity  # binomial seems to be treated differently by INLA
+    invlink_id  =  "exp"
+    invlink_pred_id  =  "exp"
   } else if ( grepl( ".*binomial", P[["family"]])) {
     lnk_function = inla.link.logit
     lnk_function_predictions = inla.link.identity  # binomial seems to be treated differently by INLA
