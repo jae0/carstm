@@ -14,6 +14,7 @@ carstm_test_inla("poisson")
 
 carstm_test_inla("binomial")
 
+# carstm_test_inla("nbinomial")
 
 
 # ---- 
@@ -46,8 +47,8 @@ posterior_means = function( x, n=100 ) {
  
 
 # mC2 = "classic" mode for model with offsets
-# mE0 = "experiemental" mode for model with NO offsets
-# mE2 = "experiemental" mode for model with offsets
+# mE0 = "experimental" mode for model with NO offsets
+# mE2 = "experimental" mode for model with offsets
 
 # eta* = A ( eta + offset )
 mC2 = inla(formula2, family="poisson", data=Germany, 
@@ -59,7 +60,7 @@ mC2 = inla(formula2, family="poisson", data=Germany,
 pC2 = posterior_means(mC2)  # range of pC2 larger
 pC2marg  = unlist( sapply( mC2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
 
-# NOTE the varying offset and sacle issues:
+# NOTE the varying offset and scale issues:
   plot( Germany$Y ~ mC2$summary.fitted.values$mean  ) #  summary.fitted.values$mean is on user scale with offset .. prediction is count
   plot( Germany$Y ~ pC2 ) # posterior samples are on link scale .. which are then exponentiated and with offsets .. prediction is count
   plot( Germany$Y ~ pC2marg ) # marginals are again on user scale with offsets .. prediction is count
@@ -96,3 +97,23 @@ pE2marg  = unlist( sapply( mE2$marginals.fitted.values, function(u) inla.zmargin
   plot( Germany$Y ~ pE2 )  # posterior means incorporates given offsets and predicts a count 
   plot( obsrate ~ pE2marg ) #   posterior marginals also on user scale and ignores offsets for prediction  .. prediction is rate
    
+
+  
+ # negative binomial .. has offsets in formula
+nbin0 = inla(formula2, family="nbinomial", data=Germany, 
+    # inla.mode="experimental", 
+    control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+    control.fixed=list(prec.intercept=1),
+    control.predictor = list(compute=TRUE, link=1)
+)
+
+pnbin0 = posterior_means(nbin0)
+pnbinmarg  = unlist( sapply( nbin0$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
+
+# NOTE the varying offset and sacle issues:
+  plot( obsrate ~ nbin0$summary.fitted.values$mean ) # fitted.values on user scale and ignores offsets for prediction .. prediction is rate even when offsets given
+  plot( Germany$Y ~ pnbin0 )  # posterior means incorporates given offsets and predicts a count 
+  plot( obsrate ~ pnbinmarg ) #   posterior marginals also on user scale and ignores offsets for prediction  .. prediction is rate
+   
+
+  

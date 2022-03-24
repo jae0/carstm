@@ -35,7 +35,7 @@
     pointsize = ifelse( exists("pointsize", ellps),   ellps[["pointsize"]], 12 )
     width_pts = ifelse( exists("width_pts", ellps),  ellps[["width_pts"]], 1200 )
     height_pts = ifelse( exists("height_pts", ellps),  ellps[["height_pts"]], 800 )
-    pres = ifelse( exists("pres", ellps),  ellps[["pres"]], 192 )
+    pres = ifelse( exists("pres", ellps),  ellps[["pres"]], 300 )
     asp = ifelse( exists("asp", ellps),  ellps[["asp"]], 0 )
     width_in = ifelse( exists("width_in", ellps),  ellps[["width_in"]], 9 )
     height_in = ifelse( exists("height_in", ellps),  ellps[["height_in"]], 7 )
