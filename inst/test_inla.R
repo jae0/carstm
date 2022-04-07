@@ -117,3 +117,25 @@ pnbinmarg  = unlist( sapply( nbin0$marginals.fitted.values, function(u) inla.zma
    
 
   
+
+  # eta* = A ( eta + offset )
+mm = inla(formula1, family="poisson", data=Germany, 
+    inla.mode="classic",
+    offset=Germany$logE,
+    control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+    control.fixed=list(prec.intercept=1),
+    control.predictor = list(compute=TRUE, link=1)
+)
+
+m2 = inla(formula1, family="poisson", data=Germany, 
+    inla.mode="classic",
+    E=Germany$E, 
+    control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+    control.fixed=list(prec.intercept=1),
+    control.predictor = list(compute=TRUE, link=1)
+)
+
+> plot(mC2$summary.fitted.values$mean, m2$summary.fitted.values$mean)
+
+> plot(mC2$summary.fitted.values$mean, m2$summary.fitted.values$mean*Germany$E)
+
