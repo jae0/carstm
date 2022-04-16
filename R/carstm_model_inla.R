@@ -125,8 +125,13 @@ carstm_model_inla = function(
 
   sqrt_safe = function( a, eps=eps )  sqrt( pmin( pmax( a, eps ), 1/eps ) )
 
-  marginal_clean =  INLA:::inla.marginal.fix  
- 
+  marginal_clean = function( w) {
+    i <- which(is.na(rowSums(w)) )
+    if ( length(i) > 0) w = w[-i,] 
+    w = w[order(w[,1]),]
+    return(w)
+  }
+
   outputdir = dirname(fn_fit)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
   
@@ -657,14 +662,15 @@ carstm_model_inla = function(
       if (length(prcs) > 0) {
 
         V = fit$marginals.hyperpar[prcs]
-        V = try( apply_generic( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
         V = try( apply_generic( V, marginal_clean ) )
+        V = try( apply_generic( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
         V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
 
         if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[prcs]
+          V = try( apply_generic( V, marginal_clean ) )
           V = apply_generic(V, function( x ) {
               x[,1] = pmax( x[,1], eps ) 
               x[,1] = pmin( x[,1], 1/eps ) 
@@ -672,7 +678,6 @@ carstm_model_inla = function(
             }
           )
           V = try( apply_generic( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
-          V = try( apply_generic( V, marginal_clean ) )
           V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
         }
@@ -708,21 +713,16 @@ carstm_model_inla = function(
       known = c( rhos, phis, other )
       unknown = setdiff( hyps, c(prcs, known) )
 
-      if (length(unknown) > 0 ) {
-        message( "Additional hyperparameters encountered. They will be treated as a normal hyperparameter (untransformed): ", unknown )
-        k = unique( c(known, unknown) )
-      } else {
-        k = known
-      }
-
       if (length(rhos) > 0) {
         V = fit$marginals.hyperpar[ rhos ]
+        V = try( apply_generic( V, marginal_clean ) )
         V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
 
         if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[ rhos ]
+          V = try( apply_generic( V, marginal_clean ) )
           V = apply_generic(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], -1 ), 1 ) 
               x
@@ -751,11 +751,13 @@ carstm_model_inla = function(
       if (length(phis) > 0) {
 
         V = fit$marginals.hyperpar[ phis ]
+        V = try( apply_generic( V, marginal_clean ) )
         V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
  
         if (any( inherits(V, "try-error"))) {
           V = fit$marginals.hyperpar[ phis ]
+          V = try( apply_generic( V, marginal_clean ) )
           V = try( apply_generic(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], 0 ), 1 ) 
               x
@@ -784,12 +786,14 @@ carstm_model_inla = function(
 
       if (length(unknown) > 0) {
         V = fit$marginals.hyperpar[ unknown ]
+        V = try( apply_generic( V, marginal_clean ) )
         V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
 
         if (any( inherits(V, "try-error"))) {
           # var ~ 100 
           V = fit$marginals.hyperpar[ unknown ]
+          V = try( apply_generic( V, marginal_clean ) )
           V = try( apply_generic(V, function( x ) {
               x[,1] = pmin( pmax( x[,1], -1/eps ), 1/eps ) 
               x
@@ -848,8 +852,8 @@ carstm_model_inla = function(
         for (re in raneff) {
           if (P[["verbose"]])  message("Extracting marginal effects of random covariates:  ", re  )
           g = fit$marginals.random[[re]]
-          if (invlink_id != "identity" )  g = try( apply_generic( g, inla.tmarginal, fun=invlink) )
           g = try( apply_generic( g, marginal_clean ) ) 
+          if (invlink_id != "identity" )  g = try( apply_generic( g, inla.tmarginal, fun=invlink) )
           g = try( apply_generic( g, inla.zmarginal, silent=TRUE  ) )
           g = try( list_simplify( simplify2array( g ) ) )
          
@@ -888,8 +892,8 @@ carstm_model_inla = function(
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSI) ]  # should be iid
             
             m = fit$marginals.random[[vnSI]]
-            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, marginal_clean ) )
+            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
             m = try( list_simplify( simplify2array( m ) ) )
             # single spatial effect (eg in conjuction with besag) .. indexing not needed but here in case more complex models ..
@@ -917,8 +921,8 @@ carstm_model_inla = function(
             O[["random"]] [[vnS]] = list()  # space as a main effect
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnS) ]
             m = fit$marginals.random[[vnS]]
-            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, marginal_clean ) ) 
+            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
             m = try( list_simplify( simplify2array( m ) ) )
             if (any( inherits(m, "try-error"))) {
@@ -1061,8 +1065,8 @@ carstm_model_inla = function(
             O[["random"]] [[vnSTI]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSTI) ]  # should be iid
             m = fit$marginals.random[[vnSTI]]
-            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, marginal_clean ) )
+            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
             m = try( list_simplify( simplify2array( m ) ) )
             if (any( inherits(m, "try-error"))) {
@@ -1091,6 +1095,7 @@ carstm_model_inla = function(
             O[["random"]] [[vnST]] = list()
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnST) ]
             m = fit$marginals.random[[vnST]]
+            m = try( apply_generic( m, marginal_clean ) )
             if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
             m = try( list_simplify( simplify2array( m ) ) )
@@ -1272,6 +1277,7 @@ carstm_model_inla = function(
       if (  O[["dimensionality"]] == "space" ) {
         ipred = which( P[["data"]]$tag=="predictions"  &  P[["data"]][,vnS0] %in% O[[vnS]] )  # filter by S and T in case additional data in other areas and times are used in the input data
         m = fit$marginals.fitted.values[ipred]
+        m = apply_generic( m, marginal_clean ) 
 
         if (!is.null(vnO)) {
 
@@ -1283,7 +1289,6 @@ carstm_model_inla = function(
  
         if (invlink_pred_id  != "identity"  ) {
           m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
-          m = apply_generic( m, marginal_clean ) 
         }
 
         if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
@@ -1337,6 +1342,7 @@ carstm_model_inla = function(
       if (O[["dimensionality"]] == "space-time"  ) {
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]] & P[["data"]][,vnT0] %in% O[[vnT]] )
         m = fit$marginals.fitted.values[ipred]   
+        m = apply_generic( m, marginal_clean )
  
         if (!is.null(vnO)) {
 
@@ -1348,7 +1354,6 @@ carstm_model_inla = function(
 
         if (invlink_pred_id  != "identity"  ) {
           m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
-          m = apply_generic( m, marginal_clean )
         } 
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
@@ -1403,6 +1408,7 @@ carstm_model_inla = function(
       if ( O[["dimensionality"]] == "space-time-cyclic" ) {
         ipred = which( P[["data"]]$tag=="predictions" & P[["data"]][,vnS0] %in% O[[vnS]]  &  P[["data"]][,vnT0] %in% O[[vnT]] &  P[["data"]][,vnU0] %in% O[[vnU]])  # ignoring U == predict at all seassonal components ..
         m = fit$marginals.fitted.values[ipred]   
+        m = apply_generic( m, marginal_clean )
 
         if (!is.null(vnO)) {
 
@@ -1414,7 +1420,6 @@ carstm_model_inla = function(
  
         if (invlink_pred_id  != "identity"  )  {
           m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
-          m = apply_generic( m, marginal_clean )
         }
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )

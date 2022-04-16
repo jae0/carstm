@@ -135,7 +135,7 @@ m2 = inla(formula1, family="poisson", data=Germany,
     control.predictor = list(compute=TRUE, link=1)
 )
 
-> plot(mC2$summary.fitted.values$mean, m2$summary.fitted.values$mean)
+plot(mC2$summary.fitted.values$mean, m2$summary.fitted.values$mean)
 
-> plot(mC2$summary.fitted.values$mean, m2$summary.fitted.values$mean*Germany$E)
+plot(mC2$summary.fitted.values$mean, m2$summary.fitted.values$mean*Germany$E)
 
