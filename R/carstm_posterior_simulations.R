@@ -1,6 +1,6 @@
 
 carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=NULL, sppoly=NULL, 
-  wgts_max=NULL, N_max=NULL, B_max=NULL, max_value=NULL, degree_day=FALSE  ) {
+  wgts_min=0, wgts_max=NULL, N_min=0, N_max=NULL, B_min=0, B_max=NULL, max_value=NULL, degree_day=FALSE  ) {
 
   operation = NULL
   
