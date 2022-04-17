@@ -27,7 +27,7 @@ additional_features_tmap = function( p, area_lines=NULL, isobaths=NULL, coastlin
 
   if (0) {
     o = additional_features_tmap( p=p, area_lines="cfa.regions", isobaths=c(  10, 100, 200, 300,   800 ), 
-      coastline =  c("unsited states of america", "canada"), xlim=c(-85,-35), ylim=c(35, 65) )
+      coastline =  c("united states of america", "canada"), xlim=c(-85,-35), ylim=c(35, 65) )
   }
 }
 

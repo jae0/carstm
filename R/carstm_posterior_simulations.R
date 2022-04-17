@@ -26,6 +26,10 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
     gen = carstm_model( p=pW, DS="carstm_modelled_summary", sppoly=sppoly  )
     gen = gen[[ "predictions_posterior_simulations"  ]]
     gen[!is.finite(gen)] = NA
+    if ( !is.null(min_value) ) {
+      i = which( gen < min_value )
+      if (length(i) > 0 ) gen[ i ] = min_value
+    }
     if ( !is.null(max_value) ) {
       i = which( gen > max_value )
       if (length(i) > 0 ) gen[ i ] = max_value
@@ -59,6 +63,11 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
     wgts = wgts[[ "predictions_posterior_simulations"  ]]
     j = which( !is.finite(wgts) )
     if (length(j) > 0 ) wgts[j] = NA
+
+    if ( !is.null(wgts_min) ) {
+      i = which( wgts < wgts_min )
+      if (length(i) > 0 ) wgts[ i ] = wgts_min
+    }
     if ( !is.null(wgts_max) ) {
       i = which( wgts > wgts_max )
       if (length(i) > 0 ) wgts[ i ] = wgts_max
@@ -73,6 +82,10 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
     biom = biom[[ "predictions_posterior_simulations" ]] 
     j = which( !is.finite(biom) )
     if (length(j) > 0 ) biom[j] = NA
+    if ( !is.null( B_min ) ) {
+      i = which( biom < B_min )
+      if (length(i) > 0 ) biom[ i ] = B_min
+    }
     if ( !is.null( B_max ) ) {
       i = which( biom > B_max )
       if (length(i) > 0 ) biom[ i ] = B_max
@@ -88,11 +101,14 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
     nums = nums[[ "predictions_posterior_simulations" ]]    
     j = which( !is.finite(nums) )
     if (length(j) > 0 ) nums[j] = NA
+    if ( !is.null(N_min) ) {
+      i = which( nums < N_min )
+      if (length(i) > 0 ) nums[ i ] = N_min
+    }
     if ( !is.null(N_max) ) {
       i = which( nums > N_max )
       if (length(i) > 0 ) nums[ i ] = N_max
     }
-    # nums = nums / 10^6  # n/km2 ->  M n  / km^2
     attr(nums, "unit") = "n/km^2"
     if (length(operation)==1) return(nums)
   }
