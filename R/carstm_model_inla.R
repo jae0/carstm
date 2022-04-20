@@ -109,12 +109,17 @@ carstm_model_inla = function(
 
   # local functions
   list_to_dataframe = function(Y){
+    
+    if (!is.vector(Y)) {
+      Y = as.data.frame(Y)
+    }
     Z = data.frame(lapply(Y, function(x) Reduce(c, x)))
     rownames(Z) = rownames(Y)
     colnames(Z) = colnames(Y)
     Z$parameter = rownames(Y)
     return(Z)
   } 
+
 
   apply_generic = function(...)  mclapply(...,   mc.cores=mc.cores ) # drop-in for lapply
   apply_simplify = function(...) simplify2array(mclapply(...,  mc.cores=mc.cores ), higher = FALSE )  # drop in for sapply
@@ -126,7 +131,7 @@ carstm_model_inla = function(
   sqrt_safe = function( a, eps=eps )  sqrt( pmin( pmax( a, eps ), 1/eps ) )
 
   marginal_clean = function( w) {
-    i <- which(is.na(rowSums(w)) )
+    i <- which(!is.finite(rowSums(w)) )
     if ( length(i) > 0) w = w[-i,] 
     w = w[order(w[,1]),]
     return(w)
@@ -621,16 +626,19 @@ carstm_model_inla = function(
 
     if (exists( "marginals.fixed", fit)) {
       V = fit$marginals.fixed  # make a copy to do transformations upon
-  
+      V = try( apply_generic( V, marginal_clean ) )
+
       fi = which( grepl("Intercept", names(V) ))
 
-      if (invlink_id != "identity" ) V = apply_generic( V, function(x)  inla.tmarginal( invlink, x, n=4096)   )
-      V = apply_generic( V, marginal_clean )
+      if (invlink_id != "identity" ) {
+        V = apply_generic( V, function(x)  inla.tmarginal( invlink, x, n=4096)   )
+        V = try( apply_generic( V, marginal_clean ) )
+      }
 
       if (length(fi) > 0) {
         if ( exists("data_transformation", O))  {
           V[[fi]] = inla.tmarginal( O$data_transformation$backward, V[[fi]]  ) # on user scale
-          V[[fi]] = marginal_clean(V[[fi]]) 
+          V[[fi]] = marginal_clean( V[[fi]])
         }
       }
 
@@ -638,7 +646,7 @@ carstm_model_inla = function(
       W = NULL
       W = cbind ( t (apply_simplify( V, FUN=inla.zmarginal, silent=TRUE ) ) )  # 
 
-      O[["summary"]][["fixed_effects"]] = list_to_dataframe( W [, tokeep, drop =FALSE] )
+      O[["summary"]][["fixed_effects"]] = list_to_dataframe( W [1, tokeep, drop =FALSE] )
       W = NULL
       V = NULL
 
@@ -664,6 +672,7 @@ carstm_model_inla = function(
         V = fit$marginals.hyperpar[prcs]
         V = try( apply_generic( V, marginal_clean ) )
         V = try( apply_generic( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
+        V = try( apply_generic( V, marginal_clean ) )
         V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
 
@@ -678,6 +687,7 @@ carstm_model_inla = function(
             }
           )
           V = try( apply_generic( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
+          V = try( apply_generic( V, marginal_clean ) )
           V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
         }
@@ -853,7 +863,10 @@ carstm_model_inla = function(
           if (P[["verbose"]])  message("Extracting marginal effects of random covariates:  ", re  )
           g = fit$marginals.random[[re]]
           g = try( apply_generic( g, marginal_clean ) ) 
-          if (invlink_id != "identity" )  g = try( apply_generic( g, inla.tmarginal, fun=invlink) )
+          if (invlink_id != "identity" )  {
+            g = try( apply_generic( g, inla.tmarginal, fun=invlink) )
+            g = try( apply_generic( g, marginal_clean ) )
+          }
           g = try( apply_generic( g, inla.zmarginal, silent=TRUE  ) )
           g = try( list_simplify( simplify2array( g ) ) )
          
@@ -893,7 +906,10 @@ carstm_model_inla = function(
             
             m = fit$marginals.random[[vnSI]]
             m = try( apply_generic( m, marginal_clean ) )
-            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            if (invlink_id != "identity" ) {
+              m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+              m = try( apply_generic( m, marginal_clean ) )
+            }
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
             m = try( list_simplify( simplify2array( m ) ) )
             # single spatial effect (eg in conjuction with besag) .. indexing not needed but here in case more complex models ..
@@ -922,7 +938,10 @@ carstm_model_inla = function(
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnS) ]
             m = fit$marginals.random[[vnS]]
             m = try( apply_generic( m, marginal_clean ) ) 
-            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            if (invlink_id != "identity" ) {
+              m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+              m = try( apply_generic( m, marginal_clean ) )
+            }
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
             m = try( list_simplify( simplify2array( m ) ) )
             if (any( inherits(m, "try-error"))) {
@@ -1066,7 +1085,10 @@ carstm_model_inla = function(
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnSTI) ]  # should be iid
             m = fit$marginals.random[[vnSTI]]
             m = try( apply_generic( m, marginal_clean ) )
-            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            if (invlink_id != "identity" ) {
+              m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+              m = try( apply_generic( m, marginal_clean ) )
+            }
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
             m = try( list_simplify( simplify2array( m ) ) )
             if (any( inherits(m, "try-error"))) {
@@ -1096,7 +1118,10 @@ carstm_model_inla = function(
             model_name = fm$random_effects$model[ which(fm$random_effects$vn == vnST) ]
             m = fit$marginals.random[[vnST]]
             m = try( apply_generic( m, marginal_clean ) )
-            if (invlink_id != "identity" ) m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+            if (invlink_id != "identity" ) {
+              m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
+              m = try( apply_generic( m, marginal_clean ) )
+            }
             m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
             m = try( list_simplify( simplify2array( m ) ) )
             if (any( inherits(m, "try-error"))) {
@@ -1288,7 +1313,8 @@ carstm_model_inla = function(
         }
  
         if (invlink_pred_id  != "identity"  ) {
-          m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
+          m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )
+          m = try( apply_generic( m, marginal_clean ) )
         }
 
         if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
@@ -1354,6 +1380,7 @@ carstm_model_inla = function(
 
         if (invlink_pred_id  != "identity"  ) {
           m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
+          m = try( apply_generic( m, marginal_clean ) )
         } 
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
@@ -1420,6 +1447,7 @@ carstm_model_inla = function(
  
         if (invlink_pred_id  != "identity"  )  {
           m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
+          m = try( apply_generic( m, marginal_clean ) )
         }
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
