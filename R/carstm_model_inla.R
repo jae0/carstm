@@ -646,7 +646,7 @@ carstm_model_inla = function(
       W = NULL
       W = cbind ( t (apply_simplify( V, FUN=inla.zmarginal, silent=TRUE ) ) )  # 
 
-      O[["summary"]][["fixed_effects"]] = list_to_dataframe( W [1, tokeep, drop =FALSE] )
+      O[["summary"]][["fixed_effects"]] = list_to_dataframe( W [, tokeep, drop =FALSE] )
       W = NULL
       V = NULL
 

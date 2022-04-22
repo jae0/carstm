@@ -1,6 +1,6 @@
 
 carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=NULL, sppoly=NULL, qmax=NULL,
-  wgts_min=0, wgts_max=NULL, N_min=0, N_max=NULL, B_min=0, B_max=NULL, max_value=NULL, degree_day=FALSE  ) {
+  wgts_min=0, wgts_max=NULL, N_min=0, N_max=NULL, B_min=0, B_max=NULL, max_value=NULL, degree_day=FALSE, pa_threshold=NULL ) {
   
   # N and B are actually densities
   
@@ -63,12 +63,12 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   if ( "meansize" %in% operation) {
     wgts = carstm_model( p=pW, DS="carstm_modelled_summary", sppoly=sppoly  )
     
-    if (!is.null(qmax)) if ( is.null(wgts_max) )  wgts_max = quantile( wgts$data$meansize, probs=qmax, na.rm=TRUE )
     
     wgts = wgts[[ "predictions_posterior_simulations"  ]]
     j = which( !is.finite(wgts) )
     if (length(j) > 0 ) wgts[j] = NA
 
+    if (!is.null(qmax)) if ( is.null(wgts_max) )  wgts_max = quantile( wgts, probs=qmax, na.rm=TRUE )
 
     if ( !is.null(wgts_min) ) {
       i = which( wgts < wgts_min )
@@ -88,12 +88,12 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   if ( "biomass" %in% operation) {
     biom = carstm_model( p=pB, DS="carstm_modelled_summary", sppoly=sppoly  )
     
-    if (!is.null(qmax)) if ( is.null(B_max) )  B_max = quantile( biom$data$totwgt / exp(biom$data$data_offset), probs=qmax, na.rm=TRUE )
     
     biom = biom[[ "predictions_posterior_simulations" ]] 
     j = which( !is.finite(biom) )
     if (length(j) > 0 ) biom[j] = NA
 
+    if (!is.null(qmax)) if ( is.null(B_max) ) B_max = quantile( biom, probs=qmax, na.rm=TRUE )
 
     if ( !is.null( B_min ) ) {
       i = which( biom < B_min )
@@ -111,13 +111,12 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
   if ( "number" %in% operation ) {
     nums = carstm_model( p=pN, DS="carstm_modelled_summary", sppoly=sppoly  )
-    
-    if (!is.null(qmax)) if ( is.null(N_max) )  N_max = quantile( nums$data$totno/ exp(nums$data$data_offset), probs=qmax, na.rm=TRUE )
-    
+        
     nums = nums[[ "predictions_posterior_simulations" ]]    
     j = which( !is.finite(nums) )
     if (length(j) > 0 ) nums[j] = NA
 
+    if (!is.null(qmax)) if ( is.null(N_max) )  N_max = quantile( nums, probs=qmax, na.rm=TRUE )
 
     if ( !is.null(N_min) ) {
       i = which( nums < N_min )
@@ -149,11 +148,13 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
     
     if ("pa" %in% operation) {
       if ( "biomass" %in% operation ) {
+        if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
         biom = biom * pa
         attr(biom, "unit") = "kg/km^2"
         return(biom)
       }
       if ("number" %in% operation) {
+        if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
         nums = nums * pa
         attr(nums, "unit") = "n/km^2"
         return(nums)
@@ -165,12 +166,14 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
     if ("meansize" %in% operation ) {
       if ( "biomass" %in% operation ) {
         if ( "presence_absence" %in% operation ) {
+          if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
           nums = biom*pa / wgts
           return(nums)
         }
       }
       if ( "number" %in% operation ) {
         if ( "presence_absence" %in% operation ) {
+          if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
           biom = nums*pa*wgts
           return(biom)
         }
