@@ -16,7 +16,7 @@
     aggregate_function=mean,
     probs=c(0,0.975),
     outfilename=NULL,
-    outscale=1,
+    outscale= 1,
     digits = 3,
     ...) {
  
@@ -29,13 +29,13 @@
 
     id = ifelse( exists("id", ellps), ellps[["id"]], "space" )
  
-     # tmap_save options:
+    # tmap_save options:
     outscale = ifelse( exists("outscale", ellps),  ellps[["outscale"]],  0.4 )  # to match screen to file outputs (not same)
     outformat = ifelse( exists("outformat", ellps),  ellps[["outformat"]], "tmap" )
     pointsize = ifelse( exists("pointsize", ellps),   ellps[["pointsize"]], 12 )
-    width_pts = ifelse( exists("width_pts", ellps),  ellps[["width_pts"]], 1200 )
-    height_pts = ifelse( exists("height_pts", ellps),  ellps[["height_pts"]], 800 )
-    pres = ifelse( exists("pres", ellps),  ellps[["pres"]], 300 )
+    width_pts = ifelse( exists("width_pts", ellps),  ellps[["width_pts"]], 1600 )
+    height_pts = ifelse( exists("height_pts", ellps),  ellps[["height_pts"]], 1200 )
+    pres = ifelse( exists("pres", ellps),  ellps[["pres"]], 600 )
     asp = ifelse( exists("asp", ellps),  ellps[["asp"]], 0 )
     width_in = ifelse( exists("width_in", ellps),  ellps[["width_in"]], 9 )
     height_in = ifelse( exists("height_in", ellps),  ellps[["height_in"]], 7 )
@@ -79,7 +79,7 @@
     scale_bar.width = ifelse( exists("scale_bar.width", ellps),  ellps[["scale_bar.width"]], 0.1 )
 
     legend.title.size = ifelse( exists("legend.title.size", ellps),  ellps[["legend.title.size"]],  1 )
-    legend.text.size = ifelse( exists("legend.text.size", ellps),   ellps[["legend.text.size"]],  1 )
+    legend.text.size = ifelse( exists("legend.text.size", ellps),   ellps[["legend.text.size"]],  0.75 )
     legend.width = ifelse( exists("legend.width", ellps),  ellps[["legend.width"]], 0.75 )
 
     legend.is.portrait = ifelse( exists("legend.is.portrait", ellps),   ellps[["legend.is.portrait"]],  TRUE )
@@ -227,7 +227,7 @@
 
     if ("compass" %in% plot_elements ) {
       tmout = tmout + 
-        tm_compass( position=compass.position, size=1) 
+        tm_compass( position=compass.position, size=1.5) 
       message( "You might need to tweak  angle of compass .. send 'north=xx" ) 
     }
 

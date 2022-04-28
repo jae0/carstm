@@ -1,6 +1,6 @@
 
 carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=NULL, sppoly=NULL, qmax=NULL,
-  wgts_min=0, wgts_max=NULL, N_min=0, N_max=NULL, B_min=0, B_max=NULL, max_value=NULL, degree_day=FALSE, pa_threshold=NULL ) {
+  wgts_min=0, wgts_max=NULL, N_min=0, N_max=NULL, B_min=0, B_max=NULL, max_value=NULL, degree_day=FALSE, pa_threshold=0.05 ) {
   
   # N and B are actually densities
   
@@ -146,16 +146,31 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
       }
     } 
     
+
+    # NOTE: r = binom0 / pois0 is the Hurdle correction for the truncation (censored mean)
+    # binom0 = pa  # prob > pa_threshold
+    # pois0 = ppois( pa_threshold, lambda = mu, lower.tail = FALSE)  # prob > pa_threshold
+
     if ("pa" %in% operation) {
       if ( "biomass" %in% operation ) {
-        if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
-        biom = biom * pa
+        pois0 = ppois( pa_threshold, lambda = biom, lower.tail = FALSE)  #mu is expected 
+        biom = biom * ( pa / pois0)
+        if (0) {
+          # old way: simple weighted sum -- this is identical to the hurdle 
+          if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
+          biom = biom * pa
+        }
         attr(biom, "unit") = "kg/km^2"
         return(biom)
       }
       if ("number" %in% operation) {
-        if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
-        nums = nums * pa
+        pois0 = ppois( pa_threshold, lambda = nums, lower.tail = FALSE)  #mu is expected 
+        nums = nums * (pa / pois0)
+        if (0) {
+          # old way: simple weighted sum-- this is identical to the hurdle 
+          if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
+          nums = nums * pa
+        }
         attr(nums, "unit") = "n/km^2"
         return(nums)
       }
@@ -166,15 +181,27 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
     if ("meansize" %in% operation ) {
       if ( "biomass" %in% operation ) {
         if ( "presence_absence" %in% operation ) {
-          if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
-          nums = biom*pa / wgts
+          nums = biom / wgts
+          pois0 = ppois( pa_threshold, lambda = nums, lower.tail = FALSE)  #mu is expected 
+          nums = nums * (pa / pois0)  
+          if (0) {
+            # old way: simple weighted sum-- this is identical to the hurdle 
+            if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
+            nums = biom*pa / wgts
+          }
           return(nums)
         }
       }
       if ( "number" %in% operation ) {
         if ( "presence_absence" %in% operation ) {
-          if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
-          biom = nums*pa*wgts
+          biom = nums * wgts
+          pois0 = ppois( pa_threshold, lambda=biom, lower.tail = FALSE)  #mu is expected 
+          biom = biom * (pa / pois0)
+          if (0) {
+            # old way: simple weighted sum-- this is identical to the hurdle 
+            if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
+            biom = nums*pa * wgts
+          }
           return(biom)
         }
       }
