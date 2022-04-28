@@ -18,6 +18,7 @@
     outfilename=NULL,
     outscale= 1,
     digits = 3,
+    transformation=NULL,
     ...) {
  
     # thin wrapper around tmap plot mode
@@ -92,6 +93,7 @@
       if (!is.null(res)) {
         vv = 0
         toplot = carstm_results_unpack( res, vn )
+
         vv = which(dimnames(toplot)$stat == stat_var)
         if ( exists("sppoly", res)) {
           if (is.null(sppoly)) sppoly = res[["sppoly"]]
@@ -120,6 +122,7 @@
         } else if (data_dimensionality==4) {
           toplot = toplot[ js, jt, ju, vv ] # year/subyear
         }
+        if (!is.null(transformation)) toplot = transformation(toplot)
       }
     }
 
@@ -154,6 +157,7 @@
         toplot = st_transform(toplot, st_crs( sppoly ) )
         toplot_id = st_points_in_polygons( pts=res, polys=sppoly[, space], varname=space )
         toplot = tapply( toplot[[vn]], toplot_id, aggregate_function, na.rm=TRUE )
+        if (!is.null(transformation)) toplot = transformation(toplot)
       }
 
       if  ( exists("breaks", ellps)) {
@@ -181,6 +185,8 @@
     } else {
       # no data sent, assume it is an element of sppoly
       if (!exists(vn, sppoly)) message( paste("variable: ", vn, "not found in sppoly ..."))
+
+      if (!is.null(transformation)) sppoly[[vn]] = transformation(sppoly[[vn]])
 
       if  ( exists("breaks", ellps)) {
         breaks = ellps[["breaks"]]
