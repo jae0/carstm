@@ -18,7 +18,7 @@
     outfilename=NULL,
     outscale= 1,
     digits = 3,
-    transformation=NULL,
+    transformation=NA,
     ...) {
  
     # thin wrapper around tmap plot mode
@@ -122,7 +122,9 @@
         } else if (data_dimensionality==4) {
           toplot = toplot[ js, jt, ju, vv ] # year/subyear
         }
-        if (!is.null(transformation)) toplot = transformation(toplot)
+        if (!is.na(transformation)) toplot = transformation(toplot)
+        if (exists("filter", sppoly)) toplot = toplot * sppoly[["filter"]]
+
       }
     }
 
@@ -157,7 +159,8 @@
         toplot = st_transform(toplot, st_crs( sppoly ) )
         toplot_id = st_points_in_polygons( pts=res, polys=sppoly[, space], varname=space )
         toplot = tapply( toplot[[vn]], toplot_id, aggregate_function, na.rm=TRUE )
-        if (!is.null(transformation)) toplot = transformation(toplot)
+        if (!is.na(transformation)) toplot = transformation(toplot)
+        if (exists("filter", sppoly)) toplot  = toplot  * sppoly[["filter"]]
       }
 
       if  ( exists("breaks", ellps)) {
@@ -186,7 +189,8 @@
       # no data sent, assume it is an element of sppoly
       if (!exists(vn, sppoly)) message( paste("variable: ", vn, "not found in sppoly ..."))
 
-      if (!is.null(transformation)) sppoly[[vn]] = transformation(sppoly[[vn]])
+      if (!is.na(transformation)) sppoly[[vn]] = transformation(sppoly[[vn]])
+      if (exists("filter", sppoly)) sppoly[[vn]] = sppoly[[vn]] * sppoly[["filter"]]
 
       if  ( exists("breaks", ellps)) {
         breaks = ellps[["breaks"]]
@@ -248,6 +252,8 @@
 
 
     if ( !is.null(outfilename) ) {
+      
+      if (!file.exists( dirname(outfilename) ))  dir.create( dirname(outfilename), recursive=TRUE, showWarnings=FALSE )
 
       if (outformat=="tmap") {
         tmap_save( tmout, outfilename, width=width_pts, height=height_pts, asp=asp, dpi=pres, scale=scale*outscale)
