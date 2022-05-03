@@ -14,13 +14,13 @@ additional_features_tmap = function( p, area_lines=NULL, isobaths=NULL, coastlin
   if (!is.null(isobaths)) {
     # isobaths=c(  10, 100, 200, 300, 400, 800 )
     O = O + tm_shape( aegis.bathymetry::isobath_db( depths=isobaths, project_to=plot_crs ), projection=plot_crs ) +
-      tm_lines( col="slategray", alpha=0.5, lwd=0.5) 
+      tm_lines( col="slategray", alpha=0.4, lwd=0.5) 
   }
 
   if (!is.null(coastline)) {
     # coastline =  c("unsited states of america", "canada")
     O = O + tm_shape( st_transform( polygons_rnaturalearth(countries=coastline, xlim=xlim, ylim=ylim), st_crs(plot_crs) ), projection=plot_crs ) +
-      tm_borders( col="slategray", alpha=0.5, lwd=0.75)
+      tm_borders( col="slategray", alpha=0.75, lwd=0.75)
   }
 
   return(O)
