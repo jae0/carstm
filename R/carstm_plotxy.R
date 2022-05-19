@@ -1,7 +1,7 @@
 
   carstm_plotxy = function( X, vn=c( "fit", "summary.random", "time" ), transf=identity, subtype="xy", h=NULL, v=NULL, errorbar_labels=NULL, adj=NULL, offs=0, 
    outfilename=NULL, width_in=9, height_in=7, width_pts=1000, height_pts=800, pres=192,  bg="white", pointsize=12, ... ) {
-    s
+
     dtype = vn[1]
     if ( dtype %in% c("sims", "res", "fit") ) {
       vns = vn[2:length(vn)]
