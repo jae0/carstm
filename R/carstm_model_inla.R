@@ -159,8 +159,8 @@ carstm_model_inla = function(
       O[["data"]] = NULL  # reduce mem usage
     }
   }
-
-  if (class(P[["data"]])=="character") {
+  
+  if (any(class(P[["data"]])=="character")) {
     if ( P[["verbose"]]) message( "Data is a function. Running ...")
     P[["data"]] = try( eval(parse(text=P[["data"]]) ) )
   }
@@ -1410,6 +1410,7 @@ carstm_model_inla = function(
           g = inla.posterior.sample( nposteriors, fit, selection=selection, add.names =FALSE, num.threads=num.threads  )  
           g = apply_simplify( g, function(x) { x$latent } )
 
+          # offsets not required in posterior simulations ... s
           # if (!is.null(vnO)) {
           #   g = apply( g, 2, function(x) x -   P[["data"]][ipred, vnO] )
           # }
@@ -1440,6 +1441,7 @@ carstm_model_inla = function(
         if (!is.null(vnO)) {
 
           if ( P[["inla.mode"]] == "experimental" ) {
+            # offsets required in experimental mode ... do not ask me why
             for ( i in 1:length(ipred) ) m[[i]][,1] = m[[i]][,1] + P[["data"]][ipred[i], vnO] 
           } 
 

@@ -48,7 +48,6 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   }
 
 
-  # construct meansizes matrix used to convert number to weight
   if ( "presence_absence" %in% operation ) {
     pa = carstm_model( p=pH, DS="carstm_modelled_summary", sppoly=sppoly  )
     pa = pa[[ "predictions_posterior_simulations" ]]
@@ -60,6 +59,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   }
 
 
+  # construct meansizes matrix used to convert number to weight
   if ( "meansize" %in% operation) {
     wgts = carstm_model( p=pW, DS="carstm_modelled_summary", sppoly=sppoly  )
     
