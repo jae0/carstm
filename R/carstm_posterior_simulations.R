@@ -150,8 +150,8 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
     # NOTE: r = binom0 / pois0 is the Hurdle correction for the truncation (censored mean)
     # binom0 = pa  # prob > pa_threshold
     # pois0 = ppois( pa_threshold, lambda = mu, lower.tail = FALSE)  # prob > pa_threshold
-
-    if ("pa" %in% operation) {
+ 
+    if ("presence_absence" %in% operation) {
       if ( "biomass" %in% operation ) {
         pois0 = ppois( pa_threshold, lambda = biom, lower.tail = FALSE)  #mu is expected 
         biom = biom * ( pa / pois0)
