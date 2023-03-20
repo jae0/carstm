@@ -1,6 +1,7 @@
 
 carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=NULL, sppoly=NULL, qmax=NULL,
-  wgts_min=0, wgts_max=NULL, N_min=0, N_max=NULL, B_min=0, B_max=NULL, max_value=NULL, degree_day=FALSE, pa_threshold=0.05 ) {
+  wgts_min=0, wgts_max=NULL, N_min=0, N_max=NULL, B_min=0, B_max=NULL, max_value=NULL, degree_day=FALSE, 
+  pa_threshold=0.05, hurdle_direct=FALSE ) {
   
   # N and B are actually densities
   
@@ -62,8 +63,6 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   # construct meansizes matrix used to convert number to weight
   if ( "meansize" %in% operation) {
     wgts = carstm_model( p=pW, DS="carstm_modelled_summary", sppoly=sppoly  )
-    
-    
     wgts = wgts[[ "predictions_posterior_simulations"  ]]
     j = which( !is.finite(wgts) )
     if (length(j) > 0 ) wgts[j] = NA
@@ -87,8 +86,6 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
   if ( "biomass" %in% operation) {
     biom = carstm_model( p=pB, DS="carstm_modelled_summary", sppoly=sppoly  )
-    
-    
     biom = biom[[ "predictions_posterior_simulations" ]] 
     j = which( !is.finite(biom) )
     if (length(j) > 0 ) biom[j] = NA
@@ -153,10 +150,15 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
  
     if ("presence_absence" %in% operation) {
       if ( "biomass" %in% operation ) {
-        pois0 = ppois( pa_threshold, lambda = biom, lower.tail = FALSE)  #mu is expected 
-        biom = biom * ( pa / pois0)
-        if (0) {
-          # old way: simple weighted sum -- this is identical to the hurdle 
+        if (hurdle_direct) {
+          if (pB$family=="poisson") {
+            pois0 = ppois( pa_threshold, lambda = biom, lower.tail = FALSE)  #mu is expected 
+            biom = biom * ( pa / pois0) 
+          } else if ( pB$family=="nbinomial") {
+            # need to check
+          }
+        } else  {
+          # simple weighted sum -- this is identical to the hurdle -- but more general
           if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
           biom = biom * pa
         }
@@ -164,10 +166,15 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
         return(biom)
       }
       if ("number" %in% operation) {
-        pois0 = ppois( pa_threshold, lambda = nums, lower.tail = FALSE)  #mu is expected 
-        nums = nums * (pa / pois0)
-        if (0) {
-          # old way: simple weighted sum-- this is identical to the hurdle 
+        if (hurdle_direct) {
+          if (pN$family=="poisson") {
+            pois0 = ppois( pa_threshold, lambda = nums, lower.tail = FALSE)  #mu is expected 
+            nums = nums * (pa / pois0)
+          } else if ( pB$family=="nbinomial") {
+            # need to check
+          }
+        } else {
+          #  simple weighted sum-- this is identical to the hurdle 
           if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
           nums = nums * pa
         }
@@ -181,11 +188,16 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
     if ("meansize" %in% operation ) {
       if ( "biomass" %in% operation ) {
         if ( "presence_absence" %in% operation ) {
-          nums = biom / wgts
-          pois0 = ppois( pa_threshold, lambda = nums, lower.tail = FALSE)  #mu is expected 
-          nums = nums * (pa / pois0)  
-          if (0) {
-            # old way: simple weighted sum-- this is identical to the hurdle 
+          if (hurdle_direct) {
+            if (pB$family=="poisson") {
+              nums = biom / wgts
+              pois0 = ppois( pa_threshold, lambda = nums, lower.tail = FALSE)  #mu is expected 
+              nums = nums * (pa / pois0)  
+            } else if ( pB$family=="nbinomial") {
+              # need to check
+            }
+          } else {
+          #  simple weighted sum-- this is identical to the hurdle 
             if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
             nums = biom*pa / wgts
           }
@@ -194,11 +206,16 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
       }
       if ( "number" %in% operation ) {
         if ( "presence_absence" %in% operation ) {
-          biom = nums * wgts
-          pois0 = ppois( pa_threshold, lambda=biom, lower.tail = FALSE)  #mu is expected 
-          biom = biom * (pa / pois0)
-          if (0) {
-            # old way: simple weighted sum-- this is identical to the hurdle 
+          if (hurdle_direct) {
+            if (pN$family=="poisson") {
+              biom = nums * wgts
+              pois0 = ppois( pa_threshold, lambda=biom, lower.tail = FALSE)  #mu is expected 
+              biom = biom * (pa / pois0)
+            } else if ( pB$family=="nbinomial") {
+              # need to check
+            }
+          } else {
+          #  simple weighted sum-- this is identical to the hurdle 
             if (!is.null(pa_threshold)) pa = ifelse( pa< pa_threshold, 0, 1)
             biom = nums*pa * wgts
           }
