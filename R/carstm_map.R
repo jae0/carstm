@@ -4,9 +4,9 @@
     toplot=NULL,
     vn=NULL,
     vn_label=NULL,
-    space = "space",
-    time= "time",
-    cyclic="cyclic",
+    space = "space_id",
+    time= "time_id",
+    cyclic="cyclic_id",
     stat_var="mean",
     sppoly=NULL,
     smatch=NULL, 
@@ -19,8 +19,46 @@
     outscale= 1,
     digits = 3,
     transformation=NA,
+    plotmethod="tmap",
     ...) {
  
+
+    if (plotmethod=="simple") {
+      # really basic map .. fast plot: carstm_map(sppoly=sppoly, vn="vartoplot")
+
+      require(ggplot2)
+      require(RColorBrewer) 
+
+      colors=RColorBrewer::brewer.pal(5, "YlOrRd") # display.brewer.all()s
+
+      if (!is.null(toplot)) sppoly[[vn]] = toplot
+      if (is.null(vn_label)) vn_label=""
+
+      plt = ggplot() +
+        geom_sf( data=sppoly, aes_string(fill=vn, alpha=0.9), colour="gray80" )  +
+        scale_fill_gradientn(name = vn_label, colors=colors, na.value=NA ) +
+        guides(fill = guide_colorbar(
+          title.theme = element_text(size = 20),
+          label.theme = element_text(size = 18) ) ) +
+        scale_alpha(range = c(0.9, 0.95), guide = "none") +
+        labs(title=vn) +
+        theme(
+          axis.line=element_blank(),
+          axis.text.x=element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank(), 
+          legend.position=c( 0.1, 0.8 ),
+          panel.background=element_blank(),
+          panel.border=element_blank(),
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),
+          plot.background=element_blank() )
+
+      return(plt)
+    }
+
     # thin wrapper around tmap plot mode
 
     ellps = list(...)

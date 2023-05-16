@@ -11,6 +11,10 @@
     }
     dta = carstm_results_unpack( X, vns ) 
 
+    if (exists("ID", dta)) {
+      dta$ID = row.names(dta)
+    }
+
     if (dtype=="fit") {
       xv = dta$ID
       yv = transf(dta$mean)

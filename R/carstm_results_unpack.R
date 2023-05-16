@@ -1,5 +1,5 @@
 carstm_results_unpack = function( res, vn ) {
-  # to facillitate data extraction dependning upon vn data hierarchy 
+  # to facillitate data extraction depending upon vn data hierarchy 
   return( switch( length(vn),
     res[[ vn[1] ]],
     res[[ vn[1] ]] [[vn[2] ]],

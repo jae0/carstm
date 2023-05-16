@@ -1,6 +1,6 @@
 
 carstm_model = function( p=list(), data=NULL, dimensionality=NULL,  
-  sppoly =NULL, space.id = NULL, time.id = NULL, cyclic.id=NULL, areal_units_fn=NULL, DS="redo",  
+  sppoly =NULL, areal_units_fn=NULL, DS="redo",  
   compress=TRUE, fn_fit=NULL, fn_res=NULL, 
    ... ) {
 
@@ -8,9 +8,6 @@ carstm_model = function( p=list(), data=NULL, dimensionality=NULL,
       data=NULL
       E=NULL
       sppoly =NULL
-      space.id = NULL
-      time.id = NULL
-      cyclic.id=NULL
       areal_units_fn=NULL
       dimensionality=NULL
       DS="redo"
@@ -60,7 +57,13 @@ carstm_model = function( p=list(), data=NULL, dimensionality=NULL,
   if (DS=="carstm_modelled_fit") {
     if (!is.null(fn_fit)) {
       message("Loading carstm fit: ", fn_fit )
-      if (file.exists(fn_fit)) load( fn_fit )
+      if (file.exists(fn_fit)) {
+        if (grepl("\\.RDS$", fn_fit)) {
+          fit = readRDS(fn_fit)
+        } else {
+          load( fn_fit )
+        }
+      }
       if (is.null(fit)) message("carstm modelled fit not found.")
     }
     return( fit )
@@ -71,24 +74,40 @@ carstm_model = function( p=list(), data=NULL, dimensionality=NULL,
     if (!is.null(fn_res)) {
       # message("Loading  data summary:  ", fn_res )
       O = NULL
-      if (file.exists(fn_res)) load( fn_res)
+      if (file.exists(fn_res)) {
+        if (grepl("\\.RDS$", fn_res)) {
+          O = readRDS(fn_res)
+        } else {
+          load( fn_res )
+        }
+      }
       if (is.null(O)) message(" summary not found.")
       return( O )
     } else {
       fit  = NULL
       # message("Loading results from fit: ", fn_fit )
-      if (file.exists(fn_fit)) load( fn_fit )
-      if (exists( "results", fit)) return( fit$results )
-      message("modelled results not found. .. try to run extraction: '' ")
+      if (file.exists(fn_fit)) {
+        if (grepl("\\.RDS$", fn_fit)) {
+          fit = readRDS(fn_fit)
+        } else {
+          load( fn_fit )
+        }
+      }
+      if (!is.null(fit)) {
+        if (exists( "results", fit)) {
+          return( fit$results )
+        }
+      }
+      message("modelled results not found. .. trying to run extraction: '' ")
+      out = carstm_model_inla( O=p, data=data, sppoly=sppoly, fn_fit=fn_fit, fn_res=fn_res, compress=compress, redo_fit=FALSE, ... )
+      return(out)
     }
   }
 
 
   outputdir = dirname(fn_fit)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
-  
-  
-
+   
   if ( grepl("glm", carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
     out = carstm_model_glm( O=p, data=data, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, ... ) 
@@ -108,10 +127,13 @@ carstm_model = function( p=list(), data=NULL, dimensionality=NULL,
   }
 
 
-  if ( grepl("inla", carstm_modelengine) ) {
-    out = carstm_model_inla( O=p, data=data, sppoly=sppoly, space.id=space.id, time.id=time.id,
-      cyclic.id=cyclic.id, fn_fit=fn_fit, fn_res=fn_res, compress=compress, ... ) 
+  if ( grepl("inla_old_method", carstm_modelengine) ) {
+    out = carstm_model_inla_working_copy( O=p, data=data, sppoly=sppoly, fn_fit=fn_fit, fn_res=fn_res, compress=compress, ... ) 
   }
-  
+
+  if ( grepl("inla", carstm_modelengine) ) {
+    out = carstm_model_inla( O=p, data=data, sppoly=sppoly, fn_fit=fn_fit, fn_res=fn_res, compress=compress, ... )
+  }
+
   return( out )
 }
