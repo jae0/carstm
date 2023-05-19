@@ -225,22 +225,24 @@
 
     } else {
       # no data sent, assume it is an element of sppoly
-      if (!exists(vn, sppoly)) message( paste("variable: ", vn, "not found in sppoly ..."))
+      if (length(vn) ==1 ) {
+        if (!exists(vn, sppoly)) message( paste("variable: ", vn, "not found in sppoly ..."))
 
-      if (!is.na(transformation)) sppoly[[vn]] = transformation(sppoly[[vn]])
-      if (exists("filter", sppoly)) sppoly[[vn]] = sppoly[[vn]] * sppoly[["filter"]]
+        if (!is.na(transformation)) sppoly[[vn]] = transformation(sppoly[[vn]])
+        if (exists("filter", sppoly)) sppoly[[vn]] = sppoly[[vn]] * sppoly[["filter"]]
 
-      if  ( exists("breaks", ellps)) {
-        breaks = ellps[["breaks"]]
-        er = range(breaks)
-      } else{
-        er = range( sppoly[[vn]],   na.rm=TRUE )
-        breaks = pretty( er )
+        if  ( exists("breaks", ellps)) {
+          breaks = ellps[["breaks"]]
+          er = range(breaks)
+        } else{
+          er = range( sppoly[[vn]],   na.rm=TRUE )
+          breaks = pretty( er )
+        }
+      
+        if (is.null(vn_label)) vn_label = vn  # this permits direct plotting of sppoly variables (if toplot and res are not sent)
+        sppoly[, vn_label] = round( sppoly[[vn]], digits=digits)
+
       }
-
-      if (is.null(vn_label)) vn_label = vn  # this permits direct plotting of sppoly variables (if toplot and res are not sent)
-      sppoly[, vn_label] = round( sppoly[[vn]], digits=digits)
-
     }
 
     sppoly = st_make_valid(sppoly)

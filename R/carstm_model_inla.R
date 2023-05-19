@@ -937,8 +937,8 @@ carstm_model_inla = function(
       message( "")
       message( "Random effects:")
       print(  O[["summary"]][["random_effects"]] )   
-      message( "\n--- NOTE --- 'SD *' from marginal summaries are on link scale\n")
-      message( "--- NOTE --- SD * from posteriors simulations are on user scale\n")
+      message( "\n--- NOTE --- 'SD *' from marginal summaries are on link scale")
+      message( "--- NOTE --- SD * from posteriors simulations are on user scale")
       message( "")
     }
 
@@ -953,7 +953,7 @@ carstm_model_inla = function(
   # separate out random spatial and randomm spatiotemporal (as they can be large arrays)
   if ("random_spatial" %in% toget) {
     # space only
-
+    Z = NULL
     iSP = which( re$dimensionality=="s" & re$level=="main")
     if (length(iSP) > 0 ) {
 
@@ -997,7 +997,7 @@ carstm_model_inla = function(
           matchfrom = list( space=Z[["space"]][iid] )
 
           for (k in 1:length(tokeep)) {
-              W[,k] = reformat_to_array( input = unlist(m[iid, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
+            W[,k] = reformat_to_array( input = unlist(m[iid, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
           O[["random"]] [[vnS]] [["iid"]] = W [, tokeep, drop =FALSE]
 
@@ -1007,12 +1007,11 @@ carstm_model_inla = function(
           Z = expand.grid( space=O[["space_id"]], type=model_name, stringsAsFactors =FALSE )
         }
 
-        jsp =  which(Z$type==model_name)
-        matchfrom = list( space=Z[["space"]][jsp] )
-        
- 
+        bym2 =  which(Z$type==model_name)
+        matchfrom = list( space=Z[["space"]][bym2] )
+        W[] = NA
         for (k in 1:length(tokeep)) {
-          W[,k] = reformat_to_array( input = unlist(m[jsp, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
+          W[,k] = reformat_to_array( input = unlist(m[bym2, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
         }
         O[["random"]] [[vnS]] [[model_name]] = W [, tokeep, drop =FALSE]
 
@@ -1039,21 +1038,17 @@ carstm_model_inla = function(
           } 
 
           # single spatial effect (eg besag, etc)
-          Z = expand.grid( space=O[["space_id"]], type=model_name, stringsAsFactors =FALSE )
-
-          jsp = which(Z$type==model_name)
-          matchfrom = list( space=Z[["space"]][jsp] )
-
- 
+          matchfrom = list( space=O[["space_id"]] )
+          W[] = NA
           for (k in 1:length(tokeep)) {
-            W[,k] = reformat_to_array( input = unlist(m[jsp, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
+            W[,k] = reformat_to_array( input = unlist(m[, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
           O[["random"]] [[vnS]] [[model_name]] = data.frame( W [, tokeep, drop =FALSE], ID=row.names(W) )
 
         }
       }
 
-      Z = W = m = matchto = matchfrom = iSP = NULL
+      Z = m = matchfrom = NULL
       gc()
 
       # POSTERIOR SIMS
@@ -1114,45 +1109,36 @@ carstm_model_inla = function(
 
       space = invlink(space) 
       row.names(space) = slabels
+      matchfrom = list( space=O[["space_id"]] )
 
       if (!is.null(exceedance_threshold)) {
         if (be_verbose)  message("Extracting random spatial errors exceedence"  )
-        
-        # redundant but generalizable to higher dims
-        jsp =  which(Z$type==model_name)
-        matchfrom = list( space=Z[["space"]][jsp] )
 
         for ( b in 1:length(exceedance_threshold)) {
           m = apply ( space, 1, FUN=function(x) length( which(x > exceedance_threshold[b]) ) ) / nposteriors
-          W = reformat_to_array( input = m, matchfrom=matchfrom, matchto = matchto )
-          names(dimnames(W))[1] = vS
-          dimnames( W )[[vS]] = O[["space_id"]]
-          O[["random"]] [[vS]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = data.frame( W [, tokeep, drop =FALSE], ID=row.names(W) )
-          m = NULL
+          V = reformat_to_array( input = m, matchfrom=matchfrom, matchto = matchto )
+          names(dimnames(V))[1] = vS
+          dimnames( V )[[vS]] = O[["space_id"]]
+          O[["random"]] [[vS]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = data.frame( V [, tokeep, drop =FALSE], ID=row.names(V) )
+          m = V = NULL
         }
       }
 
       if (!is.null(deceedance_threshold)) {
         if (be_verbose)  message("Extracting random spatial errors deceedance"  )
         # redundant but generalizable to higher dims
-        jsp =  which(Z$type==model_name)
-        matchfrom = list( space=Z[["space"]][jsp] )
-
         for ( b in 1:length(deceedance_threshold)) {
           m = apply ( space, 1, FUN=function(x) length( which(x < deceedance_threshold[b]) ) ) / nposteriors
-          W = reformat_to_array( input = m, matchfrom=matchfrom, matchto=matchto  )
-          names(dimnames(W))[1] = vS
-          dimnames( W )[[vS]] = O[["space_id"]]
-          O[["random"]] [[vS]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = data.frame( W [, tokeep, drop =FALSE], ID=row.names(W) ) 
-          m = NULL
+          V = reformat_to_array( input = m, matchfrom=matchfrom, matchto=matchto  )
+          names(dimnames(V))[1] = vS
+          dimnames( V )[[vS]] = O[["space_id"]]
+          O[["random"]] [[vS]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = data.frame( V [, tokeep, drop =FALSE], ID=row.names(V) ) 
+          m = V = NULL
         }
       }
 
       m = posterior_summary( format_results( invlink(space), labels=slabels  ) )
-
-      # redundant but generalizable to higher dims
-      jsp =  which(Z$type==model_name)
-      matchfrom = list( space=Z[["space"]][jsp] )
+      W[] = NA
       for (k in 1:length(tokeep)) {
         W[,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
       }
@@ -1169,15 +1155,16 @@ carstm_model_inla = function(
     }
   }  # end random spatial effects
 
-  matchfrom = jsp = i1 = i2= NULL
+  matchfrom = i1 = i2= NULL
   Z = W = m = space = space1 = space2 = skk1 = skk2 = iSP = NULL
   gc()
  
 
   if ("random_spatiotemporal" %in% toget ) {
     # space-time
-
+    
     iST = which( re$dimensionality=="st" & re$level=="main")
+    
     if (length(iST) > 0 ) {
 
       if (be_verbose)  message("Extracting random spatiotemporal errors"  )
@@ -1235,154 +1222,148 @@ carstm_model_inla = function(
           }
 
           #  spatiotemporal interaction effects  bym
-          jsp =  which(Z$type==model_name)
-          matchfrom = list( space=Z[["space"]][jsp], time=Z[["time"]][jsp]  )
+          bym2 =  which(Z$type==model_name)
+          matchfrom = list( space=Z[["space"]][bym2], time=Z[["time"]][bym2]  )
             
           for (k in 1:length(tokeep)) {
-            W[,,k] = reformat_to_array( input = unlist(m[jsp,tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
+            W[,,k] = reformat_to_array( input = unlist(m[bym2,tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
           O[["random"]] [[vnST]] [[model_name]] =   W [,, tokeep, drop =FALSE] 
 
         }
       }
-       
+      
       if (length(iST) == 2) {
 
         for (j in 1:length(iST)) {
-            vnST = re$vn[ iST[j] ]
-            model_name = re$model[ iST[j] ]  
-        
-            m = fit$marginals.random[[vnST]]
+          vnST = re$vn[ iST[j] ]
+          model_name = re$model[ iST[j] ]  
+      
+          m = fit$marginals.random[[vnST]]
+          m = try( apply_generic( m, marginal_clean ) )
+          if (invlink_id != "identity" ) {
+            m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
             m = try( apply_generic( m, marginal_clean ) )
-            if (invlink_id != "identity" ) {
-              m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
-              m = try( apply_generic( m, marginal_clean ) )
-            }
-            m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
-            m = try( list_simplify( simplify2array( m ) ) )
-            if (any( inherits(m, "try-error"))) {
-              message( "Error encountered in marginals .. copying directly from INLA summary instead:")
-              m = fit$summary.random[[vnST]][, inla_tokeep ]
-              names(m) = tokeep
-            } 
-            
-            Z = expand.grid( space=O[["space_id"]], type =model_name, time=O[["time_id"]], stringsAsFactors =FALSE )
-            jsp =  which(Z$type==model_name)
-            matchfrom = list( space=Z[["space"]][jsp], time=Z[["time"]][jsp]  )
-            for (k in 1:length(tokeep)) {
-              W[,,k] = reformat_to_array( input = unlist(m[jsp, tokeep[k] ]), matchfrom = matchfrom, matchto = matchto  )
-            }
-            O[["random"]] [[vnST]] [[model_name]] = W [,, tokeep, drop =FALSE]
-            m = NULL
           }
+          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
+          m = try( list_simplify( simplify2array( m ) ) )
+          if (any( inherits(m, "try-error"))) {
+            message( "Error encountered in marginals .. copying directly from INLA summary instead:")
+            m = fit$summary.random[[vnST]][, inla_tokeep ]
+            names(m) = tokeep
+          } 
+          
+          Z = expand.grid( space=O[["space_id"]], type =model_name, time=O[["time_id"]], stringsAsFactors =FALSE )
+          jst =  which(Z$type==model_name)
+          matchfrom = list( space=Z[["space"]][jst], time=Z[["time"]][jst]  )
+          for (k in 1:length(tokeep)) {
+            W[,,k] = reformat_to_array( input = unlist(m[jst, tokeep[k] ]), matchfrom = matchfrom, matchto = matchto  )
+          }
+          O[["random"]] [[vnST]] [[model_name]] = W [,, tokeep, drop =FALSE]
+          m = NULL
         }
+      }
 
-        # posterior simulations
+      # posterior simulations
 
-        space_time1 = space_time2  = space_time = array( NA, 
-          dim=c( O[["space_n"]] * O[["time_n"]] , nposteriors  ) )
-        Z = CJ( time=O[["time_id"]], space=O[["space_id"]] )  # note:: CJ has reverse order vs expand.grid
-        stlabels = paste(Z[["space"]], Z[["time"]], sep="_")
+      space_time1 = space_time2  = space_time = array( NA, 
+        dim=c( O[["space_n"]] * O[["time_n"]] , nposteriors  ) )
+      L = CJ( time=O[["time_id"]], space=O[["space_id"]] )  # note:: CJ has reverse order vs expand.grid
+      stlabels = paste(L[["space"]], L[["time"]], sep="_")
 
-        if (length(iST) == 1) {
-            stx1 = paste("^", re$vn[iST], "$", sep="")
-            if (re$model[iST] == "bym2") {
-              # special case bym2 has two factors rolled together
-              skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
-              for (i in 1:nposteriors) {
-                space_time1[,i] = S[[i]]$latent[skk1[["iid"]],]  
-                space_time2[,i] = S[[i]]$latent[skk1[["bym"]],]
-              }    
-              space_time = space_time1 + space_time2  
-              row.names(space_time1) = stlabels
-              row.names(space_time2) = stlabels
+      if (length(iST) == 1) {
+        stx1 = paste("^", re$vn[iST], "$", sep="")
+        if (re$model[iST] == "bym2") {
+          # special case bym2 has two factors rolled together
+          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
+          for (i in 1:nposteriors) {
+            space_time1[,i] = S[[i]]$latent[skk1[["iid"]],]  
+            space_time2[,i] = S[[i]]$latent[skk1[["bym"]],]
+          }    
+          space_time = space_time1 + space_time2  
+          row.names(space_time1) = stlabels
+          row.names(space_time2) = stlabels
 
-            } else {
-              # single spatial effect of some kind
-              skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-              skk1 = unlist(skk1)
-              for (i in 1:nposteriors) {
-                space_time[,i] = S[[i]]$latent[skk1,] 
-              }      
-            }
+        } else {
+          # single spatial effect of some kind
+          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+          skk1 = unlist(skk1)
+          for (i in 1:nposteriors) {
+            space_time[,i] = S[[i]]$latent[skk1,] 
+          }      
         }
-        
-        if (length(iST) == 2) {
-            i1 = which(re$model[iST] == "iid")
-            i2 = which(re$model[iST] %in% c("besag", "bym") )   # add others as required
-            if (length(i1)==0 | length(i2)==0) stop( "Unexpected situation: two spatial-time effects found, expecting one to be iid, and a second to be besag or bym, but it was not." )
-            stx1 = paste("^", re$vn[iST[i1]], "$", sep="")
-            stx2 = paste("^", re$vn[iST[i2]], "$", sep="")
-            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-            skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-            for (i in 1:nposteriors) {
-              space_time1[,i] = S[[i]]$latent[skk1[[1]],] 
-              space_time2[,i] = S[[i]]$latent[skk2[[1]],]
-            }      
-            space_time  = space_time1 + space_time2
-            row.names(space_time1) = stlabels
-            row.names(space_time2) = stlabels
-        }
-        
-        space_time = invlink(space_time)
-        row.names(space_time) = stlabels
- 
+      }
+      
+      if (length(iST) == 2) {
+        i1 = which(re$model[iST] == "iid")
+        i2 = which(re$model[iST] %in% c("besag", "bym") )   # add others as required
+        if (length(i1)==0 | length(i2)==0) stop( "Unexpected situation: two spatial-time effects found, expecting one to be iid, and a second to be besag or bym, but it was not." )
+        stx1 = paste("^", re$vn[iST[i1]], "$", sep="")
+        stx2 = paste("^", re$vn[iST[i2]], "$", sep="")
+        skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+        skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+        for (i in 1:nposteriors) {
+          space_time1[,i] = S[[i]]$latent[skk1[[1]],] 
+          space_time2[,i] = S[[i]]$latent[skk2[[1]],]
+        }      
+        space_time  = space_time1 + space_time2
+        row.names(space_time1) = stlabels
+        row.names(space_time2) = stlabels
+      }
+    
+      space_time = invlink(space_time)
+      row.names(space_time) = stlabels
+
+      Z = expand.grid( space=O[["space_id"]], type =model_name, time=O[["time_id"]], stringsAsFactors =FALSE )
+      jst =  which(Z$type==model_name)
+      matchfrom = list( space=Z[["space"]][jst], time=Z[["time"]][jst]  )
+
       if (!is.null(exceedance_threshold)) {
         if (be_verbose)  message("Extracting random spatiotemporal errors exceedence"  )
-        Z = expand.grid( space=O[["space_id"]], type =model_name, time=O[["time_id"]], stringsAsFactors =FALSE )
-        jsp =  which(Z$type==model_name)
-        matchfrom = list( space=Z[["space"]][jsp], time=Z[["time"]][jsp]  )
 
         for ( b in 1:length(exceedance_threshold)) {
           m = apply ( space_time, 1, FUN=function(x) length( which(x > exceedance_threshold[b] ) ) ) / nposteriors
-          W = reformat_to_array( input=m, matchfrom=matchfrom,  matchto=matchto )
-          names(dimnames(W))[1] = vS
-          dimnames( W )[[vS]] = O[["space_id"]]
+          V = reformat_to_array( input=m, matchfrom=matchfrom,  matchto=matchto )
+          names(dimnames(V))[1] = vS
+          dimnames( V )[[vS]] = O[["space_id"]]
           m = NULL
           if (O[["dimensionality"]] == "space-time"  ) {
-            names(dimnames(W))[2] = vT
-            dimnames( W )[[vT]] = O[["time_id"]]
+            names(dimnames(V))[2] = vT
+            dimnames( V )[[vT]] = O[["time_id"]]
           }
           if (O[["dimensionality"]] == "space-time-cyclic" ) {
-            names(dimnames(W))[3] = vU
-            dimnames( W )[[vU]] = O[["cyclic_id"]]
+            names(dimnames(V))[3] = vU
+            dimnames( V )[[vU]] = O[["cyclic_id"]]
           }
-          O[["random"]] [[vST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = W
-          W = NULL
+          O[["random"]] [[vST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = V
         }
+        V = NULL
       }
 
       if (!is.null(deceedance_threshold)) {
         if (be_verbose)  message("Extracting random spatiotemporal errors deceedance"  )
-        Z = expand.grid( space=O[["space_id"]], type =model_name, time=O[["time_id"]], stringsAsFactors =FALSE )
-        jsp =  which(Z$type==model_name)
-        matchfrom = list( space=Z[["space"]][jsp], time=Z[["time"]][jsp]  )
 
         for ( b in 1:length(deceedance_threshold)) {
           m = apply ( space_time, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / nposteriors
-          W = reformat_to_array( input = m, matchfrom=matchfrom,  matchto=matchto )
-          names(dimnames(W))[1] = vS
-          dimnames( W )[[vS]] = O[["space_id"]]
+          V = reformat_to_array( input = m, matchfrom=matchfrom,  matchto=matchto )
+          names(dimnames(V))[1] = vS
+          dimnames( V )[[vS]] = O[["space_id"]]
           m = NULL
           if (O[["dimensionality"]] == "space-time"  ) {
-            names(dimnames(W))[2] = O[["time_id"]]
-            dimnames( W )[[vT]] = vT
+            names(dimnames(V))[2] = O[["time_id"]]
+            dimnames( V )[[vT]] = vT
           }
           if (O[["dimensionality"]] == "space-time-cyclic" ) {
-            names(dimnames(W))[3] = O[["cyclic_id"]]
-            dimnames( W )[[vU]] = vT
+            names(dimnames(V))[3] = O[["cyclic_id"]]
+            dimnames( V )[[vU]] = vT
           }
-          O[["random"]] [[vST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = W
-          W = NULL
+          O[["random"]] [[vST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = V
         }
+        V = NULL
       }
-
+ 
+      W[] = NA
       m = posterior_summary(format_results( space_time, labels=stlabels ))
-
-      Z = expand.grid( space=O[["space_id"]], type =model_name, time=O[["time_id"]], stringsAsFactors =FALSE )
-      jsp =  which(Z$type==model_name)
-      matchfrom = list( space=Z[["space"]][jsp], time=Z[["time"]][jsp]  )
-  
       for (k in 1:length(tokeep)) {
         W[,,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
       }
@@ -1396,9 +1377,11 @@ carstm_model_inla = function(
         if (!is.null(space_time2)) O[["sims"]] [[vS]] [["bym2"]] = invlink(space_time2)
       }
     
-      Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = iST = NULL
+      Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL
       gc()
+
     }
+
   }  # end random spatio-temporal effects
 
 
