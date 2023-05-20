@@ -730,6 +730,9 @@ carstm_model_inla = function(
           colnames(V) = tokeep
          }
         rownames(V) = gsub("Precision for", "SD", rownames(V) )
+        rownames(V) = gsub(" for", "", rownames(V) )
+        rownames(V) = gsub(" the", "", rownames(V) )
+        
         O[["summary"]][["random_effects"]] = V[, tokeep, drop =FALSE] 
       }
  
@@ -1137,7 +1140,7 @@ carstm_model_inla = function(
         }
       }
 
-      m = posterior_summary( format_results( invlink(space), labels=slabels  ) )
+      m = posterior_summary( format_results( space, labels=slabels  ) )
       W[] = NA
       for (k in 1:length(tokeep)) {
         W[,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
