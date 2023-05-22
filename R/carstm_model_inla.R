@@ -198,9 +198,7 @@ carstm_model_inla = function(
     if (is.null(inla_args[["data"]])) stop("Data not found")
 
     setDT(inla_args[["data"]])
-
-
-
+ 
     if ( !exists("carstm_model_label", O) ) {
       if ( exists("model_label", O) ) {
         O[["carstm_model_label"]] = O[["model_label"]] 
@@ -264,8 +262,7 @@ carstm_model_inla = function(
         # force to carry a "time" to make dimensions of predictions simpler to manipulate 
         inla_args[["data"]][["time"]] = -1  
       }
-    
-
+     
       for ( eff in c("fixed_effects", "random_effects") ) {
         js = which( O[["fm"]][[eff]][["dimensionality"]] %in% c("s", "st") )
         if (length(js) > 0 ){
@@ -434,18 +431,19 @@ carstm_model_inla = function(
     if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( strategy='adaptive' ) #int.strategy='eb'
     if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if (!exists("control.mode", inla_args ) ) inla_args[["control.mode"]] = list( restart=FALSE ) 
-    if (exists("theta", O ) ) inla_args[["control.mode"]] = list( restart=FALSE, theta= O[["theta"]] )  
+    if (exists("theta", O ) ) inla_args[["control.mode"]]$theta= O[["theta"]]
+    
     if (!exists("control.compute", inla_args)) inla_args[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
       if ( inla_args[["inla.mode"]] == "classic") {
         # if ( !exists("control.results", inla_args ) ) inla_args[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
         inla_args[["control.compute"]]["return.marginals.predictor"] = TRUE  # location of this option has moved ... might move again
       }
 
-    O[["inla.mode"]] = inla_args[["inla.mode"]]  # copy for later
-    
     # if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = list(mean.intercept=0.0, prec.intercept=0.001, mean=0, prec=0.001)
     if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = H$fixed
-  
+
+    O[["inla.mode"]] = inla_args[["inla.mode"]]  # copy for later
+    
     setDF(inla_args[["data"]]) # INLA requires this
 
     fit = try( do.call( inla, inla_args ) )      
