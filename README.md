@@ -14,271 +14,310 @@ For Atlantic cod, see the preprints at:
 *carstm* can also replicate the "standard" analysis which is known as "stratanal", a basic stratified average estimate. This is shown to be equivalent to a Gaussian linear fixed effects model. Thereafter, a model-based approach is used to incrementally improve upon the assumptions of the model, focussing upon the distributional model (Poisson, overdispersed Poisson), adding environmental covariates and then employing an INLA-based ICAR (intrinsic conditionally autoregressive models; "bym2") approach towards accounting for areal unit modelling and an AR1 temporal autocorrelation assuming separability of the spacetime autocorrelation.
 
 
+A real use case example: modelling temperature near Halifax, Nova Scotia. Some example data are found in carstm::extdata/aegis_spacetime_test/RDS and is used in the example file: carstm::scripts/example_temperature_carstm.R (copied below):
+
 ```
 
-# Example
-
-  # Prepare data:
-  require(INLA)
-
-  inla.pardiso.check()  # get it if you can and turn it on with:
-
-  # inla.setOption(pardiso.license="~/paradiso.license" )  # point "pardiso.license" to the physical location of your license
+# carstm example using temperature data subset
 
 
-  data(Germany)
-  g = system.file("demodata/germany.graph", package="INLA")
-  source(system.file("demodata/Bym-map.R", package="INLA"))
-  summary(Germany)
+# prep input data (copied from stmv): 
+# centered over Halifax, NS: bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
+# t=temperature (C); z=depth (m); tiyr=decimal year
 
+fn = file.path( project.codedirectory("carstm", "inst", "extdata"), "aegis_spacetime_test.RDS")
+bottemp = readRDS(fn)   
+# bottemp = bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
 
-  # Basic BYM model using INLA directly:
-  Germany$region.iid = Germany$region 
-  fm = Y ~ f(region, model="besag",graph.file=g) + f(region.iid, model="iid") + f(x, model="rw2")
-  fit =  inla( fm, family="poisson", data=Germany, E=E, verbose=TRUE,
-      control.predictor = list( compute=TRUE),
-    control.compute = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE ),
-    inla.mode="classic"
- )
-  summary(fit)
+plot(lat ~ -lon, bottemp)
+str(bottemp)
+summary(bottemp)
 
+plot(lon~lat, bottemp)
+hist( bottemp$tiyr )  # decimal date
 
-  # Same analysis using INLA's experiemental mode (faster and more efficient RAM usage) with marginals, and bym2 model
-  fm2 = Y ~ f( region, model="bym2",graph.file=g) + f(x, model="rw2")
-  fit2 =  inla( fm2, family="poisson", data=Germany, E=E, verbose=TRUE,
-    # control.inla = list( strategy='adaptive' ) , 
-    # control.inla = list( strategy='adaptive', int.strategy='eb' ),
-    control.predictor = list( compute=TRUE  ),
-    control.compute = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE ),
-    inla.mode="experimental"
-  )
-  summary(fit2)
+# required parameter settings:
+p = list()
+p$yrs = min(year(bottemp$date)):max(year(bottemp$date)) # 1980:2010
 
+p$year.assessment = max(p$yrs)
+ 
+# create/update library list
+standard_libs = c( "colorspace", "lubridate",  "lattice", 
+    "parallel", "sf", "GADMTools", "INLA" , "data.table" )
 
-  # random effects are nearly identical 
-  dev.new()
-  par( mfrow=c(1,2))
-  Bym.map(fit$summary.random$region$mean)
-  Bym.map(fit2$summary.random$region$mean[1:nrow(Germany)])  # bym2 concatenates iid and bym effects 
-
-  dev.new()
-  plot(fit$summary.random$region$mean ~ fit2$summary.random$region$mean[1:544] )
-
-  dev.new()
-  hist(fit$summary.random$region$mean)
-
-  # predictions
-  dev.new()
-  par( mfrow=c(1,2))
-  Bym.map(fit$summary.fitted.values$mean)
-  Bym.map(exp( fit2$summary.fitted.values$mean) )  # bym2 concatenates iid and bym effects 
-
-  dev.new()
-  plot(fit$summary.fitted.values$mean ~ exp( fit2$summary.fitted.values$mean)  )
-
-  dev.new()
-  hist(fit$summary.fitted.values$mean)
-
-
-  # Same analysis, now using carstm 
-  # there are extra steps as a data structure and options need to be specified 
-  # and posterior sims to compute combined spatial (and spatiotemporal) effects
-  
-  require(carstm)  # carstm options are sent via one controlling parameter list  
-  # loadfunctions("carstm")
-
-  Germany$tag = "predictions"  # predict on all locations
-  
-  Germany$region = as.character(Germany$region)
-
-  sppoly = Germany  # construct "sppoly" with required attributes (though it is not a polygon)
-  attributes(sppoly)[["areal_units_fn"]] = g  
-  attributes(sppoly)$nb = inla.read.graph(g)
-
-  p = list(
-    modeldir = tempdir(),
-    carstm_model_label = "testlabel",
-    carstm_modelengine = "inla",
-    vn = list(Y="Y", S="region", SI="region.iid", O = "E"),  # instructions on which are spatial and iid and offset terms. parsing will try to figure it out but this is most secure
-    dimensionality = "space",   # a pure space model
-    family = "poisson",
-    nposteriors=5000
-  ) 
-
-  p$formula = formula( Y ~  1 + offset( E ) 
-    + f(region, model="besag", graph=slot(sppoly, "nb"), scale.model=TRUE ) 
-    + f(region.iid, model="iid" ) 
-    + f(x, model="rw2", scale.model=TRUE)  )
-
-  
-  p$formula = formula( Y ~  1 + offset( E ) 
-    + f(region, model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE ) 
-    + f(region.iid, model="iid") 
-    + f(x, model="rw2", scale.model=TRUE)  )
-
-  # Leroux model
-  p$formula = formula( Y ~  1 + offset( E ) 
-    + f(region, model="besagproper2", graph=slot(sppoly, "nb"), scale.model=TRUE ) 
-    + f(region.iid, model="iid" ) 
-    + f(x, model="rw2", scale.model=TRUE)   )
-
-
-
-  # note offset is not logged ... link function handles it 
-
-  fn_fit = tempfile( pattern="fit", tmpdir=p$modeldir )
-  fn_res = tempfile( pattern="res", tmpdir=p$modeldir )
-
-  res = carstm_model( 
-    p=p,
-    data = Germany, 
-    sppoly = sppoly,
-    space.id = as.character(Germany$region),
-    fn_fit = fn_fit,
-    fn_res = fn_res,
-    num.threads="4:2",
-    verbose=TRUE
-  ) 
-
-  if (0) {
-    # Or, to load currently saved results
-    res = carstm_model( p=p, fn_res = fn_res, DS="carstm_modelled_summary"  ) 
+local_libs = c("aegis", "aegis.bathymetry", "aegis.coastline", 
+    "aegis.polygons", "aegis.substrate", "aegis.temperature", "aegis.survey" ) 
     
-    # extract currently saved model fit
-    fit3 = carstm_model( p=p, fn_fit = fn_fit, DS="carstm_modelled_fit" )  
-    s
-    fit3$summary$dic$dic
-    fit3$summary$dic$p.eff
-    summary(fit3)  # identical to fit2
+p$libs = RLibrary ( c(standard_libs, local_libs) )
 
-    plot(fit3)
-    plot(fit3, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
-  }
+p$project_name = "test_ocean_bottom_temperatures_halifax"
+p$data_root = file.path( "~", "test", p$project_name ) 
+p$datadir  = file.path( p$data_root, "data" )
+p$modeldir = file.path( p$data_root, "modelled" ) 
 
-  plot(fit$summary.random$region$mean ~ fit3$summary.random$region$mean[1:544] )
-  
-  plot(res$predictions[,"mean"] ~ fit$summary.fitted.values[,"mean"] )
+if ( !file.exists(p$data_root) ) dir.create( p$data_root, showWarnings=FALSE, recursive=TRUE )
+if ( !file.exists(p$datadir) ) dir.create( p$datadir, showWarnings=FALSE, recursive=TRUE )
+if ( !file.exists(p$modeldir) ) dir.create( p$modeldir, showWarnings=FALSE, recursive=TRUE )
 
-  # random effects
-  dev.new()
-  par( mfrow=c(1,3))
-  Bym.map(fit$summary.random$region$mean)
-  Bym.map(fit2$summary.random$region$mean[1:nrow(Germany)])  # bym2 concatenates iid and bym effects 
-  Bym.map(fit3$summary.random$region$mean[1:nrow(Germany)])  # bym2 concatenates iid and bym effects 
+ 
+p$variabletomodel = "t"
+p$aegis_dimensionality="space-year-season"
+p$quantile_bounds =c(0.005, 0.995) # trim upper bounds (in posterior predictions)
 
-  dev.new()
-  par( mfrow=c(1,2))
-  plot(fit$summary.random$region$mean ~ fit2$summary.random$region$mean[1:544] )
-  plot(fit$summary.random$region$mean ~ fit3$summary.random$region$mean[1:544] )
+# space resolution
+p$aegis_proj4string_planar_km = projection_proj4string("utm20")
+p$dres = 1/60/4 # resolution in angular units (degrees)
+p$pres = 1  # spatial resolution in planar units (km)
+p$lon0 = min( bottemp$lon )
+p$lon1 = max( bottemp$lon )
+p$lat0 = min( bottemp$lat )
+p$lat1 = max( bottemp$lat )
+p$psignif = 1  
 
-  dev.new()
-  par( mfrow=c(1,3))
-  hist(fit$summary.random$region$mean)
-  hist(fit2$summary.random$region$mean)
-  hist(fit3$summary.random$region$mean)
+p$nlons = trunc( diff(range(c(p$lon0,p$lon1)))/p$dres) + 1L
+p$nlats = trunc( diff(range(c(p$lat0,p$lat1)))/p$dres) + 1L
+corners = data.frame(lon=c(p$lon0,p$lon1), lat=c(p$lat0,p$lat1))
+corners = lonlat2planar( corners, proj.type=p$aegis_proj4string_planar_km )
+corners$plon = round( corners$plon, p$psignif)  # this matches the p$pres value of x km resolution
+corners$plat = round( corners$plat, p$psignif)  # this matches the p$pres value of x km resolution
+p$corners=corners
 
-
-  # predictions
-  dev.new()
-  par( mfrow=c(1,4))
-  Bym.map(fit$summary.fitted.values$mean)
-  Bym.map(exp( fit2$summary.fitted.values$mean) )  # bym2 concatenates iid and bym effects 
-  Bym.map(exp( fit3$summary.fitted.values$mean) )  # bym2 concatenates iid and bym effects 
-  Bym.map( res$predictions[,"mean"] )  # bym2 concatenates iid and bym effects 
-
-  dev.new()
-  par( mfrow=c(1,3))
-  plot(fit$summary.fitted.values$mean ~ exp( fit2$summary.fitted.values$mean)  )
-  plot(fit$summary.fitted.values$mean ~ exp( fit3$summary.fitted.values$mean)  )
-  plot(exp(fit3$summary.fitted.values$mean) ~ res$predictions[,"mean"]  )
-
-  dev.new()
-  par( mfrow=c(1,4))
-  hist(fit$summary.fitted.values$mean)
-  hist(exp(fit2$summary.fitted.values$mean))
-  hist(exp(fit3$summary.fitted.values$mean))
-  hist(res$predictions[,"mean"])
+p$plons = seq(min(p$corners$plon), max(p$corners$plon), by=p$pres)
+p$plats = seq(min(p$corners$plat), max(p$corners$plat), by=p$pres)
+plons = seq(min(p$corners$plon), max(p$corners$plon), by=p$pres)
+plats = seq(min(p$corners$plat), max(p$corners$plat), by=p$pres)
+p$nplons = length(plons)
+p$nplats = length(plats)
+p$origin = c(min(p$corners$plon), min(p$corners$plat ))
+p$gridparams = list( dims=c(p$nplons, p$nplats), origin=p$origin, res=c(p$pres, p$pres) ) # used for fast indexing and merging
 
 
-  plot(exp(fit3$summary.fitted.values$mean) ~ res$predictions[,"mean"]  )
+p$year.assessment = max(p$yrs)
+p$timezone="America/Halifax" 
 
-  w = which(res$predictions[,"mean"] > 5) [1] 
+# time resolution
+p$ny = length(p$yrs)
+p$nw = 10 # default value of 10 time steps number of intervals in time within a year for all temp and indicators
+p$tres = 1/ p$nw # time resolution .. predictions are made with models that use seasonal components
+p$dyears = (c(1:p$nw)-1) / p$nw # intervals of decimal years... fractional year breaks
+p$dyear_centre = p$dyears[ trunc(p$nw/2) ] + p$tres/2
+p$prediction_dyear = lubridate::decimal_date( lubridate::ymd("0000/Sep/01")) # used for creating timeslices and predictions  .. needs to match the values in aegis_parameters()
+p$nt = p$nw*p$ny # i.e., seasonal with p$nw (default is annual: nt=ny)
 
-  res$predictions[w,]
-  fit3$summary.fitted.values[w,]
-
-
-  plot( fit$marginals.fitted.values[[w]] )
-  plot( fit2$marginals.fitted.values[[w]] )
-  plot( exp(fit3$marginals.fitted.values[[w]] ))
-
-
-  # carstm_maps of some of the results  .. can't map unitl polygons are coverted to sf format (TODO)
-  tmout = carstm_map(  res=res, vn=c( "predictions" ), 
-    space="region",
-    plot_elements=c( "compass", "scale_bar", "legend" ),
-    main=paste( "Predictions")  
-  )
-
-  tmout = carstm_map(  res=res, vn=c( "random", "region", "combined" ), 
-    space="region",
-    plot_elements=c( "compass", "scale_bar", "legend" ),
-    main=paste( "Spatial effects")  
-  )
+# predictions at these time values (decimal-year), # output timeslices for predictions in decimla years, yes all of them here
+tout = expand.grid( yr=p$yrs, dyear=1:p$nw, KEEP.OUT.ATTRS=FALSE )
+p$prediction_ts = sort( tout$yr + tout$dyear/p$nw - p$tres/2 )# mid-points
 
 
+p$inputdata_spatial_discretization_planar_km = p$pres / 10 # controls resolution of data prior to modelling (km )
+p$inputdata_temporal_discretization_yr = 1/52  # ie., weekly .. controls resolution of data prior to modelling to reduce data set and speed up modelling;; use 1/12 -- monthly or even 1/4.. if data density is low
+p$dyear_discretization_rawdata = c( {c(1:365)-1}/365, 1)  # dyear_discretization_rawdata :: intervals of decimal years... fractional year breaks finer than the default 10 units (taking daily for now..) .. need to close right side for "cut" .. controls resolution of data prior to modelling
 
-  if (0) {
 
-    # this section compares: mean(exp(x)) vs exp(mean(x))
-    # in this example, the differences are small .. but can be large deponding upon data distribtion
+# areal units information
+p$spatial_domain = "halifax"
+
+p$areal_units_proj4string_planar_km =  p$aegis_proj4string_planar_km   # coord system to use for areal estimation and gridding for carstm
+p$areal_units_type= "tesselation" 
+p$areal_units_constraint_ntarget = length(p$yrs)   # n time slices req in each au
+p$areal_units_constraint_nmin = 5    # n time slices req in each au
+p$areal_units_resolution_km = 1   # starting resolution .. if using tesselation/ otherwise grid size ()
+p$areal_units_overlay = "none"  
+p$areal_units_timeperiod = "none"   # only relevent for groundfish polys
+
+p$tus="yr" 
+p$hull_alpha = 20 
+p$fraction_todrop = 0.05 
+p$fraction_cv = 1.0   # approx poisson (binomial)
+p$fraction_good_bad = 0.9 
+p$nAU_min = 30 
+
+
+# carstm-specific parameters
+p$project_class = "carstm"
+p$carstm_model_label = "test_basic_form"
+p$carstm_modelengine = "inla"   # {model engine}.{label to use to store}
+p$carstm_inputs_prefilter = "aggregated" 
+p$carstm_inputs_prefilter_n = 100  # only used for "sampled"
+
+
+# create polygon  :: requires aegis, aegis.coastline, aegis.polygons
+
+
+sppoly = try( areal_units( p=p, areal_units_directory=p$datadir, redo=FALSE ) )
+
+if (inherits("try-error", sppoly)) {
+    sppoly = areal_units( 
+    p=p, 
+    xydata=setDF(bottemp[,.(lon, lat, yr=floor(tiyr) ) ]), 
+    areal_units_directory=p$datadir, 
+    redo=TRUE )  # to force create
+)
+
+plot( sppoly[ "AUID" ] ) 
+carstm_map( sppoly=sppoly, vn="au_sa_km2", map_mode="view" )  # interactive
+ 
+
+crs_lonlat = st_crs(projection_proj4string("lonlat_wgs84"))
+sppoly = st_transform(sppoly, st_crs(crs_lonlat))
+
+bottemppts = st_as_sf( bottemp[,c("lon","lat")], coords=c("lon","lat"), crs=crs_lonlat )
+
+# observations
+bottemp$tag ="observations"
+bottemp$time = year(bottemp$date)
+bottemp$AUID = st_points_in_polygons(
+    pts = bottemppts,
+    polys = sppoly[, "AUID"],
+    varname = "AUID"
+)
+
+depths = bottemp[ , .(z=median(z, na.rm=TRUE)), by=.(AUID) ]
+
+APS = st_drop_geometry(sppoly)
+setDT(APS)
+
+APS$AUID = as.character( APS$AUID )
+APS$tag ="predictions"
+APS[, p$variabletomodel] = NA
+
+APS = APS[ depths, on=.(AUID) ] 
+   
+n_aps = nrow(APS)
+APS = cbind( APS[ rep.int(1:n_aps, p$nt), ], rep.int( p$prediction_ts, rep(n_aps, p$nt )) )
+names(APS)[ncol(APS)] = "tiyr"
+APS$timestamp = lubridate::date_decimal( APS$tiyr, tz=p$timezone )
+APS$time = trunc( APS$tiyr)  # year ("time*" is a keyword)
+APS$dyear = APS$tiyr - APS$time 
+ 
+
+vvv = intersect( names(APS), names(bottemp) )
+M = rbind( bottemp[, vvv, with=FALSE ], APS[, vvv, with=FALSE ] )
+
+APS = NULL; gc()
+
+# M$uid = 1:nrow(M)  # seems to require an iid model for each obs for stability .. use this for iid
+M$AUID  = as.character(M$AUID)  # revert to factors -- should always be a character
+M$space = as.character( M$AUID)  # "space*" is a keyword
+M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
+M$time = trunc( M$tiyr)
+M$dyear = M$tiyr - M$time 
+
+# do not sepraate out as season can be used even if not predicted upon
+ii = which( M$dyear > 1) 
+if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next year
+
+cyclic_values = 1:length(p$dyears)  # internally converts to integers 
+
+M$dyri = discretize_data( M[["dyear"]], discretizations()[["dyear"]] )
+M$cyclic = as.character( M$dyri )  # "cyclic*" is a keyword
+
+M$tiyr = NULL
+M$space_time = M$space  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
+M$time_space = M$time  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
+
+
+formula = as.formula( paste(
+    p$variabletomodel, ' ~ 1',
+    ' + f( time, model="ar1",  hyper=H$ar1 ) ',   
+    ' + f( cyclic, model="rw2", scale.model=TRUE, hyper=H$rw2, cyclic=TRUE, values=cyclic_values )',
+    ' + f( space, model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE, hyper=H$bym2  ) ',
+    ' + f( inla.group( z, method="quantile", n=11 ), model="rw2", scale.model=TRUE, hyper=H$rw2)',
+    ' + f( space_time, model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE, group=time_space, hyper=H$bym2, control.group=list(model="ar1", hyper=H$ar1_group) ) '
+) )
+
+
+family = "gaussian"
+ 
+require(carstm)
+loadfunctions("carstm")
+
+# takes about 15 minutes
+res = carstm_model( 
+    p=p, 
+    sppoly=sppoly,
+    posterior_simulations_to_retain=c("predictions", "random_spatial"), 
+    nposteriors=1000,  # 1000 to 5000 would be sufficient to sufficiently sample most distributions: trade-off between file size and information content
+    dimensionality="space-time-cyclic",
+    # redo_fit=FALSE,  # if FALSE then reload fit and recompute posteriors 
+    # redo_fit=TRUE,  # if TRUE then compute fit and compute posteriors 
+    # args below are INLA options, passed directly to INLA
+    formula=formula,
+    family=family,
+    data =M,  
+    num.threads="6:2",  # adjust for your machine
+    mc.cores=2,
+    control.inla = list( strategy='laplace'  ),
+    verbose=TRUE 
+)    
+
+# to load saved fit
+# can be very large files .. slow 
+fit = carstm_model( p=p, sppoly=sppoly, DS="carstm_modelled_fit")
+
+summary(fit)
+names(fit)
+fit$summary$dic$dic
+fit$summary$dic$p.eff
+
+plot(fit)
+plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
+
+
+
+# to load saved results summary
+res = carstm_model( p=p, sppoly=sppoly, DS="carstm_modelled_summary")
+( res$summary)
+
+b0 = res$summary$fixed_effects["(Intercept)", "mean"]
+
+ts =  res$random$time 
+plot( mean ~ ID, ts, type="b", ylim=c(-2,2), lwd=1.5, xlab="year")
+lines( quant0.025 ~ ID, ts, col="gray", lty="dashed")
+lines( quant0.975 ~ ID, ts, col="gray", lty="dashed")
+
+
+ts =  res$random$cyclic
+plot( mean ~ID, ts, type="b", ylim=c(-1.5, 1.5), lwd=1.5, xlab="fractional year")
+lines( quant0.025 ~ID, ts, col="gray", lty="dashed")
+lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
+
+
+
     
-      data(warpbreaks)
-      str(warpbreaks)
-      
-      fit0 = glm(breaks ~ wool + tension, warpbreaks, family = poisson(link = "log"))
-      summary(fit0)
 
-      fit1 = glm(breaks ~ wool + tension, warpbreaks, family = quasipoisson(link = "log"))
-      summary(fit1)
+map_centre = c( (p$lon0+p$lon1)/2 - 0.5, (p$lat0+p$lat1)/2   )
+map_zoom = 7
 
-      fit2 = inla(breaks ~ wool + tension, data=warpbreaks, family="poisson" )
-      summary(fit2)
+# maps of some of the results
+tmatch="2010"
+umatch="0.75"  # == 0.75*12 = 9 (ie. Sept)  
 
-      fit3 = inla(breaks ~ wool + tension, data=warpbreaks, family="zeroinflatedpoisson0" )
-      summary(fit3)
+tmout = carstm_map(  res=res, vn="predictions", tmatch=tmatch, umatch=umatch, 
+    sppoly=sppoly,
+    breaks=seq(-1, 9, by=1), 
+    palette="-RdYlBu",
+    plot_elements=c( "isobaths",  "compass", "scale_bar", "legend" ),
+    tmap_zoom= c(map_centre, map_zoom),
+    title=paste( "Bottom temperature predictions", tmatch, umatch)  
+)
+tmout
 
-      ## chose a marginal and compare the with the results computed by the
-      res = fit2
-      r = res$summary.fixed["woolB",]
-      r
-      
-      m = res$marginals.fixed$woolB
-
-      ## compute the 95% HPD interval
-      inla.hpdmarginal(0.95, m)
-     
-      invlink = function(x) inla.link.log( x,  inverse=TRUE )
-      list_simplify = function(x) as.data.frame( t( as.data.frame( x )))
-
-      t( lapply( inla.zmarginal( m), FUN=invlink )) # NOTE, sd is incorrect .. just looking at means 
-
-      # this method recovers the the correct SD
-      t( inla.zmarginal( inla.tmarginal( invlink, m) , silent=TRUE  )  )
-
-      # or, step-by-step
-      g = inla.tmarginal( invlink, m)    
-      
-      zmarg = function(yy) inla.zmarginal( yy, silent=TRUE  )
-
-      invlink(unlist( list_simplify ( sapply( list(m), zmarg ) ) ))
-      
-      list_simplify ( sapply( list(g), zmarg ) )
+# persistent spatial effects
+tmout = carstm_map(  res=res, vn=c( "random", "space", "combined" ), 
+    sppoly=sppoly,
+    breaks=seq(-5, 5, by=1), 
+    palette="-RdYlBu",
+    plot_elements=c( "isobaths",  "compass", "scale_bar", "legend" ),
+    tmap_zoom= c(map_centre, map_zoom),
+    title="Bottom temperature spatial effects (Celsius)"
+)
+tmout
 
 
-  }
 
-
+# finished
 
 
 ```
