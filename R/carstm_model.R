@@ -1,15 +1,12 @@
 
-carstm_model = function( p=list(), data=NULL, dimensionality=NULL,  
-  sppoly =NULL, areal_units_fn=NULL, DS="redo",  
-  compress=TRUE, fn_fit=NULL, fn_res=NULL, 
+carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL, DS="redo", 
+   compress=TRUE, fn_fit=NULL, fn_res=NULL, 
    ... ) {
 
      if (0) {
       data=NULL
-      E=NULL
       sppoly =NULL
       areal_units_fn=NULL
-      dimensionality=NULL
       DS="redo"
       improve.hyperparam.estimates=FALSE
       carstm_modelengine = "inla"
@@ -29,12 +26,6 @@ carstm_model = function( p=list(), data=NULL, dimensionality=NULL,
     carstm_modelengine ="inla" # glm and gam also possible ... though not very useful
   )
 
-  if (!exists("dimensionality", p)) {
-    if (p$aegis_dimensionality=="space") p$dimensionality = "space"  
-    if (p$aegis_dimensionality=="space-year") p$dimensionality = "space-time"  
-    if (p$aegis_dimensionality=="space-year-season") p$dimensionality = "space-time-cyclic"  
-  }
-  if (!exists("dimensionality", p)) stop("dimensionality needs to be specified")
 
   if (is.null(sppoly)) {
     message("sppoly not specified, loading from file using parameters provided ..." )

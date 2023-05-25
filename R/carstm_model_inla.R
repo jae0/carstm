@@ -62,7 +62,7 @@ carstm_model_inla = function(
     }
   }
    
-   
+ 
   ### 1. Prepare inla_args and vars used in both modelling and extraction
   
   inla_args = list(...)  # INLA options to be passed directly to it  
@@ -206,6 +206,9 @@ carstm_model_inla = function(
         stop("carstm_model_label should be specified")
       }
     }
+ 
+ 
+    # NOTE:: dimensionality (model dim) is independent of aegis_dimensionality (prediction storage)
 
     if ( !exists("dimensionality", O) ) {
       if (any(re$dimensionality %in% c("st", "ts") ) ){
@@ -318,7 +321,7 @@ carstm_model_inla = function(
       }
       missingT = NULL
 
-      # sub-annual time
+      # sub-annual time 
       if (grepl("cyclic", O[["dimensionality"]]))  {
 
         # this sequence is a master key

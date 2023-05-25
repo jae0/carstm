@@ -11,7 +11,7 @@
     }
     dta = carstm_results_unpack( X, vns ) 
 
-    if (exists("ID", dta)) {
+    if (!exists("ID", dta)) {
       dta$ID = row.names(dta)
     }
 

@@ -1,10 +1,15 @@
 # carstm
-carstm provides a sequence of examples with supporting functions that examines abundance estimation of snow crab and groundfish (Atlantic cod) in
+*carstm* provides a sequence of examples with supporting functions that examines abundance estimation of snow crab and groundfish (Atlantic cod) in
 Maritimes groundfish survey strata. The approach is easily generalizable to all species. The main sequence of example models and scripts are found in inst\scripts\* for the projects: bio.snowcrab and aegis.surveys, and leverages the https::\github.com\jae0\aegis data and GIS handing routines.
 
-I recommend using the paradiso solver (https://www.pardiso-project.org/). You will need to request an academic license. It will make this much faster and less memory intensive. Combined with INLA's experimental mode (as of version 22.01.25 and possibly earlier), resource requirements are more operational. 
+For Atlantic cod, see the preprints at: 
 
-For Atlantic cod, carstm replicates the standard analysis which is known as "stratanal", a basic stratified average estimate. This is shown to be equivalent to a Gaussian linear fixed effects model. Thereafter, a model-based approach is used to incrementally improve upon the assumptions of the model, focussing upon the distributional model (Poisson, overdispersed Poisson), adding environmental covariates and then employing an INLA-based ICAR (intrinsic conditionally autoregressive models; "bym2") approach towards accounting for areal unit modelling and an AR1 temporal autocorrelation assuming separability of the spacetime autocorrelation.
+[Use in estimating an abundance index of Atlantic Cod](https://doi.org/10.1101/2022.05.05.490753) 
+[Use in decomposing environmental effects for Atlantic Cod](https://doi.org/10.1101/2022.04.21.488963)
+[Use in decomposing environmental effects for Snow Crab](https://doi.org/10.1101/2022.12.20.520893)
+
+
+*carstm* can also replicate the "standard" analysis which is known as "stratanal", a basic stratified average estimate. This is shown to be equivalent to a Gaussian linear fixed effects model. Thereafter, a model-based approach is used to incrementally improve upon the assumptions of the model, focussing upon the distributional model (Poisson, overdispersed Poisson), adding environmental covariates and then employing an INLA-based ICAR (intrinsic conditionally autoregressive models; "bym2") approach towards accounting for areal unit modelling and an AR1 temporal autocorrelation assuming separability of the spacetime autocorrelation.
 
 
 ```
