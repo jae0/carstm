@@ -4,9 +4,11 @@ Maritimes groundfish survey strata. The approach is easily generalizable to all 
 
 For Atlantic cod, see the preprints at: 
 
-[Use in estimating an abundance index of Atlantic Cod](https://doi.org/10.1101/2022.05.05.490753) 
-[Use in decomposing environmental effects for Atlantic Cod](https://doi.org/10.1101/2022.04.21.488963)
-[Use in decomposing environmental effects for Snow Crab](https://doi.org/10.1101/2022.12.20.520893)
+    - [Use in estimating an abundance index of Atlantic Cod](https://doi.org/10.1101/2022.05.05.490753)
+ 
+    - [Use in decomposing environmental effects for Atlantic Cod](https://doi.org/10.1101/2022.04.21.488963)
+
+    - [Use in decomposing environmental effects for Snow Crab](https://doi.org/10.1101/2022.12.20.520893)
 
 
 *carstm* can also replicate the "standard" analysis which is known as "stratanal", a basic stratified average estimate. This is shown to be equivalent to a Gaussian linear fixed effects model. Thereafter, a model-based approach is used to incrementally improve upon the assumptions of the model, focussing upon the distributional model (Poisson, overdispersed Poisson), adding environmental covariates and then employing an INLA-based ICAR (intrinsic conditionally autoregressive models; "bym2") approach towards accounting for areal unit modelling and an AR1 temporal autocorrelation assuming separability of the spacetime autocorrelation.
