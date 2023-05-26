@@ -16,6 +16,7 @@ For Atlantic cod, see the preprints at:
 
 A real use case example: modelling temperature near Halifax, Nova Scotia. Some example data are found in carstm::extdata/aegis_spacetime_test/RDS and is used in the example file: carstm::scripts/example_temperature_carstm.R (copied below):
 
+
 ```
 
 # carstm example using temperature data subset
@@ -62,7 +63,7 @@ if ( !file.exists(p$modeldir) ) dir.create( p$modeldir, showWarnings=FALSE, recu
 
  
 p$variabletomodel = "t"
-p$aegis_dimensionality="space-year-season"
+p$dimensionality="space-time-cyclic"
 p$quantile_bounds =c(0.005, 0.995) # trim upper bounds (in posterior predictions)
 
 # space resolution
