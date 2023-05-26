@@ -139,3 +139,5 @@ plot(mC2$summary.fitted.values$mean, m2$summary.fitted.values$mean)
 
 plot(mC2$summary.fitted.values$mean, m2$summary.fitted.values$mean*Germany$E)
 
+
+

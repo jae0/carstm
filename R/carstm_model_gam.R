@@ -37,11 +37,7 @@
     S = as.character( O[["AUID"]] )
     nAUID = length(S)
 
-    # parsing formula is better as it makes it independent of storage dim (aegis_dimensionality); see carstm_model_inla
-    if (O$aegis_dimensionality=="space") O$dimensionality = "space"  
-    if (O$aegis_dimensionality=="space-year") O$dimensionality = "space-time"  
-    if (O$aegis_dimensionality=="space-year-season") O$dimensionality = "space-time-cyclic"  
-  
+ 
     if ( O$dimensionality == "space") {
       withsolutions = withsolutions[ grep( "AUID.*:year", withsolutions ) ]
       withsolutions = gsub("AUID", "", withsolutions )
