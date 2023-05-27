@@ -332,9 +332,8 @@ carstm_model_inla = function(
         O[["cyclic_name"]]  = as.character(O[[ "cyclic_id" ]] ) # for plot labels, etc .. time gets swapped out for time index later
 
         inla_args[["data"]][["cyclic0"]] = as.character( inla_args[["data"]][[vU]] )  # a copy for internal matching 
-        inla_args[["data"]][[vU]] = match( inla_args[["data"]][[vU]], as.character(O[["cyclic_id"]]) ) # convert to data numeric (ie. a numeric factor)
-        cyclic_values = 1:O[["cyclic_n"]]  # key var for model formula
-      }
+        inla_args[["data"]][[vU]] = match( inla_args[["data"]][["cyclic0"]], as.character(O[["cyclic_id"]]) ) # convert to data numeric (ie. a numeric factor)
+       }
     }
     
 
@@ -448,8 +447,8 @@ carstm_model_inla = function(
 
     O[["inla.mode"]] = inla_args[["inla.mode"]]  # copy for later
     
-    setDF(inla_args[["data"]]) # INLA requires this
-
+    setDF(inla_args[["data"]]) # in case .. INLA requires this ?
+ 
     fit = try( do.call( inla, inla_args ) )      
 
     if (inherits(fit, "try-error" )) {

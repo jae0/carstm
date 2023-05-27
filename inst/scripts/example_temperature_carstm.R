@@ -188,9 +188,7 @@ M$dyear = M$tiyr - M$time
 # do not sepraate out as season can be used even if not predicted upon
 ii = which( M$dyear > 1) 
 if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next year
-
-cyclic_values = 1:length(p$dyears)  # internally converts to integers 
-
+ 
 M$dyri = discretize_data( M[["dyear"]], discretizations()[["dyear"]] )
 M$cyclic = as.character( M$dyri )  # "cyclic*" is a keyword
 
@@ -202,7 +200,7 @@ M$time_space = M$time  # copy for space_time component (INLA does not like to re
 formula = as.formula( paste(
     p$variabletomodel, ' ~ 1',
     ' + f( time, model="ar1",  hyper=H$ar1 ) ',   
-    ' + f( cyclic, model="rw2", scale.model=TRUE, hyper=H$rw2, cyclic=TRUE, values=cyclic_values )',
+    ' + f( cyclic, model="seasonal", scale.model=TRUE, season.length=10, hyper=H$iid  ) ',
     ' + f( space, model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE, hyper=H$bym2  ) ',
     ' + f( inla.group( z, method="quantile", n=11 ), model="rw2", scale.model=TRUE, hyper=H$rw2)',
     ' + f( space_time, model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE, group=time_space, hyper=H$bym2, control.group=list(model="ar1", hyper=H$ar1_group) ) '
