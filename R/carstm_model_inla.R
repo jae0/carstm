@@ -61,7 +61,11 @@ carstm_model_inla = function(
       message("modelled results not found. .. try to run extraction: '' ")
     }
   }
-   
+  
+
+  run_start  = Sys.time()
+
+
  
   ### 1. Prepare inla_args and vars used in both modelling and extraction
   
@@ -468,6 +472,9 @@ carstm_model_inla = function(
     if (is.null(fit)) warning("model fit error")
     if ("try-error" %in% class(fit) ) warning("model fit error")
 
+
+    run_fit  = Sys.time()
+
     message( "Fitted model saved as: ", fn_fit )
 
     outputdir = dirname(fn_fit)
@@ -540,11 +547,15 @@ carstm_model_inla = function(
     inla_args= NULL; gc()
 
     saveRDS( fit, file=fn_fit, compress=TRUE )
+
   }
 
   
   ### END Modelling
 
+  if (!exists("run_fit")) run_fit  = run_start  # in case modelling is skipped
+
+  run_extract  = Sys.time()
 
   if (is.null(fit)) fit =readRDS( fn_fit )
   
@@ -1399,6 +1410,8 @@ carstm_model_inla = function(
     } 
   }  # end random spatio-temporal effects
 
+  run_predict  = Sys.time()
+
 
   if ("predictions" %in% toget ) {
 
@@ -1733,15 +1746,45 @@ carstm_model_inla = function(
     }
   }
 
+  run_extract_end  = Sys.time()
+
+  
+
   if (is.null(fn_res)) {
     message( "Saving results summary as a sublist in fit: fit$results : \n", fn_fit)
     fit$results = O
     saveRDS( fit, file=fn_res, compress=compress  )
+
+    run_extract_save  = Sys.time()
+
+    if (be_verbose) {
+      message("Run times:")
+      message("Total: ", format(difftime(run_extract_save, run_start)))
+      message("Fit: ", format(difftime(run_extract_save, run_fit)))
+      message("Extract total: ", format(difftime(run_extract, run_extract_end)))
+      message("Extract effects: ", format(difftime(run_extract, run_predict)))
+      message("Extract predictions: ", format(difftime(run_predict, run_extract_end)))
+      message("Remainder of time on file compression, save, etc:", format(difftime(run_extract_save, run_extract_end ) + difftime(run_fit, run_start) ))
+    } 
+
     return(fit)
 
   } else {
     message( "Saving results summary as: \n", fn_res )
     saveRDS( O, file=fn_res, compress=compress   )
+   
+    run_extract_save  = Sys.time()
+   
+    if (be_verbose) {
+      message("Run times:")
+      message("Total: ", format(difftime(run_extract_save, run_start)))
+      message("Fit: ", format(difftime(run_extract_save, run_fit)))
+      message("Extract total: ", format(difftime(run_extract, run_extract_end)))
+      message("Extract effects: ", format(difftime(run_extract, run_predict)))
+      message("Extract predictions: ", format(difftime(run_predict, run_extract_end)))
+      message("Remainder of time on file compression, save, etc:", format(difftime(run_extract_save, run_extract_end ) + difftime(run_fit, run_start) ))
+    } 
+
     return(O)
   }
   
