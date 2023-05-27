@@ -210,10 +210,7 @@ carstm_model_inla = function(
         stop("carstm_model_label should be specified")
       }
     }
- 
- 
-    # NOTE:: dimensionality (model dim) is independent of dimensionality (prediction storage)
-
+  
     if ( !exists("dimensionality", O) ) {
       if (any(re$dimensionality %in% c("st", "ts") ) ){
         if (any(re$dimensionality == "c")) {
