@@ -109,17 +109,18 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
     out = carstm_model_gam( O=p, data=data, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, ... ) 
   }
 
-  if (grepl("bayesx", carstm_modelengine) ) {
-    # might be useful..
+
+  if (grepl("julia", carstm_modelengine) ) {
+    # fast ...  can call via JuliaR
   }
 
-  if (grepl("diseasemapping", carstm_modelengine) ) {
-    # might be useful..
+  if (grepl("brms", carstm_modelengine) ) {
+    # fast ... 
   }
 
 
-  if ( grepl("inla_old_method", carstm_modelengine) ) {
-    out = carstm_model_inla_working_copy( O=p, data=data, sppoly=sppoly, fn_fit=fn_fit, fn_res=fn_res, compress=compress, ... ) 
+  if (grepl("stmv", carstm_modelengine) ) {
+    # via carstm/stmv hybrid mode   ... 
   }
 
   if ( grepl("inla", carstm_modelengine) ) {
