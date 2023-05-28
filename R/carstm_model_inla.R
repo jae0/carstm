@@ -502,7 +502,7 @@ carstm_model_inla = function(
       if (O[["unique_predictions"]][1] > 1) {
         matchfrom = list( space=inla_args[["data"]][["space0"]] [ O[["ipred"]]] ) 
       } else {
-        stop("No. spatial units for prediction is less than 1 ... ?")
+        stop("No. spatial units for prediction is 0 ... ?")
       }
     }
 
@@ -513,7 +513,7 @@ carstm_model_inla = function(
         message("No. of time slice for prediction is 1 .. reducing output matrix size")
         matchfrom = list( space=inla_args[["data"]][["space0"]][O[["ipred"]]] )
       } else {
-        stop("No. time units is less than 1 ... ?")
+        stop("No. time units is 0 ... ?")
       }
     }
 
@@ -524,7 +524,7 @@ carstm_model_inla = function(
         matchfrom = list( space=inla_args[["data"]][["space0"]][O[["ipred"]]], time=inla_args[["data"]][["time0"]] [O[["ipred"]]] )
         message("No. of cyclic slices for prediction is 1 .. reducing output matrix size")
       } else {
-        stop("No. cyclic units is less than 1 ... ?")
+        stop("No. cyclic units is 0 ... ?")
       }
 
     }
