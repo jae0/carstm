@@ -7,7 +7,7 @@ carstm_model_inla = function(
   fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
   fn_res=NULL, 
   redo_fit = TRUE,
-  compress=FALSE,
+  compress=TRUE,
   toget = c("summary", "fixed_effects", "random_effects", "random_spatial", "random_spatiotemporal", "predictions"), 
   nposteriors=NULL, 
   exceedance_threshold=NULL, 
@@ -230,6 +230,7 @@ carstm_model_inla = function(
         }
       }
       message("Check dimensionality guessed from formula:  ", O[["dimensionality"]]) 
+
     }
 
   
