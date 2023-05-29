@@ -7,7 +7,8 @@ carstm_model_inla = function(
   fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
   fn_res=NULL, 
   redo_fit = TRUE,
-  compress=TRUE,
+  compress="xz",
+  compression_level=3,
   toget = c("summary", "fixed_effects", "random_effects", "random_spatial", "random_spatiotemporal", "predictions"), 
   nposteriors=NULL, 
   exceedance_threshold=NULL, 
@@ -543,7 +544,7 @@ carstm_model_inla = function(
     fit$.args = NULL
     inla_args= NULL; gc()
 
-    saveRDS( fit, file=fn_fit, compress=compress )
+    saveRDS( fit, file=fn_fit, compress=compress, compression_level=compression_level )
 
   }
 
@@ -1751,10 +1752,10 @@ carstm_model_inla = function(
     message( "Saving results summary as a sublist in fit: fit$results : \n", fn_fit)
     message( "Return object is 'fit$results' (and not 'fit')")
     fit$results = O
-    saveRDS( fit, file=fn_res, compress=compress  )
+    saveRDS( fit, file=fn_res, compress=compress, compression_level=compression_level  )
   } else {
     message( "Saving results summary as: \n", fn_res )
-    saveRDS( O, file=fn_res, compress=compress   )
+    saveRDS( O, file=fn_res, compress=compress, compression_level=compression_level   )
   }
  
   run_end  = Sys.time()
