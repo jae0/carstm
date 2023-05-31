@@ -4,6 +4,7 @@ carstm_model_inla = function(
   DS = "",
   sppoly =NULL,
   fit = NULL,
+  vn = NULL,  
   fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
   fn_res=NULL, 
   redo_fit = TRUE,
@@ -125,13 +126,15 @@ carstm_model_inla = function(
 
     vO = O[["fm"]]$offset_variable
     vY = O[["fm"]]$dependent_variable 
+
+    if (!is.null(vn)) O[["fm"]]$vn = vn  # over-ride if given
+
     vS = O[["fm"]]$vn$S
     vT = O[["fm"]]$vn$T
     vU = O[["fm"]]$vn$U
     vS2 = O[["fm"]]$vn$S2 
     vT2 = O[["fm"]]$vn$T2
     vU2 = O[["fm"]]$vn$U2
-
 
     # family related  
     if ( !exists("family", inla_args ) ) {
@@ -234,16 +237,22 @@ carstm_model_inla = function(
 
     }
 
-  
-  
-    if ( grepl("space",  O[["dimensionality"]]) ) {
+    if ( !is.null(O[["fm"]][["vn"]][["S"]]) ) {
+      # this is about model data inputs not dimensionality of outputs
 
       if (is.null(sppoly)) if (exists("sppoly", O)) sppoly = O$sppoly
       if (is.null(sppoly)) if (exists("areal_units")) sppoly = areal_units( O ) 
       if (is.null(sppoly)) stop( "sppoly is required") 
       
-      O[["sppoly"]] = sppoly  # copy in case mapping directly from O
+      # test to see if sppoly has been altered:
+      sp_nb_auid = attributes(attributes(sppoly)$NB_graph)$region.id  # order of neighbourhood graph 
+      o = match( sppoly$AUID, sp_nb_auid)  
+      if (length(unique(diff(o))) !=1) {
+        stop( "Neighbourhood indices and polygons AUID order are mismatched .. this will not end well" )
+      }
+      sp_nb_auid = o = NULL
 
+      O[["sppoly"]] = sppoly  # copy in case mapping directly from O
       
       # the master / correct sequence of the AU's and neighbourhood matrix index values
       if (!exists("space_id", O)) {
@@ -260,25 +269,12 @@ carstm_model_inla = function(
 
       if (!exists("space_id", O)) stop( "space_id could not be determined from data")
       if (!exists("space_id", attributes(sppoly)) ) attributes(sppoly)$space_id = O[["space_id"]]  # copy as attribute in case
-      
       O[["space_n"]] = length( O[[ "space_id" ]] )
       O[["space_name"]] = attributes(sppoly)$space_name  # better formatted areal unit names (for reporting or plotting)
       
-      if ( O[["dimensionality"]] == "space" ) {
+      if ( is.null(O[["fm"]][["vn"]][["T"]]) ) {
         # force to carry a "time" to make dimensions of predictions simpler to manipulate 
         inla_args[["data"]][["time"]] = -1  
-      }
-     
-      for ( eff in c("fixed_effects", "random_effects") ) {
-        js = which( O[["fm"]][[eff]][["dimensionality"]] %in% c("s", "st") )
-        if (length(js) > 0 ){
-          # store a copy as space will be overwritten with index for internal matching 
-          inla_args[["data"]][["space0"]] = inla_args[["data"]] [[ O[["fm"]][[eff]][["vn"]] [js[1]] ]]  
-          for (j in js) {
-            vnx = O[["fm"]][[eff]][["vn"]][j]
-            inla_args[["data"]][[vnx]] = match( as.character(inla_args[["data"]][[vnx]]), as.character(O[["space_id"]]) ) # convert to data numeric (ie. a numeric factor)
-          }
-        }
       }
   
       missingS = which(is.na(inla_args[["data"]][[vS]] ))
@@ -290,57 +286,27 @@ carstm_model_inla = function(
       }
       missingS = NULL
     
-      missingS = unique( setdiff( O[["space_id"]], unique(  inla_args[["data"]][["space0"]] ) ) )
+      missingS = unique( setdiff( O[["space_id"]], unique(  inla_args[["data"]][[vS]] ) ) )
       if (length(missingS) > 0) {
         warning( "No. of areal unique units in data do not match those in sppoly:", paste0( head(missingS), sep=", "))
       }
+      missingS = NULL
 
     }
 
-    if ( grepl("time",  O[["dimensionality"]]) | grepl("cyclic", O[["dimensionality"]])  ) {
-
+    if ( !is.null(O[["fm"]][["vn"]][["T"]])  | !is.null(O[["fm"]][["vn"]][["U"]])  ) {
       if (!exists("time_id", O)) O[["time_id"]] = O[["yrs"]]
-
       O[["time_n"]] = length( O[[ "time_id" ]] )
       O[["time_name"]]  = as.character(O[[ "time_id" ]] ) # for plot labels, etc .. time gets swapped out for time index later
   
-      for ( eff in c("fixed_effects", "random_effects") ) {
-        jt = which( O[["fm"]][[eff]][["dimensionality"]] %in% c("t", "ts") )
-        if (length(jt) > 0 ){
-          # store a copy for internal matching (if required)
-          inla_args[["data"]][["time0"]] =  inla_args[["data"]][[ O[["fm"]][[eff]][[ "vn"]][jt[1]] ]]  # a copy as time will be overwritten with index for internal matching 
-          for (j in jt) {
-            vnx = O[["fm"]][[eff]][["vn"]][j]
-            inla_args[["data"]][[vnx]] = match( inla_args[["data"]][[vnx]], O[["time_id"]]) # convert to data numeric (ie. a numeric factor)
-          }
-        }
-      }
-
-      missingT = which(is.na( match(  inla_args[["data"]][["time0"]], O[["time_id"]]) ))
-      if (length( missingT ) > 0 ) {
-        warning( "Time data and time do not match ... mismatches are being dropped and assuming data is OK:")
-        print( head(missingT) )
-        inla_args[["data"]] =  inla_args[["data"]] [ -missingT , ]
-      }
-      missingT = NULL
-
       # sub-annual time 
-      if (grepl("cyclic", O[["dimensionality"]]))  {
-
-        # this sequence is a master key
+      if (!is.null(O[["fm"]][["vn"]][["U"]]) )  {
         if (!exists("cyclic_id", O)) O[["cyclic_id"]] = O$dyears + diff(O$dyears)[1]/2
-
         O[["cyclic_n"]] = length( O[[ "cyclic_id" ]] )
         O[["cyclic_name"]]  = as.character(O[[ "cyclic_id" ]] ) # for plot labels, etc .. time gets swapped out for time index later
-
-        inla_args[["data"]][["cyclic0"]] = as.character( inla_args[["data"]][[vU]] )  # a copy for internal matching 
-        inla_args[["data"]][[vU]] = match( inla_args[["data"]][["cyclic0"]], as.character(O[["cyclic_id"]]) ) # convert to data numeric (ie. a numeric factor)
        }
     }
     
-
-    if (!is.null(inla_args[["covariates"]]))  inla_args[["data"]] = inla_args[["covariates"]][ inla_args[["data"]], on=c(vS)] 
-  
 
     ii = which(is.finite(inla_args[["data"]][[vY]]))
 
@@ -489,20 +455,28 @@ carstm_model_inla = function(
 
     # count prediction levels .. in case we can reduce size of output matrices
     O[["unique_predictions"]] = c(0, 0, 0)
-    if (exists("space0", inla_args[["data"]] )) {
-      O[["unique_predictions"]][1] = length(unique( inla_args[["data"]][["space0"]][O[["ipred"]]]))
+    if (!is.null(vS)) {
+      if (exists(vS, inla_args[["data"]] )) {
+        O[["unique_predictions"]][1] = length(unique( inla_args[["data"]][[vS]][O[["ipred"]]]))
+      }
     }
-    if (exists("time0", inla_args[["data"]] )) {
-      O[["unique_predictions"]][2] = length(unique( inla_args[["data"]][["time0"]][O[["ipred"]]]))
+
+    if (!is.null(vT)) {
+      if (exists(vT, inla_args[["data"]] )) {
+        O[["unique_predictions"]][2] = length(unique( inla_args[["data"]][[vT]][O[["ipred"]]]))
+      }
     }
-    if (exists("cyclic0", inla_args[["data"]] )) {
-      O[["unique_predictions"]][3] = length(unique( inla_args[["data"]][["cyclic0"]][O[["ipred"]]]))
+
+    if (!is.null(vU)) {
+      if (exists(vU, inla_args[["data"]] )) {
+        O[["unique_predictions"]][3] = length(unique( inla_args[["data"]][[vU]][O[["ipred"]]]))
+      }
     }
- 
+
     if (  O[["dimensionality"]] == "space" ) {
         # filter by S and T in case additional data in other areas and times are used in the input data
       if (O[["unique_predictions"]][1] > 1) {
-        matchfrom = list( space=inla_args[["data"]][["space0"]] [ O[["ipred"]]] ) 
+        matchfrom = list( space=inla_args[["data"]][[vS]] [ O[["ipred"]]] ) 
       } else {
         stop("No. spatial units for prediction is 0 ... ?")
       }
@@ -510,10 +484,10 @@ carstm_model_inla = function(
 
     if (O[["dimensionality"]] == "space-time"  ) {
       if (O[["unique_predictions"]][2] > 1) {
-        matchfrom = list( space=inla_args[["data"]][["space0"]][O[["ipred"]]], time=inla_args[["data"]][["time0"]] [O[["ipred"]]] )
+        matchfrom = list( space=inla_args[["data"]][[vS]][O[["ipred"]]], time=inla_args[["data"]][[vT]] [O[["ipred"]]] )
       } else if (O[["unique_predictions"]][2] == 1) {
         message("No. of time slice for prediction is 1 .. reducing output matrix size")
-        matchfrom = list( space=inla_args[["data"]][["space0"]][O[["ipred"]]] )
+        matchfrom = list( space=inla_args[["data"]][[vS]][O[["ipred"]]] )
       } else {
         stop("No. time units is 0 ... ?")
       }
@@ -521,9 +495,9 @@ carstm_model_inla = function(
 
     if ( O[["dimensionality"]] == "space-time-cyclic" ) {
       if (O[["unique_predictions"]][3] > 1) {
-        matchfrom = list( space=inla_args[["data"]][["space0"]][O[["ipred"]]], time=inla_args[["data"]][["time0"]][O[["ipred"]]], cyclic=inla_args[["data"]][["cyclic0"]][O[["ipred"]]] )
+        matchfrom = list( space=inla_args[["data"]][[vS]][O[["ipred"]]], time=inla_args[["data"]][[vT]][O[["ipred"]]], cyclic=inla_args[["data"]][[vU]][O[["ipred"]]] )
       } else if (O[["unique_predictions"]][3] == 1) {
-        matchfrom = list( space=inla_args[["data"]][["space0"]][O[["ipred"]]], time=inla_args[["data"]][["time0"]] [O[["ipred"]]] )
+        matchfrom = list( space=inla_args[["data"]][[vS]][O[["ipred"]]], time=inla_args[["data"]][[vT]] [O[["ipred"]]] )
         message("No. of cyclic slices for prediction is 1 .. reducing output matrix size")
       } else {
         stop("No. cyclic units is 0 ... ?")
@@ -1001,15 +975,15 @@ carstm_model_inla = function(
       W = array( NA, dim=c( O[["space_n"]], length(tokeep) ), dimnames=list( space=O[["space_id"]], stat=tokeep ) )
       names(dimnames(W))[1] = vS  # need to do this in a separate step ..
 
-      O[["random"]] [[vS]] = list()  # space as a main effect  vS==vnS
+      O[["random"]] [[vS]] = list()  # space as a main effect  vS==vS
 
       if (length(iSP) == 1) {
 
-        vnS = re$vn[ iSP ]  # == vS as it is a single spatial effect
+        vS = re$vn[ iSP ]  # == vS as it is a single spatial effect
         
         model_name = re$model[ iSP ]  # should be iid
 
-        m = fit$marginals.random[[vnS]]
+        m = fit$marginals.random[[vS]]
         m = try( apply_generic( m, marginal_clean ) )
         if (invlink_id != "identity" ) {
           m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
@@ -1020,7 +994,7 @@ carstm_model_inla = function(
         # single spatial effect (eg in conjuction with besag) .. indexing not needed but here in case more complex models ..
         if (any( inherits(m, "try-error"))) {
           message( "Error encountered in marginals .. copying directly from INLA summary instead:")
-          m = fit$summary.random[[vnS]][, inla_tokeep ]
+          m = fit$summary.random[[vS]][, inla_tokeep ]
           names(m) =  tokeep
         } 
         
@@ -1036,7 +1010,7 @@ carstm_model_inla = function(
           for (k in 1:length(tokeep)) {
             W[,k] = reformat_to_array( input = unlist(m[iid, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["random"]] [[vnS]] [["iid"]] = W [, tokeep, drop =FALSE]
+          O[["random"]] [[vS]] [["iid"]] = W [, tokeep, drop =FALSE]
 
         } else {
           # single spatial effect that is not bym2
@@ -1050,17 +1024,17 @@ carstm_model_inla = function(
         for (k in 1:length(tokeep)) {
           W[,k] = reformat_to_array( input = unlist(m[bym2, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
         }
-        O[["random"]] [[vnS]] [[model_name]] = W [, tokeep, drop =FALSE]
+        O[["random"]] [[vS]] [[model_name]] = W [, tokeep, drop =FALSE]
 
       }
 
       if (length(iSP) == 2) {
         
         for (j in 1:length(iSP)) {
-          vnS = re$vn[ iSP[j] ]
+          vS = re$vn[ iSP[j] ]
           model_name = re$model[ iSP[j] ]  
           
-          m = fit$marginals.random[[vnS]]
+          m = fit$marginals.random[[vS]]
           m = try( apply_generic( m, marginal_clean ) ) 
           if (invlink_id != "identity" ) {
             m = try( apply_generic( m, inla.tmarginal, fun=invlink) )
@@ -1070,7 +1044,7 @@ carstm_model_inla = function(
           m = try( list_simplify( simplify2array( m ) ) )
           if (any( inherits(m, "try-error"))) {
             message( "Error encountered in marginals .. copying directly from INLA summary instead:")
-            m = fit$summary.random[[vnS]][, inla_tokeep ]
+            m = fit$summary.random[[vS]][, inla_tokeep ]
             names(m) = c("ID", tokeep)
           } 
 
@@ -1080,7 +1054,7 @@ carstm_model_inla = function(
           for (k in 1:length(tokeep)) {
             W[,k] = reformat_to_array( input = unlist(m[, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["random"]] [[vnS]] [[model_name]] = data.frame( W [, tokeep, drop =FALSE], ID=row.names(W) )
+          O[["random"]] [[vS]] [[model_name]] = data.frame( W [, tokeep, drop =FALSE], ID=row.names(W) )
 
         }
       }
@@ -1471,7 +1445,6 @@ carstm_model_inla = function(
           dimnames=list( space=O[["space_id"]], stat=names(m) ) )
         names(dimnames(W))[1] = vS  # need to do this in a separate step ..
         
-        # matchfrom = list( space=inla_args[["data"]][["space0"]] [ O[["ipred"]]] ) 
         # matchfrom already created higher up
         matchto = list( space=O[["space_id"]] )
 
@@ -1529,7 +1502,6 @@ carstm_model_inla = function(
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
           names(dimnames(W))[2] = vT  # need to do this in a separate step ..
         
-          # matchfrom = list( space=inla_args[["data"]][["space0"]][O[["ipred"]]], time=inla_args[["data"]][["time0"]] [O[["ipred"]]] )
           # matchfrom already created higher up
           matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
           for (k in 1:length(names(m))) {
@@ -1546,7 +1518,6 @@ carstm_model_inla = function(
     
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
  
-          # matchfrom = list( space=inla_args[["data"]][["space0"]][O[["ipred"]]], time=inla_args[["data"]][["time0"]] [O[["ipred"]]] )
           # matchfrom already created higher up
           matchto = list( space=O[["space_id"]] )
           for (k in 1:length(names(m))) {
@@ -1630,7 +1601,6 @@ carstm_model_inla = function(
           names(dimnames(W))[2] = vT  # need to do this in a separate step ..
           names(dimnames(W))[3] = vU  # need to do this in a separate step ..
 
-          # matchfrom = list( space=inla_args[["data"]][["space0"]][ipred], time=inla_args[["data"]][["time0"]][ipred], cyclic=inla_args[["data"]][["cyclic0"]][ipred] )
           matchto = list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]] )
 
           for (k in 1:length(names(m))) {
@@ -1647,7 +1617,6 @@ carstm_model_inla = function(
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
           names(dimnames(W))[2] = vT  # need to do this in a separate step ..
 
-          # matchfrom = list( space=inla_args[["data"]][["space0"]][ipred], time=inla_args[["data"]][["time0"]][ipred], cyclic=inla_args[["data"]][["cyclic0"]][ipred] )
           matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
 
           for (k in 1:length(names(m))) {

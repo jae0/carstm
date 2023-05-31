@@ -180,22 +180,28 @@ APS = NULL; gc()
 
 # M$uid = 1:nrow(M)  # seems to require an iid model for each obs for stability .. use this for iid
 M$AUID  = as.character(M$AUID)  # revert to factors -- should always be a character
-M$space = as.character( M$AUID)  # "space*" is a keyword
+
+M$space = match( M$AUID, sppoly$AUID) 
+M$space_time = M$space  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
+
 M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
 M$time = trunc( M$tiyr)
+M$time_space = M$time  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
+
 M$dyear = M$tiyr - M$time 
+M$tiyr = NULL
 
 # do not sepraate out as season can be used even if not predicted upon
 ii = which( M$dyear > 1) 
 if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next year
  
 M$dyri = discretize_data( M[["dyear"]], discretizations()[["dyear"]] )
-M$cyclic = as.character( M$dyri )  # "cyclic*" is a keyword
 
-M$tiyr = NULL
-M$space_time = M$space  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
-M$time_space = M$time  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
+cyclic_levels = factor(p$dyears + diff(p$dyears)[1]/2, ordered=TRUE )
+M$cyclic = factor( as.character( M$dyri ), levels =levels(cyclic_levels) )   # copy for carstm/INLA
 
+
+# "H" in formula are created on the fly in carstm ... they can be dropped in formula or better priors defined manually
 
 formula = as.formula( paste(
     p$variabletomodel, ' ~ 1',
