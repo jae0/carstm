@@ -7,8 +7,8 @@ carstm_model_inla = function(
   fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
   fn_res=NULL, 
   redo_fit = TRUE,
-  compress="xz",
-  compression_level=3,
+  compress="gzip",
+  compression_level=1,
   toget = c("summary", "fixed_effects", "random_effects", "random_spatial", "random_spatiotemporal", "predictions"), 
   nposteriors=NULL, 
   exceedance_threshold=NULL, 
@@ -539,12 +539,15 @@ carstm_model_inla = function(
       }
     }
 
+    O[["carstm_prediction_surface_parameters"]] = NULL
+    
     fit$modelinfo = O  # store in case a restart is needed
 
     fit$.args = NULL
+
     inla_args= NULL; gc()
 
-    saveRDS( fit, file=fn_fit, compress=compress, compression_level=compression_level )
+    carstm_saveRDS( fit, file=fn_fit, compress=compress, compression_level=compression_level )
 
   }
 
@@ -1746,16 +1749,19 @@ carstm_model_inla = function(
 
   run_predict_end  = Sys.time()
 
+  O[["ipred"]] = NULL
+  O[["matchfrom"]] = NULL
+
   
 
   if (is.null(fn_res)) {
     message( "Saving results summary as a sublist in fit: fit$results : \n", fn_fit)
     message( "Return object is 'fit$results' (and not 'fit')")
     fit$results = O
-    saveRDS( fit, file=fn_res, compress=compress, compression_level=compression_level  )
+    carstm_saveRDS( fit, file=fn_res, compress=compress, compression_level=compression_level  )
   } else {
     message( "Saving results summary as: \n", fn_res )
-    saveRDS( O, file=fn_res, compress=compress, compression_level=compression_level   )
+    carstm_saveRDS( O, file=fn_res, compress=compress , compression_level=compression_level  )
   }
  
   run_end  = Sys.time()

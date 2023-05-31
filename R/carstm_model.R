@@ -1,6 +1,6 @@
 
 carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL, DS="redo", 
-   compress=TRUE, fn_fit=NULL, fn_res=NULL, 
+   compress="gzip", compression_level=1, fn_fit=NULL, fn_res=NULL, 
    ... ) {
 
      if (0) {
@@ -101,12 +101,12 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
    
   if ( grepl("glm", carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
-    out = carstm_model_glm( O=p, data=data, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, ... ) 
+    out = carstm_model_glm( O=p, data=data, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, compression_level=compression_level, ... ) 
   }
 
   if ( grepl("gam", carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
-    out = carstm_model_gam( O=p, data=data, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, ... ) 
+    out = carstm_model_gam( O=p, data=data, fn_fit=fn_fit,  fn_res=fn_res, compress=compress, compression_level=compression_level, ... ) 
   }
 
 
@@ -124,7 +124,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
   }
 
   if ( grepl("inla", carstm_modelengine) ) {
-    out = carstm_model_inla( O=p, data=data, sppoly=sppoly, fn_fit=fn_fit, fn_res=fn_res, compress=compress, ... )
+    out = carstm_model_inla( O=p, data=data, sppoly=sppoly, fn_fit=fn_fit, fn_res=fn_res, compress=compress, compression_level=compression_level, ... )
   }
 
   return( out )

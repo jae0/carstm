@@ -1,5 +1,6 @@
 
-  carstm_model_gam = function( O, data, fn_fit=tempfile(pattern="fit_", fileext=".rdata"), fn_res=tempfile(pattern="res_", fileext=".rdata"), compress=TRUE,   redo_fit=TRUE , ... ) {
+  carstm_model_gam = function( O, data, fn_fit=tempfile(pattern="fit_", fileext=".RDS"), fn_res=tempfile(pattern="res_", fileext=".RDS"), 
+    compress="gzip", compression_level=1,  redo_fit=TRUE , ... ) {
     
     # TODO:: assumes a fixed name convention .. look at carstm_model_inla to disconnect and use O$vn$*
 
@@ -20,7 +21,7 @@
 
       message( "Saving carstm fit: ", fn_fit )
 
-      save( fit, file=fn_fit, compress=compress )
+      carstm_saveRDS( fit, file=fn_fit, compress=compress, compression_level=compression_level )
     }
 
     if (is.null(fit)) load( fn_fit )
@@ -106,7 +107,7 @@
     if ( grepl( ".*lognormal", O$family)) O[[vn]] = exp(O[[vn]])
     if (exists("data_transformation", O) ) O[[vn]] = O$data_transformation$backward( O[[vn]] ) # make all positive
 
-    save( O, file=fn_res, compress=compress )
+    carstm_saveRDS( O, file=fn_res, compress=compress, compression_level=compression_level )
 
     message( "carstm summary saved as: ", fn_res )
 
