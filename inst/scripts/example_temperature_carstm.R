@@ -13,8 +13,7 @@ bottemp = readRDS(fn)
 plot(lat ~ -lon, bottemp)
 str(bottemp)
 summary(bottemp)
-
-plot(lon~lat, bottemp)
+ 
 hist( bottemp$tiyr )  # decimal date
 
 # required parameter settings:
@@ -225,7 +224,6 @@ res = carstm_model(
     sppoly=sppoly,
     posterior_simulations_to_retain=c("predictions", "random_spatial"), 
     nposteriors=1000,  # 1000 to 5000 would be sufficient to sufficiently sample most distributions: trade-off between file size and information content
-    dimensionality="space-time-cyclic",
     # redo_fit=FALSE,  # if FALSE then reload fit and recompute posteriors 
     # redo_fit=TRUE,  # if TRUE then compute fit and compute posteriors 
     # args below are INLA options, passed directly to INLA
