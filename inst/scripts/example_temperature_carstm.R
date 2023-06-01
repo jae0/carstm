@@ -186,7 +186,8 @@ M$space_time = M$space  # copy for space_time component (INLA does not like to r
 
 M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
 M$time = trunc( M$tiyr)
-M$time_space = M$time  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
+
+M$time_space = match( M$time, p$yrs ) # group index 
 
 M$dyear = M$tiyr - M$time 
 M$tiyr = NULL

@@ -417,6 +417,7 @@ carstm_model_inla = function(
     
     setDF(inla_args[["data"]]) # in case .. INLA requires this ?
  
+ 
     fit = try( do.call( inla, inla_args ) )      
 
     if (inherits(fit, "try-error" )) {
@@ -476,7 +477,9 @@ carstm_model_inla = function(
     if (  O[["dimensionality"]] == "space" ) {
         # filter by S and T in case additional data in other areas and times are used in the input data
       if (O[["unique_predictions"]][1] > 1) {
-        matchfrom = list( space=inla_args[["data"]][[vS]] [ O[["ipred"]]] ) 
+        ms = inla_args[["data"]][[vS]][O[["ipred"]]]
+        matchfrom = list( space=O[["space_id"]][ms] ) 
+        ms = NULL
       } else {
         stop("No. spatial units for prediction is 0 ... ?")
       }
@@ -484,10 +487,15 @@ carstm_model_inla = function(
 
     if (O[["dimensionality"]] == "space-time"  ) {
       if (O[["unique_predictions"]][2] > 1) {
-        matchfrom = list( space=inla_args[["data"]][[vS]][O[["ipred"]]], time=inla_args[["data"]][[vT]] [O[["ipred"]]] )
+        ms = inla_args[["data"]][[vS]][O[["ipred"]]]
+        mt = inla_args[["data"]][[vT]][O[["ipred"]]]
+        matchfrom = list( space=O[["space_id"]][ms] , time=O[["time_id"]][mt] )
+        ms = mt = NULL
       } else if (O[["unique_predictions"]][2] == 1) {
         message("No. of time slice for prediction is 1 .. reducing output matrix size")
-        matchfrom = list( space=inla_args[["data"]][[vS]][O[["ipred"]]] )
+        ms = inla_args[["data"]][[vS]][O[["ipred"]]]
+        matchfrom = list( space=O[["space_id"]][ms] ) 
+        ms = NULL
       } else {
         stop("No. time units is 0 ... ?")
       }
@@ -495,10 +503,18 @@ carstm_model_inla = function(
 
     if ( O[["dimensionality"]] == "space-time-cyclic" ) {
       if (O[["unique_predictions"]][3] > 1) {
-        matchfrom = list( space=inla_args[["data"]][[vS]][O[["ipred"]]], time=inla_args[["data"]][[vT]][O[["ipred"]]], cyclic=inla_args[["data"]][[vU]][O[["ipred"]]] )
+        ms = inla_args[["data"]][[vS]][O[["ipred"]]]
+        mt = inla_args[["data"]][[vT]][O[["ipred"]]]
+        mc = inla_args[["data"]][[vU]][O[["ipred"]]]
+        matchfrom = list( space=O[["space_id"]][ms], time=O[["time_id"]][mt], cyclic=O[["cyclic_id"]][mc] )
+        ms = mt = mc = NULL
       } else if (O[["unique_predictions"]][3] == 1) {
-        matchfrom = list( space=inla_args[["data"]][[vS]][O[["ipred"]]], time=inla_args[["data"]][[vT]] [O[["ipred"]]] )
         message("No. of cyclic slices for prediction is 1 .. reducing output matrix size")
+        ms = inla_args[["data"]][[vS]][O[["ipred"]]]
+        mt = inla_args[["data"]][[vT]][O[["ipred"]]]
+        matchfrom = list( space=O[["space_id"]][ms] , time=O[["time_id"]][mt] )
+        ms = mt = NULL
+
       } else {
         stop("No. cyclic units is 0 ... ?")
       }
@@ -1447,6 +1463,8 @@ carstm_model_inla = function(
         
         # matchfrom already created higher up
         matchto = list( space=O[["space_id"]] )
+
+browser()
 
         for (k in 1:length(names(m))) {
           W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
