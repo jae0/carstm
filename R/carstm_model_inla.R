@@ -1464,8 +1464,6 @@ carstm_model_inla = function(
         # matchfrom already created higher up
         matchto = list( space=O[["space_id"]] )
 
-browser()
-
         for (k in 1:length(names(m))) {
           W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
         }
