@@ -42,7 +42,7 @@ if ( !file.exists(p$modeldir) ) dir.create( p$modeldir, showWarnings=FALSE, recu
 
  
 p$variabletomodel = "t"
-p$dimensionality="space-time-cyclic"
+p$dimensionality="space-time-cyclic"  # output dimensions
 p$quantile_bounds =c(0.005, 0.995) # trim upper bounds (in posterior predictions)
 
 # space resolution
@@ -183,9 +183,8 @@ M$AUID  = as.character(M$AUID)  # revert to factors -- should always be a charac
 M$space = match( M$AUID, sppoly$AUID) 
 M$space_time = M$space  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
 
-M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
+# M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
 M$time = trunc( M$tiyr)
-
 M$time_space = match( M$time, p$yrs ) # group index 
 
 M$dyear = M$tiyr - M$time 
@@ -212,11 +211,16 @@ formula = as.formula( paste(
     ' + f( space_time, model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE, group=time_space, hyper=H$bym2, control.group=list(model="ar1", hyper=H$ar1_group) ) '
 ) )
 
-
-family = "gaussian"
+ 
  
 require(carstm)
-loadfunctions("carstm")
+# loadfunctions("carstm")
+
+# required
+p$space_id = sppoly$AUID
+p$time_id = p$yrs
+p$cyclic_id = cyclic_levels
+
 
 # takes about 15 minutes
 res = carstm_model( 
@@ -224,15 +228,15 @@ res = carstm_model(
     sppoly=sppoly,
     posterior_simulations_to_retain=c("predictions", "random_spatial"), 
     nposteriors=1000,  # 1000 to 5000 would be sufficient to sufficiently sample most distributions: trade-off between file size and information content
-    # redo_fit=FALSE,  # if FALSE then reload fit and recompute posteriors 
+    redo_fit=FALSE,  # if FALSE then reload fit and recompute posteriors 
     # redo_fit=TRUE,  # if TRUE then compute fit and compute posteriors 
     # args below are INLA options, passed directly to INLA
     formula=formula,
-    family=family,
+    family="gaussian",  # inla family
     data =M,  
     num.threads="6:2",  # adjust for your machine
     mc.cores=2,
-    control.inla = list( strategy='laplace'  ),
+    control.inla = list( strategy='laplace' ),  # faster
     verbose=TRUE 
 )    
 
@@ -253,9 +257,7 @@ plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
 # to load saved results summary
 res = carstm_model( p=p, sppoly=sppoly, DS="carstm_modelled_summary")
 ( res$summary)
-
-b0 = res$summary$fixed_effects["(Intercept)", "mean"]
-
+ 
 ts =  res$random$time 
 plot( mean ~ ID, ts, type="b", ylim=c(-2,2), lwd=1.5, xlab="year")
 lines( quant0.025 ~ ID, ts, col="gray", lty="dashed")
@@ -263,7 +265,7 @@ lines( quant0.975 ~ ID, ts, col="gray", lty="dashed")
 
 
 ts =  res$random$cyclic
-plot( mean ~ID, ts, type="b", ylim=c(-1.5, 1.5), lwd=1.5, xlab="fractional year")
+plot( mean ~ID, ts, type="b", ylim=c(-5, 5), lwd=1.5, xlab="fractional year")
 lines( quant0.025 ~ID, ts, col="gray", lty="dashed")
 lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
 
@@ -280,7 +282,7 @@ umatch="0.75"  # == 0.75*12 = 9 (ie. Sept)
 
 tmout = carstm_map(  res=res, vn="predictions", tmatch=tmatch, umatch=umatch, 
     sppoly=sppoly,
-    breaks=seq(-1, 9, by=1), 
+    breaks=seq(-1, 9, by=2), 
     palette="-RdYlBu",
     plot_elements=c( "isobaths",  "compass", "scale_bar", "legend" ),
     tmap_zoom= c(map_centre, map_zoom),
@@ -291,7 +293,7 @@ tmout
 # persistent spatial effects
 tmout = carstm_map(  res=res, vn=c( "random", "space", "combined" ), 
     sppoly=sppoly,
-    breaks=seq(-5, 5, by=1), 
+    breaks=seq(-5, 5, by=2), 
     palette="-RdYlBu",
     plot_elements=c( "isobaths",  "compass", "scale_bar", "legend" ),
     tmap_zoom= c(map_centre, map_zoom),

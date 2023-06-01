@@ -250,13 +250,15 @@ carstm_model_inla = function(
       if (length(unique(diff(o))) !=1) {
         stop( "Neighbourhood indices and polygons AUID order are mismatched .. this will not end well" )
       }
-      sp_nb_auid = o = NULL
+      o = NULL
 
       O[["sppoly"]] = sppoly  # copy in case mapping directly from O
       
       # the master / correct sequence of the AU's and neighbourhood matrix index values
       if (!exists("space_id", O)) {
-        if (exists("space_id", attributes(sppoly)) ) {
+        if (exists(sp_nb_auid) ) {
+          O[["space_id"]] = sp_nb_auid
+        } else if (exists("space_id", attributes(sppoly)) ) {
           O[["space_id"]] = as.character( attributes(sppoly)$space_id )
         } else if (exists("space_id", attributes(sppoly)) ) {
           O[["space_id"]] = as.character( attributes(sppoly)$space_id )
@@ -266,6 +268,7 @@ carstm_model_inla = function(
           O[["space_id"]] = as.character( sppoly[["AUID"]] )
         }
       }
+      sp_nb_auid = NULL
 
       if (!exists("space_id", O)) stop( "space_id could not be determined from data")
       if (!exists("space_id", attributes(sppoly)) ) attributes(sppoly)$space_id = O[["space_id"]]  # copy as attribute in case
@@ -296,17 +299,18 @@ carstm_model_inla = function(
 
     if ( !is.null(O[["fm"]][["vn"]][["T"]])  | !is.null(O[["fm"]][["vn"]][["U"]])  ) {
       if (!exists("time_id", O)) O[["time_id"]] = O[["yrs"]]
+      if (!exists("time_id", O)) stop( "time_id or yrs need to be provided")
       O[["time_n"]] = length( O[[ "time_id" ]] )
       O[["time_name"]]  = as.character(O[[ "time_id" ]] ) # for plot labels, etc .. time gets swapped out for time index later
   
       # sub-annual time 
       if (!is.null(O[["fm"]][["vn"]][["U"]]) )  {
-        if (!exists("cyclic_id", O)) O[["cyclic_id"]] = O$dyears + diff(O$dyears)[1]/2
+        if (!exists("cyclic_id", O)) O[["cyclic_id"]] = O[["cyclic_levels"]]
+        if (!exists("cyclic_id", O)) stop( "cyclic_id or cyclic_levels need to be provided")
         O[["cyclic_n"]] = length( O[[ "cyclic_id" ]] )
-        O[["cyclic_name"]]  = as.character(O[[ "cyclic_id" ]] ) # for plot labels, etc .. time gets swapped out for time index later
+        O[["cyclic_name"]] = as.character(O[[ "cyclic_id" ]] ) # for plot labels, etc .. time gets swapped out for time index later
        }
-    }
-    
+    } 
 
     ii = which(is.finite(inla_args[["data"]][[vY]]))
 
@@ -454,71 +458,26 @@ carstm_model_inla = function(
  
     O[["ipred"]] = which( inla_args[["data"]][["tag"]]=="predictions" )  
 
-    # count prediction levels .. in case we can reduce size of output matrices
-    O[["unique_predictions"]] = c(0, 0, 0)
-    if (!is.null(vS)) {
-      if (exists(vS, inla_args[["data"]] )) {
-        O[["unique_predictions"]][1] = length(unique( inla_args[["data"]][[vS]][O[["ipred"]]]))
-      }
-    }
-
-    if (!is.null(vT)) {
-      if (exists(vT, inla_args[["data"]] )) {
-        O[["unique_predictions"]][2] = length(unique( inla_args[["data"]][[vT]][O[["ipred"]]]))
-      }
-    }
-
-    if (!is.null(vU)) {
-      if (exists(vU, inla_args[["data"]] )) {
-        O[["unique_predictions"]][3] = length(unique( inla_args[["data"]][[vU]][O[["ipred"]]]))
-      }
-    }
-
     if (  O[["dimensionality"]] == "space" ) {
         # filter by S and T in case additional data in other areas and times are used in the input data
-      if (O[["unique_predictions"]][1] > 1) {
         ms = inla_args[["data"]][[vS]][O[["ipred"]]]
         matchfrom = list( space=O[["space_id"]][ms] ) 
         ms = NULL
-      } else {
-        stop("No. spatial units for prediction is 0 ... ?")
-      }
     }
 
     if (O[["dimensionality"]] == "space-time"  ) {
-      if (O[["unique_predictions"]][2] > 1) {
         ms = inla_args[["data"]][[vS]][O[["ipred"]]]
         mt = inla_args[["data"]][[vT]][O[["ipred"]]]
         matchfrom = list( space=O[["space_id"]][ms] , time=O[["time_id"]][mt] )
         ms = mt = NULL
-      } else if (O[["unique_predictions"]][2] == 1) {
-        message("No. of time slice for prediction is 1 .. reducing output matrix size")
-        ms = inla_args[["data"]][[vS]][O[["ipred"]]]
-        matchfrom = list( space=O[["space_id"]][ms] ) 
-        ms = NULL
-      } else {
-        stop("No. time units is 0 ... ?")
-      }
     }
 
     if ( O[["dimensionality"]] == "space-time-cyclic" ) {
-      if (O[["unique_predictions"]][3] > 1) {
         ms = inla_args[["data"]][[vS]][O[["ipred"]]]
         mt = inla_args[["data"]][[vT]][O[["ipred"]]]
         mc = inla_args[["data"]][[vU]][O[["ipred"]]]
-        matchfrom = list( space=O[["space_id"]][ms], time=O[["time_id"]][mt], cyclic=O[["cyclic_id"]][mc] )
+        matchfrom = list( space=O[["space_id"]][ms], time=mt, cyclic=mc )
         ms = mt = mc = NULL
-      } else if (O[["unique_predictions"]][3] == 1) {
-        message("No. of cyclic slices for prediction is 1 .. reducing output matrix size")
-        ms = inla_args[["data"]][[vS]][O[["ipred"]]]
-        mt = inla_args[["data"]][[vT]][O[["ipred"]]]
-        matchfrom = list( space=O[["space_id"]][ms] , time=O[["time_id"]][mt] )
-        ms = mt = NULL
-
-      } else {
-        stop("No. cyclic units is 0 ... ?")
-      }
-
     }
 
     O[["matchfrom"]] = matchfrom
@@ -669,6 +628,7 @@ carstm_model_inla = function(
   }
 
 
+
   if ( "fixed_effects" %in% toget) {
 
     if (exists( "marginals.fixed", fit)) {
@@ -740,7 +700,7 @@ carstm_model_inla = function(
         V = try( apply_generic( V, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
         V = try( apply_generic( V, marginal_clean ) )
         V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-        V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
+        V = try( list_simplify( try(simplify2array( V ) ), silent=TRUE), silent=TRUE)
           
         if (any( inherits(V, "try-error")))  {
           if (be_verbose)  {
@@ -773,7 +733,7 @@ carstm_model_inla = function(
         V = fit$marginals.hyperpar[ rhos ]
         V = try( apply_generic( V, marginal_clean ) )
         V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-        V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
+        V = try( list_simplify( try(simplify2array( V ), silent=TRUE)) , silent=TRUE)
 
         if (any( inherits(V, "try-error"))) {
           # var ~ 100 
@@ -810,7 +770,7 @@ carstm_model_inla = function(
         V = fit$marginals.hyperpar[ phis ]
         V = try( apply_generic( V, marginal_clean ) )
         V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-        V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
+        V = try( list_simplify( try(simplify2array( V ), silent=TRUE) ), silent=TRUE)
  
         if (any( inherits(V, "try-error"))) {
           V = fit$marginals.hyperpar[ phis ]
@@ -821,7 +781,7 @@ carstm_model_inla = function(
             }
           ) )
           V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-          V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
+          V = try( list_simplify( try( simplify2array( V ), silent=TRUE) ), silent=TRUE)
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ phis ], FUN=function(x) inla.mmarginal( x ))
           if (any( inherits(V, "try-error"))) {
             if (be_verbose)  message( "Model may be over parameterized. NAN and Inf values encountered in phis. Try alt parameterizations or smaller number of n or masking negative values")
@@ -845,7 +805,7 @@ carstm_model_inla = function(
         V = fit$marginals.hyperpar[ unknown ]
         V = try( apply_generic( V, marginal_clean ) )
         V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-        V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
+        V = try( list_simplify( try(simplify2array( V ), silent=TRUE) ), silent=TRUE)
 
         if (any( inherits(V, "try-error"))) {
           # var ~ 100 
@@ -857,7 +817,7 @@ carstm_model_inla = function(
             }
           ) )
           V = try( apply_generic( V, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-          V = try( list_simplify( simplify2array( V ) ), silent=TRUE)
+          V = try( list_simplify( try( simplify2array( V ), silent=TRUE) ), silent=TRUE)
           #  alternatively: V[,"mode"] = apply_simplify( fit$marginals.hyperpar[ unknown ], FUN=function(x) inla.mmarginal( x ))
           if (any( inherits(V, "try-error"))) {
             if (be_verbose)  message( "Model may be over parameterized. NAN and Inf values encountered in unknown. Try alt parameterizations or smaller number of n or masking negative values")
@@ -899,7 +859,7 @@ carstm_model_inla = function(
             g = try( apply_generic( g, marginal_clean ) )
           }
           g = try( apply_generic( g, inla.zmarginal, silent=TRUE  ) )
-          g = try( list_simplify( simplify2array( g ) ) )
+          g = try( list_simplify( try( simplify2array( g ), silent=TRUE) ) )
           
           if (any( inherits(g, "try-error"))) {
             message( "Error encountered in marginals .. copying directly from INLA summary instead:")
@@ -979,7 +939,6 @@ carstm_model_inla = function(
   # separate out random spatial and randomm spatiotemporal (as they can be large arrays)
   if ("random_spatial" %in% toget) {
     # space only
-    if (O[["unique_predictions"]][1] > 1) {
     Z = NULL
     iSP = which( re$dimensionality=="s" & re$level=="main")
     if (length(iSP) > 0 ) {
@@ -1006,7 +965,7 @@ carstm_model_inla = function(
           m = try( apply_generic( m, marginal_clean ) )
         }
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
-        m = try( list_simplify( simplify2array( m ) ) )
+        m = try( list_simplify( try( simplify2array( m ), silent=TRUE) ) )
         # single spatial effect (eg in conjuction with besag) .. indexing not needed but here in case more complex models ..
         if (any( inherits(m, "try-error"))) {
           message( "Error encountered in marginals .. copying directly from INLA summary instead:")
@@ -1057,7 +1016,7 @@ carstm_model_inla = function(
             m = try( apply_generic( m, marginal_clean ) )
           }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE ) )
-          m = try( list_simplify( simplify2array( m ) ) )
+          m = try( list_simplify( try( simplify2array( m ), silent=TRUE) ) )
           if (any( inherits(m, "try-error"))) {
             message( "Error encountered in marginals .. copying directly from INLA summary instead:")
             m = fit$summary.random[[vS]][, inla_tokeep ]
@@ -1180,7 +1139,7 @@ carstm_model_inla = function(
         if (!is.null(space2)) O[["sims"]] [[vS]] [["bym2"]] =  invlink(space2) 
       }
     }
-    }
+    
   }  # end random spatial effects
 
   matchfrom = i1 = i2= NULL
@@ -1190,7 +1149,6 @@ carstm_model_inla = function(
 
   if ("random_spatiotemporal" %in% toget ) {
     # space-time
-    if (O[["unique_predictions"]][2] > 1  ) {
 
     iST = which( re$dimensionality=="st" & re$level=="main")
     
@@ -1224,7 +1182,7 @@ carstm_model_inla = function(
             m = try( apply_generic( m, marginal_clean ) )
           }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
-          m = try( list_simplify( simplify2array( m ) ) )
+          m = try( list_simplify( try( simplify2array( m ), silent=TRUE) ) )
           if (any( inherits(m, "try-error"))) {
             message( "Error encountered in marginals .. copying directly from INLA summary instead:")
             m = fit$summary.random[[vnST]][, inla_tokeep ]
@@ -1275,7 +1233,8 @@ carstm_model_inla = function(
             m = try( apply_generic( m, marginal_clean ) )
           }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ) )
-          m = try( list_simplify( simplify2array( m ) ) )
+          m = try( list_simplify( try( simplify2array( m ), silent=TRUE)
+           ) )
           if (any( inherits(m, "try-error"))) {
             message( "Error encountered in marginals .. copying directly from INLA summary instead:")
             m = fit$summary.random[[vnST]][, inla_tokeep ]
@@ -1398,7 +1357,6 @@ carstm_model_inla = function(
       gc()
 
     }
-    } 
   }  # end random spatio-temporal effects
 
   run_predict_start  = Sys.time()
@@ -1435,7 +1393,6 @@ carstm_model_inla = function(
     if (length(fit[["marginals.fitted.values"]]) > 0 ) {
 
       if ( O[["dimensionality"]] == "space" ) {
-      if ( O[["unique_predictions"]][1] > 1 ) {
 
         m = fit$marginals.fitted.values[O[["ipred"]]]
         m = apply_generic( m, marginal_clean ) 
@@ -1469,7 +1426,6 @@ carstm_model_inla = function(
         }
         O[["predictions"]] = W[, tokeep, drop =FALSE]
         m = W = NULL
- 
 
         if ( "predictions" %in% posterior_simulations_to_retain ) {
           W = array( NA, 
@@ -1484,11 +1440,10 @@ carstm_model_inla = function(
           W = NULL 
         }
       
-      }}
+      }
 
 
       if (O[["dimensionality"]] == "space-time"  ) {
-
 
         m = fit$marginals.fitted.values[O[["ipred"]]]   
         m = apply_generic( m, marginal_clean )
@@ -1508,76 +1463,38 @@ carstm_model_inla = function(
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
 
-
-        if ( O[["unique_predictions"]][2] > 1 ) {
-          W = array( NA, 
-            dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
-            dimnames=list( space=O[["space_id"]], time=O[["time_id"]], stat=names(m) ) 
-          )
-    
-          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-          names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-        
-          # matchfrom already created higher up
-          matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
-          for (k in 1:length(names(m))) {
-            W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto)
-          }
-          O[["predictions"]] = W[,, tokeep, drop =FALSE]
-
-        } else if ( O[["unique_predictions"]][2] == 1 ) {  
-          # single time slice at prediction time
-          W = array( NA, 
-            dim=c( O[["space_n"]], length(names(m)) ),  
-            dimnames=list( space=O[["space_id"]], stat=names(m) ) 
-          )
-    
-          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
- 
-          # matchfrom already created higher up
-          matchto = list( space=O[["space_id"]] )
-          for (k in 1:length(names(m))) {
-            W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto)
-          }
-          O[["predictions"]] = W[, tokeep, drop =FALSE]
-
+        W = array( NA, 
+          dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
+          dimnames=list( space=O[["space_id"]], time=O[["time_id"]], stat=names(m) ) 
+        )
+  
+        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+        names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+      
+        # matchfrom already created higher up
+        matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
+        for (k in 1:length(names(m))) {
+          W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto)
         }
-
+        O[["predictions"]] = W[,, tokeep, drop =FALSE]
+    
         m = W = NULL
  
         if ( "predictions" %in% posterior_simulations_to_retain ) {
 
-          if ( O[["unique_predictions"]][2] > 1 ) {
+          W = array( NA, 
+            dim=c( O[["space_n"]], O[["time_n"]], nposteriors ),  
+            dimnames=list( space=O[["space_id"]], time=O[["time_id"]], sim=1:nposteriors ) )
 
-            W = array( NA, 
-              dim=c( O[["space_n"]], O[["time_n"]], nposteriors ),  
-              dimnames=list( space=O[["space_id"]], time=O[["time_id"]], sim=1:nposteriors ) )
+          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+          names(dimnames(W))[2] = vT  # need to do this in a separate step ..
 
-            names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-            names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-
-            for (k in 1:nposteriors ) {
-              W[,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
-            }
-            
-            O[["sims"]][["predictions"]] = W[,,, drop =FALSE]
-            W = NULL
-
-          } else if ( O[["unique_predictions"]][2] == 1 ) {
-
-            W = array( NA, 
-              dim=c( O[["space_n"]],  nposteriors ),  
-              dimnames=list( space=O[["space_id"]], sim=1:nposteriors ) )
-
-            names(dimnames(W))[1] = vS  # need to do this in a separate step ..
- 
-            for (k in 1:nposteriors ) {
-              W[,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
-            }
-            
-            O[["sims"]][["predictions"]] = W[,, drop =FALSE]
-            W = NULL
+          for (k in 1:nposteriors ) {
+            W[,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
+          
+          O[["sims"]][["predictions"]] = W[,,, drop =FALSE]
+          W = NULL
         }
 
       }
@@ -1606,78 +1523,36 @@ carstm_model_inla = function(
 
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
- 
 
-        if ( O[["unique_predictions"]][3] > 1 ) {
+        W = array( NA, 
+          dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], length(names(m)) ),  
+          dimnames=list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]], stat=names(m) ) )
+        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+        names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+        names(dimnames(W))[3] = vU  # need to do this in a separate step ..
 
+        matchto = list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]] )
+
+        for (k in 1:length(names(m))) {
+          W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+        }
+        O[["predictions"]] = W[,,, tokeep, drop =FALSE]
+        m = W = NULL
+      
+        if ( "predictions" %in% posterior_simulations_to_retain ) {
+          
           W = array( NA, 
-            dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], length(names(m)) ),  
-            dimnames=list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]], stat=names(m) ) )
+            dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], nposteriors ),  
+            dimnames=list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]], sim=1:nposteriors ) )
+
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
           names(dimnames(W))[2] = vT  # need to do this in a separate step ..
           names(dimnames(W))[3] = vU  # need to do this in a separate step ..
-
-          matchto = list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]] )
-
-          for (k in 1:length(names(m))) {
-            W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+          for (k in 1:nposteriors ) {
+            W[,,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
-          O[["predictions"]] = W[,,, tokeep, drop =FALSE]
-          m = W = NULL
-        
-        }  else if ( O[["unique_predictions"]][3] == 1 ) {
-
-          W = array( NA, 
-            dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
-            dimnames=list( space=O[["space_id"]], time=O[["time_id"]], stat=names(m) ) )
-          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-          names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-
-          matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
-
-          for (k in 1:length(names(m))) {
-            W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
-          }
-          O[["predictions"]] = W[,, tokeep, drop =FALSE]
-          m = W = NULL
-        
-        }
-
- 
-
-        if ( "predictions" %in% posterior_simulations_to_retain ) {
-         
-          if ( O[["unique_predictions"]][3] > 1 ) {
-
-            W = array( NA, 
-              dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], nposteriors ),  
-              dimnames=list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]], sim=1:nposteriors ) )
-
-            names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-            names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-            names(dimnames(W))[3] = vU  # need to do this in a separate step ..
-            for (k in 1:nposteriors ) {
-              W[,,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
-            }
-            O[["sims"]][["predictions"]] = W[,,, ,drop =FALSE]
-            W = NULL
-          } else  if ( O[["unique_predictions"]][3] == 1 ) {
-
-            W = array( NA, 
-              dim=c( O[["space_n"]], O[["time_n"]] , nposteriors ),  
-              dimnames=list( space=O[["space_id"]], time=O[["time_id"]],   sim=1:nposteriors ) )
-
-            names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-            names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-   
-            for (k in 1:nposteriors ) {
-              W[,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
-            }
-            O[["sims"]][["predictions"]] = W[,, ,drop =FALSE]
-            W = NULL
-          }
-        
-        
+          O[["sims"]][["predictions"]] = W[,,, ,drop =FALSE]
+          W = NULL
         
         }
 
