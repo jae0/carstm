@@ -6,30 +6,30 @@
 # centered over Halifax, NS: bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
 # t=temperature (C); z=depth (m); tiyr=decimal year
 
-fn = file.path( project.codedirectory("carstm", "inst", "extdata"), "aegis_spacetime_test.RDS")
-bottemp = readRDS(fn)   
+require(carstm)
+ 
+bottemp = readRDS( system.file("extdata", "aegis_spacetime_test.RDS", package="carstm" ) )   
 # bottemp = bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
 
 plot(lat ~ -lon, bottemp)
 str(bottemp)
 summary(bottemp)
- 
 hist( bottemp$tiyr )  # decimal date
+
+# required R library list
+standard_libs = c( "colorspace", "lubridate",  "lattice",  "parallel", "sf", "GADMTools", "INLA" , "data.table" )
+
+# aegis.* libs (found on github.com/jae0)
+local_libs = c("aegis", "aegis.bathymetry", "aegis.coastline",  "aegis.polygons", "aegis.substrate", "aegis.temperature", "aegis.survey" ) 
+
 
 # required parameter settings:
 p = list()
-p$yrs = min(year(bottemp$date)):max(year(bottemp$date)) # 1980:2010
 
-p$year.assessment = max(p$yrs)
- 
-# create/update library list
-standard_libs = c( "colorspace", "lubridate",  "lattice", 
-    "parallel", "sf", "GADMTools", "INLA" , "data.table" )
-
-local_libs = c("aegis", "aegis.bathymetry", "aegis.coastline", 
-    "aegis.polygons", "aegis.substrate", "aegis.temperature", "aegis.survey" ) 
-    
 p$libs = RLibrary ( c(standard_libs, local_libs) )
+
+p$yrs = min(year(bottemp$date)):max(year(bottemp$date)) # 1980:2010
+p$year.assessment = max(year(bottemp$date))
 
 p$project_name = "test_ocean_bottom_temperatures_halifax"
 p$data_root = file.path( "~", "test", p$project_name ) 
@@ -39,24 +39,26 @@ p$modeldir = file.path( p$data_root, "modelled" )
 if ( !file.exists(p$data_root) ) dir.create( p$data_root, showWarnings=FALSE, recursive=TRUE )
 if ( !file.exists(p$datadir) ) dir.create( p$datadir, showWarnings=FALSE, recursive=TRUE )
 if ( !file.exists(p$modeldir) ) dir.create( p$modeldir, showWarnings=FALSE, recursive=TRUE )
-
  
 p$variabletomodel = "t"
 p$dimensionality="space-time-cyclic"  # output dimensions
 p$quantile_bounds =c(0.005, 0.995) # trim upper bounds (in posterior predictions)
+ 
 
 # space resolution
 p$aegis_proj4string_planar_km = projection_proj4string("utm20")
+
 p$dres = 1/60/4 # resolution in angular units (degrees)
 p$pres = 1  # spatial resolution in planar units (km)
 p$lon0 = min( bottemp$lon )
 p$lon1 = max( bottemp$lon )
 p$lat0 = min( bottemp$lat )
 p$lat1 = max( bottemp$lat )
-p$psignif = 1  
+p$psignif = 1  # planar sig no digits
 
 p$nlons = trunc( diff(range(c(p$lon0,p$lon1)))/p$dres) + 1L
 p$nlats = trunc( diff(range(c(p$lat0,p$lat1)))/p$dres) + 1L
+
 corners = data.frame(lon=c(p$lon0,p$lon1), lat=c(p$lat0,p$lat1))
 corners = lonlat2planar( corners, proj.type=p$aegis_proj4string_planar_km )
 corners$plon = round( corners$plon, p$psignif)  # this matches the p$pres value of x km resolution
@@ -65,16 +67,12 @@ p$corners=corners
 
 p$plons = seq(min(p$corners$plon), max(p$corners$plon), by=p$pres)
 p$plats = seq(min(p$corners$plat), max(p$corners$plat), by=p$pres)
-plons = seq(min(p$corners$plon), max(p$corners$plon), by=p$pres)
-plats = seq(min(p$corners$plat), max(p$corners$plat), by=p$pres)
-p$nplons = length(plons)
-p$nplats = length(plats)
+p$nplons = length(p$plons)
+p$nplats = length(p$plats)
 p$origin = c(min(p$corners$plon), min(p$corners$plat ))
 p$gridparams = list( dims=c(p$nplons, p$nplats), origin=p$origin, res=c(p$pres, p$pres) ) # used for fast indexing and merging
 
 
-p$year.assessment = max(p$yrs)
-p$timezone="America/Halifax" 
 
 # time resolution
 p$ny = length(p$yrs)
@@ -84,6 +82,7 @@ p$dyears = (c(1:p$nw)-1) / p$nw # intervals of decimal years... fractional year 
 p$dyear_centre = p$dyears[ trunc(p$nw/2) ] + p$tres/2
 p$cyclic_levels = factor(p$dyears + diff(p$dyears)[1]/2, ordered=TRUE )
 
+p$timezone="America/Halifax" 
 p$prediction_dyear = lubridate::decimal_date( lubridate::ymd("0000/Sep/01")) # used for creating timeslices and predictions  .. needs to match the values in aegis_parameters()
 p$nt = p$nw*p$ny # i.e., seasonal with p$nw (default is annual: nt=ny)
 
