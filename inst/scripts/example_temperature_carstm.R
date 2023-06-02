@@ -82,6 +82,8 @@ p$nw = 10 # default value of 10 time steps number of intervals in time within a 
 p$tres = 1/ p$nw # time resolution .. predictions are made with models that use seasonal components
 p$dyears = (c(1:p$nw)-1) / p$nw # intervals of decimal years... fractional year breaks
 p$dyear_centre = p$dyears[ trunc(p$nw/2) ] + p$tres/2
+p$cyclic_levels = factor(p$dyears + diff(p$dyears)[1]/2, ordered=TRUE )
+
 p$prediction_dyear = lubridate::decimal_date( lubridate::ymd("0000/Sep/01")) # used for creating timeslices and predictions  .. needs to match the values in aegis_parameters()
 p$nt = p$nw*p$ny # i.e., seasonal with p$nw (default is annual: nt=ny)
 
@@ -180,12 +182,11 @@ APS = NULL; gc()
 # M$uid = 1:nrow(M)  # seems to require an iid model for each obs for stability .. use this for iid
 M$AUID  = as.character(M$AUID)  # revert to factors -- should always be a character
 
-M$space = match( M$AUID, sppoly$AUID) 
+M$space = match( M$AUID, sppoly$AUID) # require numeric index matching order of neighbourhood graph
 M$space_time = M$space  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
 
-# M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
-M$time = trunc( M$tiyr)
-M$time_space = match( M$time, p$yrs ) # group index 
+M$time = trunc( M$tiyr)  
+M$time_space = match( M$time, p$yrs ) # group index must be numeric/integer when used as groups 
 
 M$dyear = M$tiyr - M$time 
 M$tiyr = NULL
@@ -196,8 +197,7 @@ if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next
  
 M$dyri = discretize_data( M[["dyear"]], discretizations()[["dyear"]] )
 
-cyclic_levels = factor(p$dyears + diff(p$dyears)[1]/2, ordered=TRUE )
-M$cyclic = factor( as.character( M$dyri ), levels =levels(cyclic_levels) )   # copy for carstm/INLA
+M$cyclic = factor( as.character( M$dyri ), levels =levels(p$cyclic_levels) )   # copy for carstm/INLA
 
 
 # "H" in formula are created on the fly in carstm ... they can be dropped in formula or better priors defined manually
