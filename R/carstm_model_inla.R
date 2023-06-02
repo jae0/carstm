@@ -245,22 +245,23 @@ carstm_model_inla = function(
       if (is.null(sppoly)) stop( "sppoly is required") 
       
       # test to see if sppoly has been altered:
-      sp_nb_auid = attributes(attributes(sppoly)$NB_graph)$region.id  # order of neighbourhood graph 
-      o = match( sppoly$AUID, sp_nb_auid)  
-      if (length(unique(diff(o))) !=1) {
-        stop( "Neighbourhood indices and polygons AUID order are mismatched .. this will not end well" )
+      sp_nb_auid = NULL
+      sp_nb_auid = try( attributes(attributes(sppoly)$NB_graph)$region.id, silent=TRUE)  # order of neighbourhood graph 
+      if (!inherits("try-error", sp_nb_auid)) {
+        o = match( sppoly$AUID, sp_nb_auid)  
+        if (length(unique(diff(o))) !=1) {
+          stop( "Neighbourhood indices and polygons AUID order are mismatched .. this will not end well" )
+        }
+        o = NULL
+        O[["space_id"]] = sp_nb_auid
+        sp_nb_auid = NULL
       }
-      o = NULL
 
       O[["sppoly"]] = sppoly  # copy in case mapping directly from O
       
       # the master / correct sequence of the AU's and neighbourhood matrix index values
       if (!exists("space_id", O)) {
-        if (exists(sp_nb_auid) ) {
-          O[["space_id"]] = sp_nb_auid
-        } else if (exists("space_id", attributes(sppoly)) ) {
-          O[["space_id"]] = as.character( attributes(sppoly)$space_id )
-        } else if (exists("space_id", attributes(sppoly)) ) {
+        if (exists("space_id", attributes(sppoly)) ) {
           O[["space_id"]] = as.character( attributes(sppoly)$space_id )
         } else if (exists("region.id", attributes(sppoly)) ) {
           O[["space_id"]] = as.character( attributes(sppoly)$region.id )
@@ -268,7 +269,6 @@ carstm_model_inla = function(
           O[["space_id"]] = as.character( sppoly[["AUID"]] )
         }
       }
-      sp_nb_auid = NULL
 
       if (!exists("space_id", O)) stop( "space_id could not be determined from data")
       if (!exists("space_id", attributes(sppoly)) ) attributes(sppoly)$space_id = O[["space_id"]]  # copy as attribute in case
