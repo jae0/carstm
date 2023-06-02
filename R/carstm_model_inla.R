@@ -4,6 +4,7 @@ carstm_model_inla = function(
   DS = "",
   sppoly =NULL,
   fit = NULL,
+  space_id=NULL, time_id=NULL, cyclic_id=NULL, 
   vn = NULL,  
   fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
   fn_res=NULL, 
@@ -260,7 +261,10 @@ carstm_model_inla = function(
       O[["sppoly"]] = sppoly  # copy in case mapping directly from O
       
       # the master / correct sequence of the AU's and neighbourhood matrix index values
-      if (!exists("space_id", O)) {
+      if (!is.null(space_id)) {
+        O[["space_id"]] = space_id
+        space_id = NULL
+      } else {
         if (exists("space_id", attributes(sppoly)) ) {
           O[["space_id"]] = as.character( attributes(sppoly)$space_id )
         } else if (exists("region.id", attributes(sppoly)) ) {
@@ -298,14 +302,24 @@ carstm_model_inla = function(
     }
 
     if ( !is.null(O[["fm"]][["vn"]][["T"]])  | !is.null(O[["fm"]][["vn"]][["U"]])  ) {
-      if (!exists("time_id", O)) O[["time_id"]] = O[["yrs"]]
+      if (!is.null(time_id)) {
+        O[["time_id"]] = time_id
+        time_id = NULL
+      } else {
+        if (exists("yrs", O)) O[["time_id"]] = O[["yrs"]]
+      }
       if (!exists("time_id", O)) stop( "time_id or yrs need to be provided")
       O[["time_n"]] = length( O[[ "time_id" ]] )
       O[["time_name"]]  = as.character(O[[ "time_id" ]] ) # for plot labels, etc .. time gets swapped out for time index later
   
       # sub-annual time 
       if (!is.null(O[["fm"]][["vn"]][["U"]]) )  {
-        if (!exists("cyclic_id", O)) O[["cyclic_id"]] = O[["cyclic_levels"]]
+        if (!is.null(cyclic_id)) {
+          O[["cyclic_id"]] = cyclic_id
+          cyclic_id = NULL
+        } else {
+          if (exists("cyclic_levels", O)) O[["cyclic_id"]] = O[["cyclic_levels"]]
+        }
         if (!exists("cyclic_id", O)) stop( "cyclic_id or cyclic_levels need to be provided")
         O[["cyclic_n"]] = length( O[[ "cyclic_id" ]] )
         O[["cyclic_name"]] = as.character(O[[ "cyclic_id" ]] ) # for plot labels, etc .. time gets swapped out for time index later
@@ -1466,7 +1480,10 @@ carstm_model_inla = function(
           dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
           dimnames=list( space=O[["space_id"]], time=O[["time_id"]], stat=names(m) ) 
         )
-  
+        space_id = sppoly$AUID,
+      time_id = p0$yrs,
+      cyclic_id = cyclic_levels,
+
         names(dimnames(W))[1] = vS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vT  # need to do this in a separate step ..
 
