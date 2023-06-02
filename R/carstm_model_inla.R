@@ -374,7 +374,7 @@ carstm_model_inla = function(
 
       obs = 1:nrow(inla_args[["data"]])
       if (exists("tag", inla_args[["data"]])) {
-        obso = which(inla_args[["data"]][[tag]]=="observations")
+        obso = which(inla_args[["data"]][["tag"]]=="observations")
         if (length(obso) > 3) obs = obso
         obso = NULL
       }   
@@ -1480,10 +1480,7 @@ carstm_model_inla = function(
           dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
           dimnames=list( space=O[["space_id"]], time=O[["time_id"]], stat=names(m) ) 
         )
-        space_id = sppoly$AUID,
-      time_id = p0$yrs,
-      cyclic_id = cyclic_levels,
-
+ 
         names(dimnames(W))[1] = vS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vT  # need to do this in a separate step ..
 

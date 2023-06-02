@@ -9,7 +9,6 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
       sppoly =NULL
       areal_units_fn=NULL
       DS="redo"
-      improve.hyperparam.estimates=FALSE
       carstm_modelengine = "inla"
       compress=TRUE
       fn_fit=NULL
