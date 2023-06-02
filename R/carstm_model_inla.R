@@ -460,28 +460,27 @@ carstm_model_inla = function(
 
     if (  O[["dimensionality"]] == "space" ) {
         # filter by S and T in case additional data in other areas and times are used in the input data
-        ms = inla_args[["data"]][[vS]][O[["ipred"]]]
-        matchfrom = list( space=O[["space_id"]][ms] ) 
-        ms = NULL
+      O[["matchfrom"]] = list( 
+        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] 
+      ) 
     }
 
     if (O[["dimensionality"]] == "space-time"  ) {
-        ms = inla_args[["data"]][[vS]][O[["ipred"]]]
-        mt = inla_args[["data"]][[vT]][O[["ipred"]]]
-        matchfrom = list( space=O[["space_id"]][ms] , time=O[["time_id"]][mt] )
-        ms = mt = NULL
+      O[["matchfrom"]] = list( 
+        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] , 
+        time=inla_args[["data"]][[vT]][O[["ipred"]]] 
+      )
     }
 
     if ( O[["dimensionality"]] == "space-time-cyclic" ) {
-        ms = inla_args[["data"]][[vS]][O[["ipred"]]]
-        mt = inla_args[["data"]][[vT]][O[["ipred"]]]
-        mc = inla_args[["data"]][[vU]][O[["ipred"]]]
-        matchfrom = list( space=O[["space_id"]][ms], time=mt, cyclic=mc )
-        ms = mt = mc = NULL
+      O[["matchfrom"]] = list( 
+        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] , 
+        time=inla_args[["data"]][[vT]][O[["ipred"]]],
+        cyclic=inla_args[["data"]][[vU]][O[["ipred"]]]
+      )
     }
 
-    O[["matchfrom"]] = matchfrom
-
+    
     if (!is.null(vO)) {
       if ( O[["inla.mode"]] == "experimental" ) {
         O[["Offset"]] = inla_args[["data"]][[vO]][ O[["ipred"]] ] 
@@ -1470,7 +1469,7 @@ carstm_model_inla = function(
   
         names(dimnames(W))[1] = vS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-      
+
         # matchfrom already created higher up
         matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
         for (k in 1:length(names(m))) {
