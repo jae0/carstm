@@ -190,7 +190,7 @@ M$time_space = match( M$time, p$yrs ) # group index must be numeric/integer when
 M$dyear = M$tiyr - M$time 
 M$tiyr = NULL
 
-# do not sepraate out as season can be used even if not predicted upon
+# do not separate out as season can be used even if not predicted upon
 ii = which( M$dyear > 1) 
 if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next year
  

@@ -1,5 +1,14 @@
 # carstm
-*carstm* provides a sequence of examples with supporting functions that examines abundance estimation of snow crab and groundfish (Atlantic cod) in
+
+# (C)onditional (A)uto(R)egressive (S)pace(T)ime (M)odels
+# Conditional AutoRegressive ("CAR") models are just about th simplest possible way of accounting for spatial autorcorrelation. It is essentially the analogue of the temporal ARIMA type models but in space. It is arguably even simpler as the units of space are discrete areal units (arbitrary polygons). Originally it was formulated in lattice form and related to the Ising models in physics. Its use is most prevalent in epidemiologu made accessible by the original Besag-York-Mollie paper, Leroux and Reibler, and many others.
+
+# This project is basically an accounting front-end to the computational engines (INLA, sf) to facillitate the computing, storage and access to the results of these models. Relatively simple to do for a simple spatial model without carstm, however, in spatio-temporal models, a bit of a challenge. This tool is mostly written to facilitate my work flow to estimate relationships and predict in a Bayesian spato-temporal context, variables such as depth (aegis.bathymetry), substrate grain size (aegis.substrate), bottom temperature (aegis.temperature), species composition (aegis.speciescomposition), snow crab numerical abundance, size and probability of observation to estimate viable habitat (bio.snowcrab), and extentions to cod abundance, number, size and habitat (aegis.survey), etc.. Many other variables require spatiotemporal modelling (e.g., physiological condition of fish, system-level metabolism) and are planned.  
+
+# The dynamic modelling is limited to basic statistical modelling and is not able to compute latent state space models (yet). Currently use of Julia/Turing/Differential Equations/SciML poses a serious risk of making these really interesting questions viable ...   
+
+
+In the project aegis.survey, you will find a sequence of examples using *carstm* with supporting functions that examines abundance estimation of snow crab and groundfish (Atlantic cod) in
 Maritimes groundfish survey strata. The approach is easily generalizable to all species. The main sequence of example models and scripts are found in inst\scripts\* for the projects: bio.snowcrab and aegis.surveys, and leverages the https::\github.com\jae0\aegis data and GIS handing routines.
 
 For Atlantic cod, see the preprints at: 
@@ -11,46 +20,41 @@ For Atlantic cod, see the preprints at:
 [Use in decomposing environmental effects for Snow Crab](https://doi.org/10.1101/2022.12.20.520893)
 
 
-*carstm* can also replicate the "standard" analysis which is known as "stratanal", a basic stratified average estimate. This is shown to be equivalent to a Gaussian linear fixed effects model. Thereafter, a model-based approach is used to incrementally improve upon the assumptions of the model, focussing upon the distributional model (Poisson, overdispersed Poisson), adding environmental covariates and then employing an INLA-based ICAR (intrinsic conditionally autoregressive models; "bym2") approach towards accounting for areal unit modelling and an AR1 temporal autocorrelation assuming separability of the spacetime autocorrelation.
+*carstm* can also replicate the "standard" analysis used by DFO Maritimes (known as "stratanal"), a really basic stratified average estimate. This is shown to be equivalent to a Gaussian linear fixed effects model. Thereafter, a model-based approach is used to incrementally improve upon the assumptions of the model, focussing upon the distributional model (Poisson, overdispersed Poisson), adding environmental covariates and then employing an INLA-based ICAR (intrinsic conditionally autoregressive models; "bym2") approach towards accounting for areal unit modelling and an AR1 temporal autocorrelation assuming separability of the spacetime autocorrelation.
 
 
-A real use case example: modelling temperature near Halifax, Nova Scotia. Some example data are found in carstm::extdata/aegis_spacetime_test/RDS and is used in the example file: carstm::scripts/example_temperature_carstm.R (copied below):
+The remainder here is an example of a real use case that fully shows the space-time-seasonal ("cyclic") approach: modelling temperature near Halifax, Nova Scotia, with season discretized to 10 units (to improve data density). Some example data are found in carstm::extdata/aegis_spacetime_test/RDS and is used in the example file: carstm::scripts/example_temperature_carstm.R (copied below):
 
 
 ```
 
-# carstm example using temperature data subset
-
-
-# prep input data (copied from stmv): 
-# centered over Halifax, NS: bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
+# carstm example using temperature data for the offshore area near Halifax, Canada 
+# spatial range:  lon > -65 & lon < -62 & lat < 45 & lat>43 
 # t=temperature (C); z=depth (m); tiyr=decimal year
 
-fn = file.path( project.codedirectory("carstm", "inst", "extdata"), "aegis_spacetime_test.RDS")
-bottemp = readRDS(fn)   
+require(carstm)
+ 
+bottemp = readRDS( system.file("extdata", "aegis_spacetime_test.RDS", package="carstm" ) )   
 # bottemp = bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
 
 plot(lat ~ -lon, bottemp)
 str(bottemp)
 summary(bottemp)
-
-plot(lon~lat, bottemp)
 hist( bottemp$tiyr )  # decimal date
+
+# required R library list
+standard_libs = c( "colorspace", "lubridate",  "lattice",  "parallel", "sf", "GADMTools", "INLA" , "data.table" )
+
+# aegis.* libs (found on github.com/jae0)
+local_libs = c("aegis", "aegis.bathymetry", "aegis.coastline",  "aegis.polygons", "aegis.substrate", "aegis.temperature", "aegis.survey" ) 
 
 # required parameter settings:
 p = list()
-p$yrs = min(year(bottemp$date)):max(year(bottemp$date)) # 1980:2010
 
-p$year.assessment = max(p$yrs)
- 
-# create/update library list
-standard_libs = c( "colorspace", "lubridate",  "lattice", 
-    "parallel", "sf", "GADMTools", "INLA" , "data.table" )
-
-local_libs = c("aegis", "aegis.bathymetry", "aegis.coastline", 
-    "aegis.polygons", "aegis.substrate", "aegis.temperature", "aegis.survey" ) 
-    
 p$libs = RLibrary ( c(standard_libs, local_libs) )
+
+p$yrs = min(year(bottemp$date)):max(year(bottemp$date)) # 1980:2010
+p$year.assessment = max(year(bottemp$date))
 
 p$project_name = "test_ocean_bottom_temperatures_halifax"
 p$data_root = file.path( "~", "test", p$project_name ) 
@@ -60,25 +64,27 @@ p$modeldir = file.path( p$data_root, "modelled" )
 if ( !file.exists(p$data_root) ) dir.create( p$data_root, showWarnings=FALSE, recursive=TRUE )
 if ( !file.exists(p$datadir) ) dir.create( p$datadir, showWarnings=FALSE, recursive=TRUE )
 if ( !file.exists(p$modeldir) ) dir.create( p$modeldir, showWarnings=FALSE, recursive=TRUE )
-
  
 p$variabletomodel = "t"
-p$dimensionality="space-time-cyclic"
+p$dimensionality="space-time-cyclic"  # output dimensions
 p$quantile_bounds =c(0.005, 0.995) # trim upper bounds (in posterior predictions)
+ 
 
 # space resolution
 p$aegis_proj4string_planar_km = projection_proj4string("utm20")
+
 p$dres = 1/60/4 # resolution in angular units (degrees)
 p$pres = 1  # spatial resolution in planar units (km)
 p$lon0 = min( bottemp$lon )
 p$lon1 = max( bottemp$lon )
 p$lat0 = min( bottemp$lat )
 p$lat1 = max( bottemp$lat )
-p$psignif = 1  
+p$psignif = 1  # planar sig no digits
 
 p$nlons = trunc( diff(range(c(p$lon0,p$lon1)))/p$dres) + 1L
 p$nlats = trunc( diff(range(c(p$lat0,p$lat1)))/p$dres) + 1L
-corners = data.frame(lon=c(p$lon0,p$lon1), lat=c(p$lat0,p$lat1))
+
+corners = data.frame(lon=c(p$lon0,p$lon1), lat=c(p$lat0,p$lat1))s
 corners = lonlat2planar( corners, proj.type=p$aegis_proj4string_planar_km )
 corners$plon = round( corners$plon, p$psignif)  # this matches the p$pres value of x km resolution
 corners$plat = round( corners$plat, p$psignif)  # this matches the p$pres value of x km resolution
@@ -86,16 +92,12 @@ p$corners=corners
 
 p$plons = seq(min(p$corners$plon), max(p$corners$plon), by=p$pres)
 p$plats = seq(min(p$corners$plat), max(p$corners$plat), by=p$pres)
-plons = seq(min(p$corners$plon), max(p$corners$plon), by=p$pres)
-plats = seq(min(p$corners$plat), max(p$corners$plat), by=p$pres)
-p$nplons = length(plons)
-p$nplats = length(plats)
+p$nplons = length(p$plons)
+p$nplats = length(p$plats)
 p$origin = c(min(p$corners$plon), min(p$corners$plat ))
 p$gridparams = list( dims=c(p$nplons, p$nplats), origin=p$origin, res=c(p$pres, p$pres) ) # used for fast indexing and merging
 
 
-p$year.assessment = max(p$yrs)
-p$timezone="America/Halifax" 
 
 # time resolution
 p$ny = length(p$yrs)
@@ -103,6 +105,9 @@ p$nw = 10 # default value of 10 time steps number of intervals in time within a 
 p$tres = 1/ p$nw # time resolution .. predictions are made with models that use seasonal components
 p$dyears = (c(1:p$nw)-1) / p$nw # intervals of decimal years... fractional year breaks
 p$dyear_centre = p$dyears[ trunc(p$nw/2) ] + p$tres/2
+p$cyclic_levels = factor(p$dyears + diff(p$dyears)[1]/2, ordered=TRUE )
+
+p$timezone="America/Halifax" 
 p$prediction_dyear = lubridate::decimal_date( lubridate::ymd("0000/Sep/01")) # used for creating timeslices and predictions  .. needs to match the values in aegis_parameters()
 p$nt = p$nw*p$ny # i.e., seasonal with p$nw (default is annual: nt=ny)
 
@@ -110,14 +115,13 @@ p$nt = p$nw*p$ny # i.e., seasonal with p$nw (default is annual: nt=ny)
 tout = expand.grid( yr=p$yrs, dyear=1:p$nw, KEEP.OUT.ATTRS=FALSE )
 p$prediction_ts = sort( tout$yr + tout$dyear/p$nw - p$tres/2 )# mid-points
 
-
 p$inputdata_spatial_discretization_planar_km = p$pres / 10 # controls resolution of data prior to modelling (km )
 p$inputdata_temporal_discretization_yr = 1/52  # ie., weekly .. controls resolution of data prior to modelling to reduce data set and speed up modelling;; use 1/12 -- monthly or even 1/4.. if data density is low
 p$dyear_discretization_rawdata = c( {c(1:365)-1}/365, 1)  # dyear_discretization_rawdata :: intervals of decimal years... fractional year breaks finer than the default 10 units (taking daily for now..) .. need to close right side for "cut" .. controls resolution of data prior to modelling
 
 
 # areal units information
-p$spatial_domain = "halifax"
+p$spatial_domain = "halifax"  # Arbitrary label
 
 p$areal_units_proj4string_planar_km =  p$aegis_proj4string_planar_km   # coord system to use for areal estimation and gridding for carstm
 p$areal_units_type= "tesselation" 
@@ -193,24 +197,30 @@ APS$time = trunc( APS$tiyr)  # year ("time*" is a keyword)
 APS$dyear = APS$tiyr - APS$time 
  
 
+# final data with observations and predictions
 vvv = intersect( names(APS), names(bottemp) )
-M = rbind( bottemp[, vvv, with=FALSE ], APS[, vvv, with=FALSE ] )
+M = rbind( bottemp[, vvv, with=FALSE ], APS[, vvv, with=FALSE ] )  
 
 APS = NULL; gc()
-
-# M$uid = 1:nrow(M)  # seems to require an iid model for each obs for stability .. use this for iid
+ 
 M$AUID  = as.character(M$AUID)  # revert to factors -- should always be a character
-M$space = as.character( M$AUID)  # "space*" is a keyword
-M$tiyr  = trunc( M$tiyr / p$tres )*p$tres    # discretize for inla .. midpoints
-M$time = trunc( M$tiyr)
-M$dyear = M$tiyr - M$time 
 
-# do not sepraate out as season can be used even if not predicted upon
+M$space = match( M$AUID, sppoly$AUID) # require numeric index matching order of neighbourhood graph
+M$space_time = M$space  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
+
+M$time = trunc( M$tiyr)  
+M$time_space = match( M$time, p$yrs ) # group index must be numeric/integer when used as groups 
+
+M$dyear = M$tiyr - M$time 
+M$tiyr = NULL
+
+# do not separate out as season can be used even if not predicted upon
 ii = which( M$dyear > 1) 
 if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next year
  
 M$dyri = discretize_data( M[["dyear"]], discretizations()[["dyear"]] )
-M$cyclic = as.character( M$dyri )  # "cyclic*" is a keyword
+
+M$cyclic = factor( as.character( M$dyri ), levels =levels(p$cyclic_levels) )   # copy for carstm/INLA
 
 M$tiyr = NULL
 M$space_time = M$space  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
@@ -229,8 +239,8 @@ formula = as.formula( paste(
 
 family = "gaussian"
  
-require(carstm)
-loadfunctions("carstm")
+# require(carstm)
+# loadfunctions("carstm")
 
 # takes about 15 minutes
 res = carstm_model( 
@@ -281,8 +291,6 @@ ts =  res$random$cyclic
 plot( mean ~ID, ts, type="b", ylim=c(-1.5, 1.5), lwd=1.5, xlab="fractional year")
 lines( quant0.025 ~ID, ts, col="gray", lty="dashed")
 lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
-
-
 
     
 
