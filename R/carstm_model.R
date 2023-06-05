@@ -1,7 +1,7 @@
 
 carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL, vn=NULL, DS="redo", 
     space_id=NULL, time_id=NULL, cyclic_id=NULL, 
-    compress="gzip", compression_level=1, fn_fit=NULL, fn_res=NULL, 
+    compress="gzip", compression_level=1, fn_fit=NULL, fn_res=NULL, debug=FALSE,
     ... ) {
 
      if (0) {
@@ -126,7 +126,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
   if ( grepl("inla", carstm_modelengine) ) {
     out = carstm_model_inla( O=p, data=data, sppoly=sppoly, vn=vn, fn_fit=fn_fit, fn_res=fn_res, 
       compress=compress, compression_level=compression_level, 
-      space_id=space_id, time_id=time_id, cyclic_id=cyclic_id, ... )
+      space_id=space_id, time_id=time_id, cyclic_id=cyclic_id, debug=debug, ... )
   }
 
   return( out )
