@@ -1356,7 +1356,7 @@ carstm_model_inla_working_copy = function(
           for (k in 1:nposteriors ) {
             W[,k] = reformat_to_array( input=unlist(g[,k]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["predictions_posterior_simulations"]] = W[,, drop =FALSE]
+          O[["sims"]][["predictions"]] = W[,, drop =FALSE]
           W = NULL
           g = NULL
         }
@@ -1425,7 +1425,7 @@ carstm_model_inla_working_copy = function(
             W[,,k] = reformat_to_array( input=unlist(g[,k]), matchfrom=matchfrom, matchto=matchto )
           }
           
-          O[["predictions_posterior_simulations"]] = W[,,, drop =FALSE]
+          O[["sims"]][["predictions"]] = W[,,, drop =FALSE]
           W = NULL
           g = NULL
         }
@@ -1495,7 +1495,7 @@ carstm_model_inla_working_copy = function(
           for (k in 1:nposteriors ) {
             W[,,,k] = reformat_to_array( input=unlist(g[,k]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["predictions_posterior_simulations"]] = W[,,, ,drop =FALSE]
+          O[["sims"]][["predictions"]] = W[,,, ,drop =FALSE]
           W = NULL
           g = NULL
         }

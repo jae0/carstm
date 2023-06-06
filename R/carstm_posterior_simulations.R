@@ -27,7 +27,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
     # simple wrapper to data .. direct access would give more control if a single set is wanted .. 
     # this is more useful when complex transformations are required using multiple sims (e.g. 2 or 3-operations below)
     gen = carstm_model( p=pW, DS="carstm_modelled_summary", sppoly=sppoly  )
-    gen = gen[[ "predictions_posterior_simulations"  ]]
+    gen = gen[["sims"]][["predictions"]] 
     gen[!is.finite(gen)] = NA
     if ( !is.null(min_value) ) {
       i = which( gen < min_value )
@@ -51,7 +51,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
   if ( "presence_absence" %in% operation ) {
     pa = carstm_model( p=pH, DS="carstm_modelled_summary", sppoly=sppoly  )
-    pa = pa[[ "predictions_posterior_simulations" ]]
+    pa = pa[["sims"]][["predictions"]]
     j = which( !is.finite(pa) )
     if (length(j) > 0 ) pa[j] = NA
     # pa = inverse.logit(pa)
@@ -63,7 +63,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   # construct meansizes matrix used to convert number to weight
   if ( "meansize" %in% operation) {
     wgts = carstm_model( p=pW, DS="carstm_modelled_summary", sppoly=sppoly  )
-    wgts = wgts[[ "predictions_posterior_simulations"  ]]
+    wgts = wgts[["sims"]][["predictions"]]
     j = which( !is.finite(wgts) )
     if (length(j) > 0 ) wgts[j] = NA
 
@@ -86,7 +86,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
   if ( "biomass" %in% operation) {
     biom = carstm_model( p=pB, DS="carstm_modelled_summary", sppoly=sppoly  )
-    biom = biom[[ "predictions_posterior_simulations" ]] 
+    biom = biom[["sims"]][["predictions"]] 
     j = which( !is.finite(biom) )
     if (length(j) > 0 ) biom[j] = NA
 
@@ -109,7 +109,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   if ( "number" %in% operation ) {
     nums = carstm_model( p=pN, DS="carstm_modelled_summary", sppoly=sppoly  )
         
-    nums = nums[[ "predictions_posterior_simulations" ]]    
+    nums = nums[["sims"]][["predictions"]]    
     j = which( !is.finite(nums) )
     if (length(j) > 0 ) nums[j] = NA
 
