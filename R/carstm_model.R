@@ -1,6 +1,7 @@
 
-carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL, vn=NULL, DS="redo", 
-    space_id=NULL, time_id=NULL, cyclic_id=NULL, 
+carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL, DS="redo", 
+    space_id=NULL, time_id=NULL, cyclic_id=NULL, theta=NULL, carstm_directory=NULL, 
+    nposteriors=NULL, posterior_simulations_to_retain=NULL,
     compress="gzip", compression_level=1, fn_fit=NULL, fn_res=NULL, debug=FALSE,
     ... ) {
 
@@ -43,6 +44,19 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
     if (is.null(fn_fit)) fn_fit = carstm_filenames( p=p, returntype="carstm_modelled_fit", areal_units_fn=areal_units_fn )
     if (is.null(fn_res)) fn_res = carstm_filenames( p=p, returntype="carstm_modelled_summary", areal_units_fn=areal_units_fn )
   }
+
+  if (exists("carstm_directory", p)) {
+    # override default load/save locations:
+    fn_fit = file.path( p$carstm_directory, basename( fn_fit) )
+    fn_res = file.path( p$carstm_directory, basename( fn_res) )
+  }
+
+  if (!is.null(carstm_directory)) {
+    # override default load/save locations:
+    fn_fit = file.path( carstm_directory, basename( fn_fit) )
+    fn_res = file.path( carstm_directory, basename( fn_res) )
+  }
+
 
   fit = NULL
   if (DS=="carstm_modelled_fit") {
@@ -124,9 +138,10 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
   }
 
   if ( grepl("inla", carstm_modelengine) ) {
-    out = carstm_model_inla( O=p, data=data, sppoly=sppoly, vn=vn, fn_fit=fn_fit, fn_res=fn_res, 
+    out = carstm_model_inla( O=p, data=data, sppoly=sppoly, fn_fit=fn_fit, fn_res=fn_res, 
       compress=compress, compression_level=compression_level, 
-      space_id=space_id, time_id=time_id, cyclic_id=cyclic_id, debug=debug, ... )
+      nposteriors=nposteriors, posterior_simulations_to_retain=posterior_simulations_to_retain,
+      space_id=space_id, time_id=time_id, cyclic_id=cyclic_id, theta=theta, debug=debug, ... )
   }
 
   return( out )

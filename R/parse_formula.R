@@ -1,5 +1,9 @@
 
 parse_formula = function( fm ) {
+  # parse INLA formulae for keywords: .. awkward but simplest solution without specifying everything explicitly
+  # "space" == spatial 
+  # "time" == time (linear year)
+  # "cyclic" == seasonal or repeating component (decimal)
 
   tfm = terms.formula(fm, specials = c("f"), data = NULL)
   vars =  setdiff( as.character(attr(tfm, "variables")), "list" ) 

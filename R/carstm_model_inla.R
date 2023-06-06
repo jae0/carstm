@@ -5,19 +5,19 @@ carstm_model_inla = function(
   sppoly =NULL,
   fit = NULL,
   space_id=NULL, time_id=NULL, cyclic_id=NULL, 
-  vn = NULL,  
   fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
   fn_res=NULL, 
   redo_fit = TRUE,
+  theta=NULL,
   compress="gzip",
   compression_level=1,
   toget = c("summary", "random_spatial", "random_spatiotemporal", "predictions"), 
   nposteriors=NULL, 
+  posterior_simulations_to_retain=NULL,
   exceedance_threshold=NULL, 
   deceedance_threshold=NULL, 
   exceedance_threshold_predictions=NULL,
   deceedance_threshold_predictions=NULL,
-  posterior_simulations_to_retain=c("summary", "random_spatial", "predictions"),
   debug=FALSE,
   eps = 1e-32,
   ... ) {
@@ -120,8 +120,6 @@ carstm_model_inla = function(
 
     vO = O[["fm"]]$offset_variable
     vY = O[["fm"]]$dependent_variable 
-
-    if (!is.null(vn)) O[["fm"]]$vn = vn  # over-ride if given
 
     vS = O[["fm"]]$vn$S
     vT = O[["fm"]]$vn$T
@@ -412,12 +410,12 @@ carstm_model_inla = function(
     if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( strategy='adaptive' ) #int.strategy='eb'
     if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if (!exists("control.mode", inla_args ) ) inla_args[["control.mode"]] = list( restart=FALSE ) 
-    if (exists("theta", O ) ) inla_args[["control.mode"]]$theta= O[["theta"]]
+    if (!is.null(theta) ) inla_args[["control.mode"]]$theta= theta
     
     if (!exists("control.compute", inla_args)) inla_args[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
       if ( inla_args[["inla.mode"]] == "classic") {
         # if ( !exists("control.results", inla_args ) ) inla_args[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
-        inla_args[["control.compute"]]["return.marginals.predictor"] = TRUE  # location of this option has moved ... might move again
+        inla_args[["control.compute"]]$return.marginals.predictor  = TRUE  # location of this option has moved ... might move again
       }
 
     # if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = list(mean.intercept=0.0, prec.intercept=0.001, mean=0, prec=0.001)
@@ -563,6 +561,7 @@ carstm_model_inla = function(
 
   sqrt_safe = function( a, eps=eps )  sqrt( pmin( pmax( a, eps ), 1/eps ) )
 
+
   marginal_clean = function( w) {
     i <- which(!is.finite(rowSums(w)) )
     if ( length(i) > 0) w = w[-i,] 
@@ -570,75 +569,73 @@ carstm_model_inla = function(
     return(w)
   }
 
-  
+  test_for_error = function( Z ) {
+    if ( "try-error" %in%  class(Z) ) return("error")
+    if (is.list(Z)) {
+      if (any( unlist(lapply(Z, function(o) inherits(o, "try-error"))) )) return("error")
+    } else if (is.vector(Z) ){
+      if (any( inherits(Z, "try-error")))  {
+        return("error")
+      } else if (any(grepl("Error", m))) {
+        return("error")
+      }  
+    }
+    return( "good" )    
+  }
 
 marginal_summary = function(Z, invlink=NULL ) {
   
   if (!is.null(invlink)) {
-    Z = try( apply_generic( Z, marginal_clean ), silent=TRUE ) 
-    if (any( inherits(Z, "try-error"))) return("error")
-
     Z = try( apply_generic( Z, inla.tmarginal, fun=invlink) )
-    if (is.list(Z)) {
-      if (any( unlist(lapply(Z, function(o) inherits(o, "try-error"))) )) return("error")
-    } else if (is.vector(Z) ){
-      if (any( inherits(Z, "try-error")))  return("error")
+    if (test_for_error(Z) =="error") {
+      class(m) = "try-error"
+      return(m) 
     }
-  
-    Z = try( apply_generic( Z, marginal_clean ), silent=TRUE )
-    if (is.list(Z)) {
-      if (any( unlist(lapply(Z, function(o) inherits(o, "try-error"))) )) return("error")
-    } else if (is.vector(Z) ){
-      if (any( inherits(Z, "try-error")))  return("error")
+
+    Z = try( apply_generic( Z, marginal_clean ) )
+    if (test_for_error(Z) =="error") {
+      class(m) = "try-error"
+      return(m) 
     }
 
     Z = try( apply_generic( Z, inla.zmarginal, silent=TRUE  ) )
-    if (is.list(Z)) {
-      if (any( unlist(lapply(Z, function(o) inherits(o, "try-error"))) )) return("error")
-    } else if (is.vector(Z) ){
-      if (any( inherits(Z, "try-error")))  return("error")
+    if (test_for_error(Z) =="error") {
+      class(m) = "try-error"
+      return(m) 
     }
 
     Z = try( simplify2array( Z ), silent=TRUE) 
-    if (is.list(Z)) {
-      if (any( unlist(lapply(Z, function(o) inherits(o, "try-error"))) )) return("error")
-    } else if (is.vector(Z) ){
-      if (any( inherits(Z, "try-error")))  return("error")
+    if (test_for_error(Z) =="error") {
+      class(m) = "try-error"
+      return(m) 
     }
 
     Z = try( list_simplify( Z), silent=TRUE )
-    if (is.list(Z)) {
-      if (any( unlist(lapply(Z, function(o) inherits(o, "try-error"))) )) return("error")
-    } else if (is.vector(Z) ){
-      if (any( inherits(Z, "try-error")))  return("error")
+    if (test_for_error(Z) =="error") {
+      class(m) = "try-error"
+      return(m) 
     }
 
     return(Z)
   
   } else {
 
-    Z = try( apply_generic( Z, marginal_clean ), silent=TRUE )
-    if (any( inherits(Z, "try-error"))) return("error")
-
     Z = try( apply_generic( Z, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-    if (is.list(Z)) {
-      if (any( unlist(lapply(Z, function(o) inherits(o, "try-error"))) )) return("error")
-    } else if (is.vector(Z) ){
-      if (any( inherits(Z, "try-error")))  return("error")
+    if (test_for_error(Z) =="error") {
+      class(m) = "try-error"
+      return(m) 
     }
   
     Z = try( simplify2array( Z ), silent=TRUE) 
-    if (is.list(Z)) {
-      if (any( unlist(lapply(Z, function(o) inherits(o, "try-error"))) )) return("error")
-    } else if (is.vector(Z) ){
-      if (any( inherits(Z, "try-error")))  return("error")
+    if (test_for_error(Z) =="error") {
+      class(m) = "try-error"
+      return(m) 
     }
 
     Z = try( list_simplify( Z ), silent=TRUE)
-    if (is.list(Z)) {
-      if (any( unlist(lapply(Z, function(o) inherits(o, "try-error"))) )) return("error")
-    } else if (is.vector(Z) ){
-      if (any( inherits(Z, "try-error")))  return("error")
+    if (test_for_error(Z) =="error") {
+      class(m) = "try-error"
+      return(m) 
     }
 
     return(Z)
@@ -657,17 +654,23 @@ marginal_summary = function(Z, invlink=NULL ) {
 
   if (exists("debug")) if (is.character(debug)) if (debug=="summary") browser()
 
-
-  if (length(posterior_simulations_to_retain) > 0) {
-
-    if (exists("nposteriors", O)) {
-      nposteriors = O$nposteriors
-    } else {
-      message("nposteriors not found, defaulting to 100")
-      nposteriors = 100 
+  if (!is.null(posterior_simulations_to_retain)) {
+ 
+    posterior_simulations_to_retain = unique( c( "summary", posterior_simulations_to_retain))
+ 
+    if (is.null(nposteriors)) {
+      if (exists("nposteriors", O)) {
+        nposteriors = O$nposteriors
+      } else {
+        message("nposteriors not found, defaulting to 1000")
+        nposteriors = 1000 
+      }
     }
-
+    message( "Sampling from joint posteriors: n = ", nposteriors )
+ 
     S = inla.posterior.sample( nposteriors, fit, add.names=FALSE, num.threads=mc.cores ) 
+
+    message( "Sampling complete ... now reformatting and extracting required components" )
 
     for (z in c("tag", "start", "length") ) assign(z, attributes(S)[[".contents"]][[z]] )  # index info
 
@@ -712,24 +715,29 @@ marginal_summary = function(Z, invlink=NULL ) {
   
     if (exists( "marginals.fixed", fit)) {
       m = fit$marginals.fixed  # make a copy to do transformations upon
-      m = try( apply_generic( m, marginal_clean ) )
-
       fi = grep("Intercept", names(m) )
-
       if (invlink_id != "identity" ) {
-        m = apply_generic( m, function(x)  inla.tmarginal( invlink, x, n=4096)   )
-        m = try( apply_generic( m, marginal_clean ) )
+        m = try( apply_generic( m, function(x) marginal_clean( inla.tmarginal( invlink, x, n=4096)) ), silent=TRUE  )
       }
-
-      if (length(fi) > 0) {
+      if (length(fi) == 1) {
         if ( exists("data_transformation", O))  {
           m[[fi]] = inla.tmarginal( O$data_transformation$backward, m[[fi]]  ) # on user scale
-          m[[fi]] = marginal_clean( m[[fi]])
         }
       } 
+      m = try(apply_simplify( m[[1]], FUN=inla.zmarginal, silent=TRUE ), silent=TRUE)
 
-      W = cbind ( t (apply_simplify( m, FUN=inla.zmarginal, silent=TRUE ) ) )  # 
-      W = list_to_dataframe( W [, tokeep, drop =FALSE] )
+      if (test_for_error(m) =="error") { 
+          message("Problem with marginals for intercept (probably too variable), doing a simple inverse transform, SD is blanked out")
+          W = fit$summary.fixed[ "(Intercept)", 1:5]
+          colnames(W) = tokeep
+          W[,c(1,3:5)] = exp( W[,c(1,3:5)] )
+          W[,2] = NA
+
+      } else {
+        W = cbind ( t (m) )  # 
+        W = list_to_dataframe( W [, tokeep, drop =FALSE] )
+      }
+
       W$ID = row.names(W)
       O[["summary"]][["fixed_effects"]] = W
       m = NULL
@@ -775,14 +783,12 @@ marginal_summary = function(Z, invlink=NULL ) {
       if (length(prcs) > 0) {
   
         m = fit$marginals.hyperpar[prcs]
-        m = try( apply_generic( m, marginal_clean ), silent=TRUE )
         m = try( apply_generic( m, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
-        m = try( apply_generic( m, marginal_clean ), silent=TRUE )
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         m = try( simplify2array( m ), silent=TRUE)
         m = try( list_simplify( m), silent=TRUE)
           
-        if (any( inherits(m, "try-error")))  {
+        if (test_for_error(m) =="error") {  
           if (be_verbose)  {
             message( "NAN or Inf values encountered in marginals.") 
             message( "Try an alternate parameterization as model may be over parameterized or degenerate. ")
@@ -791,7 +797,7 @@ marginal_summary = function(Z, invlink=NULL ) {
           m = fit$summary.hyperpar[prcs,1:5]
           m[,c(1,3:5)] = 1/sqrt_safe( m[,c(1,3:5)], eps )
           colnames(m) = tokeep
-         }
+        }
         rownames(m) = gsub("Precision for", "SD", rownames(m) )
         rownames(m) = gsub(" for", "", rownames(m) )
         rownames(m) = gsub(" the", "", rownames(m) )
@@ -855,12 +861,12 @@ marginal_summary = function(Z, invlink=NULL ) {
 
         if (be_verbose)  message("Extracting random effects of covariates, if any" )
         if (exists("debug")) if (is.character(debug)) if ( debug =="random_covariates") browser()
- 
+ browser()
         raneff = setdiff( names( fit$marginals.random ), c(vS, vS2  ) )
         for (rnef in raneff) {
           m = marginal_summary( fit$marginals.random[[rnef]], invlink=invlink )
-          if (is.character(m) && m=="error")  {
-            message( "failed to transform marginals .. copying directly from INLA summary instead: ", rnef)
+          if (test_for_error(m) =="error") {  
+             message( "failed to transform marginals .. copying directly from INLA summary instead: ", rnef)
             m = fit$summary.random[[rnef]][, inla_tokeep, drop =FALSE ]
             names(m) =  tokeep
             O[["random"]] [[rnef]] = m
@@ -962,10 +968,8 @@ marginal_summary = function(Z, invlink=NULL ) {
         model_name = re$model[ iSP ]  # should be iid
 
         m = fit$marginals.random[[vS]]
-        m = try( apply_generic( m, marginal_clean ), silent=TRUE  )
         if (invlink_id != "identity" ) {
           m = try( apply_generic( m, inla.tmarginal, fun=invlink) , silent=TRUE )
-          m = try( apply_generic( m, marginal_clean ), silent=TRUE  )
         }
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE ), silent=TRUE )
         m = try( simplify2array( m ), silent=TRUE)
@@ -1014,10 +1018,8 @@ marginal_summary = function(Z, invlink=NULL ) {
           model_name = re$model[ iSP[j] ]  
           
           m = fit$marginals.random[[vS]]
-          m = try( apply_generic( m, marginal_clean ), silent=TRUE  ) 
           if (invlink_id != "identity" ) {
             m = try( apply_generic( m, inla.tmarginal, fun=invlink), silent=TRUE  )
-            m = try( apply_generic( m, marginal_clean ), silent=TRUE  )
           }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE) , silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE) 
@@ -1181,10 +1183,8 @@ marginal_summary = function(Z, invlink=NULL ) {
         if (exists(vnST, fit$marginals.random )) {
 
           m = fit$marginals.random[[vnST]]
-          m = try( apply_generic( m, marginal_clean ), silent=TRUE  )
           if (invlink_id != "identity" ) {
             m = try( apply_generic( m, inla.tmarginal, fun=invlink) , silent=TRUE )
-            m = try( apply_generic( m, marginal_clean ), silent=TRUE  )
           }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE), silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE)
@@ -1233,10 +1233,8 @@ marginal_summary = function(Z, invlink=NULL ) {
           model_name = re$model[ iST[j] ]  
       
           m = fit$marginals.random[[vnST]]
-          m = try( apply_generic( m, marginal_clean ), silent=TRUE )
           if (invlink_id != "identity" ) {
             m = try( apply_generic( m, inla.tmarginal, fun=invlink), silent=TRUE )
-            m = try( apply_generic( m, marginal_clean ), silent=TRUE )
           }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE)
@@ -1400,7 +1398,6 @@ marginal_summary = function(Z, invlink=NULL ) {
       if ( O[["dimensionality"]] == "space" ) {
 
         m = fit$marginals.fitted.values[O[["ipred"]]]
-        m = apply_generic( m, marginal_clean ) 
 
         if (!is.null(vO)) {
           if ( O[["inla.mode"]] == "experimental" ) {
@@ -1410,7 +1407,6 @@ marginal_summary = function(Z, invlink=NULL ) {
  
         if (invlink_pred_id  != "identity"  ) {
           m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )
-          m = try( apply_generic( m, marginal_clean ), silent=TRUE )
         }
 
         if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
@@ -1451,7 +1447,6 @@ marginal_summary = function(Z, invlink=NULL ) {
       if (O[["dimensionality"]] == "space-time"  ) {
 
         m = fit$marginals.fitted.values[O[["ipred"]]]   
-        m = apply_generic( m, marginal_clean )
  
         if (!is.null(vO)) {
           if ( O[["inla.mode"]] == "experimental" ) {
@@ -1461,7 +1456,6 @@ marginal_summary = function(Z, invlink=NULL ) {
 
         if (invlink_pred_id  != "identity"  ) {
           m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
-          m = try( apply_generic( m, marginal_clean ), silent=TRUE )
         } 
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
@@ -1508,7 +1502,6 @@ marginal_summary = function(Z, invlink=NULL ) {
       if ( O[["dimensionality"]] == "space-time-cyclic" ) {
 
         m = fit$marginals.fitted.values[O[["ipred"]]]   
-        m = apply_generic( m, marginal_clean )
 
         if (!is.null(vO)) {
 
@@ -1521,7 +1514,6 @@ marginal_summary = function(Z, invlink=NULL ) {
  
         if (invlink_pred_id  != "identity"  )  {
           m = apply_generic( m, function(u) {inla.tmarginal( invlink_pred, u) } )    
-          m = try( apply_generic( m, marginal_clean ) )
         }
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
