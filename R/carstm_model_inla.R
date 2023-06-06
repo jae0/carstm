@@ -861,7 +861,7 @@ marginal_summary = function(Z, invlink=NULL ) {
 
         if (be_verbose)  message("Extracting random effects of covariates, if any" )
         if (exists("debug")) if (is.character(debug)) if ( debug =="random_covariates") browser()
- browser()
+
         raneff = setdiff( names( fit$marginals.random ), c(vS, vS2  ) )
         for (rnef in raneff) {
           m = marginal_summary( fit$marginals.random[[rnef]], invlink=invlink )
