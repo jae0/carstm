@@ -12,10 +12,12 @@ carstm_test_inla = function( family = "poisson" ) {
 
     fit1 = glm ( r ~ x1, offset = log(n), data=Seeds, family="poisson" )
 
+#### form used in carstm  "classical"
     fit2 = inla ( r ~ x1 + offset(log(n)), data=Seeds, family="poisson" ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
       control.predictor = list(compute=TRUE, link=1)
     )
+####
 
     fit3 = inla ( r ~ x1, offset=log(n), data=Seeds,  family="poisson" ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
@@ -28,14 +30,14 @@ carstm_test_inla = function( family = "poisson" ) {
     )
 
 
-#### form used in carstm
-
+#### form used in carstm "experimental"
     fit2e = inla ( r ~ x1 + offset(log(n)), data=Seeds, family="poisson"  ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
       control.predictor = list(compute=TRUE, link=1),
       inla.mode="experimental"
     )
-#####
+
+####
 
     fit3e = inla ( r ~ x1, offset=log(n), data=Seeds,  family="poisson" ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
@@ -121,7 +123,7 @@ carstm_test_inla = function( family = "poisson" ) {
 
 
     # predictions from marginals
-
+    # both experimental and classical marginals.fitted.values are on response scale
     pfit2  = unlist( sapply( fit2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )  
     pfit2e = unlist( sapply( fit2e$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] ) 
 
@@ -131,28 +133,50 @@ carstm_test_inla = function( family = "poisson" ) {
     pfit4 = unlist( sapply( fit4$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
     pfit4e = unlist( sapply( fit4e$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
 
+    # changed behaviour 2023:
+    pfit4 = pfit4 * Seeds$n  # ***
+    pfit4e = pfit4e * Seeds$n  # ***
+
 
     # predictions from posterior distributions
-    posterior_means = function( x, n=500 ) {
+    posterior_means = function( x, n=1000 ) {
       pp = inla.posterior.sample.eval( function() Predictor, inla.posterior.sample( n, x ) )
-      return(rowMeans( exp( pp ) ))
+      return(rowMeans( exp( pp ) ))  # <<< note conversion here
     }
 
-    posterior_means2 = function( x, n=500 ) {
+    posterior_means2 = function( x, n=1000 ) {
+      # method used in carstm  .. posterior is on link scale ((for both experimental and classical))
       pp = inla.posterior.sample( n, x, selection=list(Predictor=0)  )
       oo = apply( simplify2array( lapply( pp, function(x) { exp(x$latent) } ) ), 1, mean)
       return( oo )
     }
 
+    
+    # all on response scale:
+
     p0 = predict( fitc, type="response" )
     p1 = predict( fit1, type="response" )
+    p2c = posterior_means2(fit2) 
     p2 = posterior_means(fit2) 
+
+    # method used in carstm  .. 
+    # posterior sims is on link scale ((for both experimental and classical))
+    #  marginals.fitted.values are on response scale (for both experimental and classical)
+    # summary.fitted.values on response scale ((for both experimental and classical))
+
     p2e = posterior_means(fit2e)  # captures offset information
-    p2e2 = posterior_means2(fit2e) # captures offset information
+    p2e2 = posterior_means2(fit2e) # captures offset information  -- method used in carstm
     p3 = posterior_means(fit3) 
     p3e = posterior_means(fit3e) 
     p4 = posterior_means(fit4) 
     p4e = posterior_means(fit4e) 
+
+    # changed behaviour 2023:
+    p4 = p4 * Seeds$n  # ***
+    p4e = p4e * Seeds$n #***
+
+
+    # summary.fitted.values on response scale ((for both experimental and classical))
 
     # all predictions
     u = cbind(
@@ -165,8 +189,10 @@ carstm_test_inla = function( family = "poisson" ) {
       p2,    # with offset
 
 #### "experimental" ... used by default in carstm
-      fit2e$summary.fitted.values$mean * Seeds$n, # no offset
-      pfit2e * Seeds$n ,#  no offset
+#      fit2e$summary.fitted.values$mean * Seeds$n, # no offset
+      fit2e$summary.fitted.values$mean  , # changed in 2023! ***
+#      pfit2e * Seeds$n ,#  no offset needed any longer
+      pfit2e  ,#  changed in 2023! ***
       p2e,  # with offset
       p2e2, # with offset
 ####
@@ -175,18 +201,24 @@ carstm_test_inla = function( family = "poisson" ) {
       pfit3,
       p3,
 
-      fit3e$summary.fitted.values$mean * Seeds$n, # experimental mode requires offset
-      pfit3e * Seeds$n ,
+#      fit3e$summary.fitted.values$mean * Seeds$n, # experimental mode requires offset
+      fit3e$summary.fitted.values$mean  , # experimental mode no longer requires offset *** 2023
+#       pfit3e * Seeds$n ,
+      pfit3e ,  # experimental mode no longer requires offset *** 2023 
       p3e,
 
       fit4$summary.fitted.values$mean  * Seeds$n,  # using E=... notation requires offset
-      pfit4 * Seeds$n,
-      p4 * Seeds$n,
+#      pfit4 * Seeds$n,
+      pfit4 ,  # no longer needs offsets  *** 2023
+#      p4 * Seeds$n,
+      p4 ,  # no longer needs offsets  *** 2023
 
       fit4e$summary.fitted.values$mean * Seeds$n,   # using E=... notation requires offset
-      pfit4e * Seeds$n,
-      p4e * Seeds$n
-    )
+#      pfit4e * Seeds$n,
+      pfit4e ,  # no longer needs offsets  *** 2023
+ #      p4e * Seeds$n   # no longer needs offsets  *** 2023
+      p4e     # no longer needs offsets  *** 2023
+      )
 
     plot( as.data.frame(u) )
     o = cor(u)  # should all be 1
