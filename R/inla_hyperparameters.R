@@ -5,18 +5,35 @@ inla_hyperparameters = function( reference_sd, alpha=0.5, reference_mean=0 ) {
 
   if (!is.finite(reference_sd)) stop("SD is not finite")
   
+  sd_component = 0.5 * reference_sd
+
   hyper = list(
 
     iid = list(
       prec = list(
         prior = "pc.prec",  # exponential decay
-        param = c(reference_sd, alpha)
+        param = c(sd_component , alpha)
       )
     ),
+    
+    cycl = list(
+      prec = list(
+        prior = "pc.prec",  # exponential decay
+        param = c(sd_component*0.5 , alpha)
+      )
+    ),
+
 
     # means informative, sd marginally diffuse
     # see: inla.set.control.fixed.default() for defaults
     fixed = list(
+        mean.intercept = reference_mean,
+        prec.intercept = 1e-5,
+        mean=0,
+        prec=1e-5
+    ),
+
+    fixed_low = list(
         mean.intercept = reference_mean,
         prec.intercept = 1e-3,
         mean=0,
@@ -29,7 +46,7 @@ inla_hyperparameters = function( reference_sd, alpha=0.5, reference_mean=0 ) {
     rw2 = list(
       prec = list(
         prior = "pc.prec",  # exponential decay
-        param = c(reference_sd, alpha)
+        param = c(sd_component, alpha)
       )
     ),
 
@@ -40,7 +57,7 @@ inla_hyperparameters = function( reference_sd, alpha=0.5, reference_mean=0 ) {
     ar1 = list(
       prec = list(
         prior = "pc.prec",  # exponential decay
-        param = c(reference_sd, alpha)
+        param = c(sd_component, alpha)
       ),
       rho = list(
         prior = "pc.cor0", # inla.doc("pc.cor0") ..base model: rho = 0  --- expoential; will tend to 0 unless there is info
@@ -52,7 +69,7 @@ inla_hyperparameters = function( reference_sd, alpha=0.5, reference_mean=0 ) {
     ar1_group = list(
       # theta1 = list(
       #   prior = "pc.prec",  # exponential decay
-      #   param = c(reference_sd, alpha)
+      #   param = c(sd_component, alpha)
       # ),
       rho = list(
         prior = "pc.cor0", # inla.doc("pc.cor0") ..base model: rho = 0  --- expoential; will tend to 0 unless there is info
@@ -63,7 +80,7 @@ inla_hyperparameters = function( reference_sd, alpha=0.5, reference_mean=0 ) {
     besag = list(
       prec = list(
         prior = "pc.prec",
-        param = c(reference_sd, alpha)
+        param = c(sd_component, alpha)
       )
     ),
 
@@ -71,7 +88,7 @@ inla_hyperparameters = function( reference_sd, alpha=0.5, reference_mean=0 ) {
     bym2 = list(
       prec = list(
         prior = "pc.prec",
-        param = c(reference_sd, alpha)
+        param = c(sd_component, alpha)
       ),
       phi = list(
         prior="pc",  # see bottom of inla.doc("bym2")
