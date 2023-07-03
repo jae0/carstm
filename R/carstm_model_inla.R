@@ -887,7 +887,7 @@ carstm_model_inla = function(
         random = invlink(random)
         row.names(random) = rlabels
         
-        O[["s"]][["random_effects"]] = random
+        O[["summary"]][["random_effects"]] = random
         
         # same seq as space_id ( == attributes(space)$row.names )
         O[["posterior_summary"]][["random_effects"]] = posterior_summary( format_results( random, labels=rlabels ) )
@@ -951,7 +951,7 @@ carstm_model_inla = function(
 
       if (length(iSP) == 1) {
 
-        vS = re$vn[ iSP ]  # == vS as it is a single spatial effect
+        # vS = re$vn[ iSP ]  # == vS as it is a single spatial effect
         
         model_name = re$model[ iSP ]  # should be iid
 
@@ -1001,10 +1001,11 @@ carstm_model_inla = function(
       if (length(iSP) == 2) {
         
         for (j in 1:length(iSP)) {
-          vS = re$vn[ iSP[j] ]
+          
+          vnS = re$vn[ iSP[j] ]
           model_name = re$model[ iSP[j] ]  
           
-          m = fit$marginals.random[[vS]]
+          m = fit$marginals.random[[vnS]]
          
           m = try( apply_generic( m, inla.tmarginal, fun=invlink), silent=TRUE  )
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE) , silent=TRUE )
@@ -1012,7 +1013,7 @@ carstm_model_inla = function(
           m = try( list_simplify(m), silent=TRUE  )
           if (test_for_error(m) =="error") {  
             message( "failed to transform random_spatial marginals .. copying directly from INLA summary instead")
-            m = fit$summary.random[[vS]][, inla_tokeep ]
+            m = fit$summary.random[[vnS]][, inla_tokeep ]
             names(m) = c("ID", tokeep)
           } 
 
@@ -1022,7 +1023,7 @@ carstm_model_inla = function(
           for (k in 1:length(tokeep)) {
             W[,k] = reformat_to_array( input = unlist(m[, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["random"]] [[vS]] [[model_name]] = data.frame( W [, tokeep, drop =FALSE], ID=row.names(W) )
+          O[["random"]] [[vnS]] [[model_name]] = data.frame( W [, tokeep, drop =FALSE], ID=row.names(W) )
 
         }
       }
@@ -1303,7 +1304,7 @@ carstm_model_inla = function(
             names(dimnames(m))[2] = vT
             dimnames( m )[[vS]] = O[["space_id"]]
             dimnames( m )[[vT]] = O[["time_id"]]
-            O[["random"]] [[vST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = m
+            O[["random"]] [[vnST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = m
           }
           m = NULL
         }
@@ -1318,7 +1319,7 @@ carstm_model_inla = function(
             names(dimnames(m))[2] = O[["time_id"]]
             dimnames( m )[[vS]] = O[["space_id"]]
             dimnames( m )[[vT]] = vT
-            O[["random"]] [[vST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = m
+            O[["random"]] [[vnST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = m
           }
           m = NULL
         }
@@ -1331,11 +1332,11 @@ carstm_model_inla = function(
         O[["random"]] [[vnST]] [["combined"]] = W[,, tokeep, drop =FALSE] 
 
         if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
-          O[["sims"]] [[vST]] [["combined"]] = space_time
+          O[["sims"]] [[vnST]] [["combined"]] = space_time
         }
         if ( "random_spatiotemporal12" %in% posterior_simulations_to_retain ) {
-          if (!is.null(space_time1)) O[["sims"]] [[vS]] [["iid"]] =  invlink(space_time1)
-          if (!is.null(space_time2)) O[["sims"]] [[vS]] [["bym2"]] = invlink(space_time2)
+          if (!is.null(space_time1)) O[["sims"]] [[vnST]] [["iid"]] =  invlink(space_time1)
+          if (!is.null(space_time2)) O[["sims"]] [[vnST]] [["bym2"]] = invlink(space_time2)
         }
       } 
       Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL

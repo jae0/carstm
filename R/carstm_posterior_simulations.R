@@ -1,7 +1,7 @@
 
 carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=NULL, sppoly=NULL, qmax=NULL,
   wgts_min=0, wgts_max=NULL, N_min=0, N_max=NULL, B_min=0, B_max=NULL, max_value=NULL, degree_day=FALSE, 
-  pa_threshold=0.05, hurdle_direct=FALSE ) {
+  pa_threshold=0.05, hurdle_direct=FALSE, denoise="" ) {
   
   # N and B are actually densities
   
@@ -27,7 +27,20 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
     # simple wrapper to data .. direct access would give more control if a single set is wanted .. 
     # this is more useful when complex transformations are required using multiple sims (e.g. 2 or 3-operations below)
     gen = carstm_model( p=pW, DS="carstm_modelled_summary", sppoly=sppoly  )
-    gen = gen[["sims"]][["predictions"]] 
+
+    if ( denoise == "" ) {
+      gen =  gen[["sims"]][["predictions"]]
+    } else {
+      if (grepl( "spatial", denoise)) vnS = gen[["fm"]][["vn"]][["S"]]
+      if (grepl( "spatiotemporal", denoise)) vnST = gen[["fm"]][["vn"]][["S2"]]
+      if ("spatial" %in% denoise )  gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnS]] [["combined"]] 
+      if ("spatial_iid" %in% denoise )  gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnS]] [["iid"]]
+      if ("spatial_bym2" %in% denoise )  gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnS]] [["bym2"]]
+      if ("spatiotemporal" %in% denoise ) gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnST]] [["combined"]] 
+      if ("spatiotemporal_iid" %in% denoise ) gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnST]] [["iid"]]
+      if ("spatiotemporal_bym2" %in% denoise ) gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnST]] [["bym2"]]
+    }
+
     gen[!is.finite(gen)] = NA
     if ( !is.null(min_value) ) {
       i = which( gen < min_value )
@@ -51,7 +64,19 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
   if ( "presence_absence" %in% operation ) {
     pa = carstm_model( p=pH, DS="carstm_modelled_summary", sppoly=sppoly  )
-    pa = pa[["sims"]][["predictions"]]
+    if ( denoise == "" ) {
+      pa = pa[["sims"]][["predictions"]]
+    } else {
+      if (grepl( "spatial", denoise)) vnS = pa[["fm"]][["vn"]][["S"]]
+      if (grepl( "spatiotemporal", denoise)) vnST = pa[["fm"]][["vn"]][["S2"]]
+      if ("spatial" %in% denoise )  pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnS]] [["combined"]] 
+      if ("spatial_iid" %in% denoise )  pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnS]] [["iid"]]
+      if ("spatial_bym2" %in% denoise )  pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnS]] [["bym2"]]
+      if ("spatiotemporal" %in% denoise ) pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnST]] [["combined"]] 
+      if ("spatiotemporal_iid" %in% denoise ) pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnST]] [["iid"]]
+      if ("spatiotemporal_bym2" %in% denoise ) pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnST]] [["bym2"]]
+    }
+
     j = which( !is.finite(pa) )
     if (length(j) > 0 ) pa[j] = NA
     # pa = inverse.logit(pa)
@@ -63,7 +88,19 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   # construct meansizes matrix used to convert number to weight
   if ( "meansize" %in% operation) {
     wgts = carstm_model( p=pW, DS="carstm_modelled_summary", sppoly=sppoly  )
-    wgts = wgts[["sims"]][["predictions"]]
+    if ( denoise == "" ) {
+      wgts = wgts[["sims"]][["predictions"]]
+    } else {
+      if (grepl( "spatial", denoise)) vnS = wgts[["fm"]][["vn"]][["S"]]
+      if (grepl( "spatiotemporal", denoise)) vnST = wgts[["fm"]][["vn"]][["S2"]]
+      if ("spatial" %in% denoise )  wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnS]] [["combined"]] 
+      if ("spatial_iid" %in% denoise )  wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnS]] [["iid"]]
+      if ("spatial_bym2" %in% denoise )  wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnS]] [["bym2"]]
+      if ("spatiotemporal" %in% denoise ) wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnST]] [["combined"]] 
+      if ("spatiotemporal_iid" %in% denoise ) wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnST]] [["iid"]]
+      if ("spatiotemporal_bym2" %in% denoise ) wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnST]] [["bym2"]]
+    }
+
     j = which( !is.finite(wgts) )
     if (length(j) > 0 ) wgts[j] = NA
 
@@ -86,7 +123,19 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
   if ( "biomass" %in% operation) {
     biom = carstm_model( p=pB, DS="carstm_modelled_summary", sppoly=sppoly  )
-    biom = biom[["sims"]][["predictions"]] 
+    if ( denoise == "" ) {
+      biom = biom[["sims"]][["predictions"]]
+    } else {
+      if (grepl( "spatial", denoise)) vnS = biom[["fm"]][["vn"]][["S"]]
+      if (grepl( "spatiotemporal", denoise)) vnST = biom[["fm"]][["vn"]][["S2"]]
+      if ("spatial" %in% denoise )  biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnS]] [["combined"]] 
+      if ("spatial_iid" %in% denoise )  biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnS]] [["iid"]]
+      if ("spatial_bym2" %in% denoise )  biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnS]] [["bym2"]]
+      if ("spatiotemporal" %in% denoise ) biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnST]] [["combined"]] 
+      if ("spatiotemporal_iid" %in% denoise ) biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnST]] [["iid"]]
+      if ("spatiotemporal_bym2" %in% denoise ) biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnST]] [["bym2"]]
+    }
+
     j = which( !is.finite(biom) )
     if (length(j) > 0 ) biom[j] = NA
 
@@ -109,7 +158,19 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   if ( "number" %in% operation ) {
     nums = carstm_model( p=pN, DS="carstm_modelled_summary", sppoly=sppoly  )
         
-    nums = nums[["sims"]][["predictions"]]    
+    if ( denoise == "" ) {
+      nums = nums[["sims"]][["predictions"]]
+    } else {
+      if (grepl( "spatial", denoise)) vnS = nums[["fm"]][["vn"]][["S"]]
+      if (grepl( "spatiotemporal", denoise)) vnST = nums[["fm"]][["vn"]][["S2"]]
+      if ("spatial" %in% denoise )  nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnS]] [["combined"]] 
+      if ("spatial_iid" %in% denoise )  nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnS]] [["iid"]]
+      if ("spatial_bym2" %in% denoise )  nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnS]] [["bym2"]]
+      if ("spatiotemporal" %in% denoise ) nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnST]] [["combined"]] 
+      if ("spatiotemporal_iid" %in% denoise ) nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnST]] [["iid"]]
+      if ("spatiotemporal_bym2" %in% denoise ) nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnST]] [["bym2"]]
+    }
+
     j = which( !is.finite(nums) )
     if (length(j) > 0 ) nums[j] = NA
 

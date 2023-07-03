@@ -108,7 +108,7 @@ p$areal_units_overlay = "none"
 p$areal_units_timeperiod = "none"   # only relevent for groundfish polys
 
 p$tus="yr" 
-p$hull_alpha = 20 
+
 p$fraction_todrop = 0.05 
 p$fraction_cv = 1.0   # approx poisson (binomial)
 p$fraction_good_bad = 0.9 
