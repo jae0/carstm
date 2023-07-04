@@ -751,10 +751,10 @@ carstm_model_inla = function(
       }      
 
       if (be_verbose) {
-        message( "")
-        message( "Fixed effects")
-        print(  O[["summary"]][["fixed_effects"]][,c("mean", "sd")] )    
-        message( "")
+        # message( "")
+        # message( "Fixed effects")
+        # print(  O[["summary"]][["fixed_effects"]][,c("mean", "sd")] )    
+        # message( "")
       } 
 
     }
