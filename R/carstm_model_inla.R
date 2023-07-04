@@ -887,7 +887,7 @@ carstm_model_inla = function(
         random = invlink(random)
         row.names(random) = rlabels
         
-        O[["summary"]][["random_effects"]] = random
+        # O[["summary"]][["random_effects"]] = random
         
         # same seq as space_id ( == attributes(space)$row.names )
         O[["posterior_summary"]][["random_effects"]] = posterior_summary( format_results( random, labels=rlabels ) )
@@ -916,12 +916,12 @@ carstm_model_inla = function(
 
 
     if (be_verbose)  {
-      message( "")
-      message( "Random effects:")
-      print(  O[["summary"]][["random_effects"]][,c("mean", "sd")] )   
-      message( "\n--- NOTE --- 'SD *' from marginal summaries are on link scale")
-      message( "--- NOTE --- SD * from posteriors simulations are on user scale")
-      message( "")
+      # message( "")
+      # message( "Random effects:")
+      # print(  O[["summary"]][["random_effects"]]  )   
+      # message( "\n--- NOTE --- 'SD *' from marginal summaries are on link scale")
+      # message( "--- NOTE --- SD * from posteriors simulations are on user scale")
+      # message( "")
     }
 
   }  # end random_effects
