@@ -4,7 +4,7 @@ carstm_posterior_predictions_simulations = function(
   fit = NULL,
   space_id=NULL, time_id=NULL, cyclic_id=NULL, 
   fn_fit=NULL, 
-  num.threads = "1:1"
+  num.threads = "1:1",
   toget = c("summary", "random_spatial", "random_spatiotemporal", "predictions"), 
   nposteriors=NULL, 
   posterior_simulations_to_retain=NULL,
