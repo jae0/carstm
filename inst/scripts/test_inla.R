@@ -1,5 +1,5 @@
 
-# some tests of INLA and CARSTM
+# some tests of INLA and CARSTM in case internals of INLA change 
 
 # how INLA treats offsets are not always clear or consistent
 # CARSTM tries to handle them: the following tests should succeed so long as INLA does not change base behaviour

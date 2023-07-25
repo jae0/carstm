@@ -1,33 +1,52 @@
 
-# carstm example using temperature data subset
+# Example: using carstm to model bottom temperatures 
 
+## Data description
 
-# prep input data (copied from stmv): 
-# centered over Halifax, NS: bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
-# t=temperature (C); z=depth (m); tiyr=decimal year
+This is a small subset of real data for the area close to Halifax, Nova Scotia, Canada. 
 
-require(carstm)
+The example data is bounded by longitudes (-65, -62) and lattitdes (45, 43). It is stored as test data for carstm. We load it as follows:
+
+```r
+
+set.seed(12345)
+
+require(carstm)  # data is found in this project
  
 bottemp = readRDS( system.file("extdata", "aegis_spacetime_test.RDS", package="carstm" ) )   
 # bottemp = bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
 
 plot(lat ~ -lon, bottemp)
 str(bottemp)
-summary(bottemp)
-hist( bottemp$tiyr )  # decimal date
 
+# NOTE: t=temperature (C); z=depth (m); tiyr=decimal year
+
+hist( bottemp$tiyr )  # decimal date
+summary(bottemp)
+```
+
+---
+
+## Analysis
+
+To begin analysis using [CARSTM](https://github.com/jae0/carstm), we bring in the required library dependencies.
+
+```r
 # required R library list
 standard_libs = c( "colorspace", "lubridate",  "lattice",  "parallel", "sf", "GADMTools", "INLA" , "data.table" )
 
 # aegis.* libs (found on github.com/jae0)
 local_libs = c("aegis", "aegis.bathymetry", "aegis.coastline",  "aegis.polygons", "aegis.substrate", "aegis.temperature", "aegis.survey" ) 
 
-
 # required parameter settings:
 p = list()
 
 p$libs = RLibrary ( c(standard_libs, local_libs) )
+```
 
+To the parameter list *p*, we add additional options related to areal unit configuration and modelling.
+
+```r
 p$yrs = min(year(bottemp$date)):max(year(bottemp$date)) # 1980:2010
 p$year.assessment = max(year(bottemp$date))
 
@@ -44,7 +63,6 @@ p$variabletomodel = "t"
 p$dimensionality="space-time-cyclic"  # output dimensions
 p$quantile_bounds =c(0.005, 0.995) # trim upper bounds (in posterior predictions)
  
-
 # space resolution
 p$aegis_proj4string_planar_km = projection_proj4string("utm20")
 
@@ -122,24 +140,45 @@ p$carstm_modelengine = "inla"   # {model engine}.{label to use to store}
 p$carstm_inputs_prefilter = "aggregated" 
 p$carstm_inputs_prefilter_n = 100  # only used for "sampled"
 
+```
 
+## Areal units
+
+Next we create the areal units. If desired, these can be made manually using an interactive drawing program (e.g., QGIS, GRASS, OpenStreetMap, GoogleEarth, etc.). 
+
+```r
 # create polygon  :: requires aegis, aegis.coastline, aegis.polygons
 
-
-sppoly = try( areal_units( p=p, areal_units_directory=p$datadir, redo=FALSE ) )
-
-if (inherits("try-error", sppoly)) {
-    sppoly = areal_units( 
+sppoly = areal_units( 
     p=p, 
     xydata=setDF(bottemp[,.(lon, lat, yr=floor(tiyr) ) ]), 
-    areal_units_directory=p$datadir, 
-    redo=TRUE )  # to force create
-)
+    areal_units_directory=p$datadir,
+    verbose=TRUE 
+) 
+    
+# sppoly = try( areal_units( p=p, areal_units_directory=p$datadir, redo=FALSE ) )
 
 plot( sppoly[ "AUID" ] ) 
-carstm_map( sppoly=sppoly, vn="au_sa_km2", map_mode="view" )  # interactive
- 
 
+# map surface areas 
+carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="tmap", tmapmode="view" )  # interactive map
+
+carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="simple"  )  # direct plot
+
+# carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="tmap", tmapmode="plot" )  # direct plot
+# carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="ggplot"  )  # direct plot
+
+```
+
+Which gives the following representation, based upon data density:
+
+![](sppoly_temperature.png)
+
+---
+
+Now we can assemble the data required for modelling and identify the position of data in these areal unitss.
+
+```r
 crs_lonlat = st_crs(projection_proj4string("lonlat_wgs84"))
 sppoly = st_transform(sppoly, st_crs(crs_lonlat))
 
@@ -156,6 +195,8 @@ bottemp$AUID = st_points_in_polygons(
 
 depths = bottemp[ , .(z=median(z, na.rm=TRUE)), by=.(AUID) ]
 
+
+# create prediction surface
 APS = st_drop_geometry(sppoly)
 setDT(APS)
 
@@ -196,8 +237,7 @@ if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next
  
 M$dyri = discretize_data( M[["dyear"]], discretizations()[["dyear"]] )
 
-M$cyclic = factor( as.character( M$dyri ), levels =levels(p$cyclic_levels) )   # copy for carstm/INLA
-
+M$cyclic = factor( as.character( M$dyri ), levels =levels(p$cyclic_levels), ordered=TRUE )   # copy for carstm/INLA
 
 # "H" in formula are created on the fly in carstm ... they can be dropped in formula or better priors defined manually
 
@@ -210,34 +250,73 @@ formula = as.formula( paste(
     ' + f( space_time, model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE, group=time_space, hyper=H$bym2, control.group=list(model="ar1", hyper=H$ar1_group) ) '
 ) )
 
- 
- 
+
+
 require(carstm)
 # loadfunctions("carstm")
 
-# required
+# required names for carstm
 p$space_id = sppoly$AUID
 p$time_id = p$yrs
-p$cyclic_id = cyclic_levels
+p$cyclic_id = p$cyclic_levels
 
 
 # takes about 15 minutes
 res = carstm_model( 
     p=p, 
+    data=M,
     sppoly=sppoly,
     posterior_simulations_to_retain=c("predictions", "random_spatial"), 
-    nposteriors=1000,  # 1000 to 5000 would be sufficient to sufficiently sample most distributions: trade-off between file size and information content
-    redo_fit=FALSE,  # if FALSE then reload fit and recompute posteriors 
-    # redo_fit=TRUE,  # if TRUE then compute fit and compute posteriors 
-    # args below are INLA options, passed directly to INLA
+    nposteriors=100,  # 1000 to 5000 would be sufficient to sample most distributions: trade-off between file size and information content
+    # remaining args below are INLA options, passed directly to INLA
     formula=formula,
     family="gaussian",  # inla family
-    data =M,  
-    num.threads="6:2",  # adjust for your machine
-    mc.cores=2,
-    control.inla = list( strategy='laplace' ),  # faster
-    verbose=TRUE 
+    num.threads="2:2",  # adjust for your machine
+    # control.inla = list( strategy='laplace' ),  # faster
+    verbose=TRUE s
 )    
+
+(res$summary)
+
+```
+
+This provides the following as a solution:
+
+```r
+Deviance Information Criterion (DIC) ...............: 73073.06
+Deviance Information Criterion (DIC, saturated) ....: 19974.04
+Effective number of parameters .....................: 556.18
+
+Watanabe-Akaike information criterion (WAIC) ...: 73045.28
+Effective number of parameters .................: 525.95
+
+Marginal log-Likelihood:  -28206.58 
+ is computed 
+
+$fixed_effects
+             mean    sd quant0.025 quant0.5 quant0.975          ID
+(Intercept) 6.945 1.917      3.117    6.942      10.77 (Intercept)
+
+$random_effects
+                                                  mean        sd quant0.025
+SD Gaussian observations                       1.56343 8.129e-03    1.54708
+SD time                                        0.67932 1.061e-01    0.47326
+SD cyclic                                      0.27732 2.072e-01    0.09053
+SD space                                       0.71235 3.058e-02    0.65377
+SD inla.group(z, method = "quantile", n = 11)  0.89586 2.362e-01    0.48495
+SD space_time                                  0.22435 2.039e-02    0.18339
+Rho for time                                   0.04661 1.683e-01   -0.28778
+GroupRho for space_time                       -0.99999 3.855e-05   -1.00000
+Phi for space                                  0.80607 3.836e-02    0.71885
+Phi for space_time                             0.31895 1.739e-01    0.04290
+
+```
+
+The variance components are dominated by overall background residual errors. Space, time and depth are relatively important as well (SD ~ 1/2 of residual error). Autocorrelation in space (Phi for space) is relatively high with about 80% of the spatial variability associated with neighbourhood effects. Temporal autocorrelation is very poor both overall (Rho for time) and in fact for space-time, actually -1! Suggesting extremely high temporal variability that the 10 units of seasonal increments absorbs the autocorrelation reasonably well, leaving variations that are operating on other temporal scales (periodicities).  
+
+And finally a few plots and maps.
+
+```r
 
 # to load saved fit
 # can be very large files .. slow 
@@ -252,10 +331,8 @@ plot(fit)
 plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
 
 
-
-# to load saved results summary
-res = carstm_model( p=p, sppoly=sppoly, DS="carstm_modelled_summary")
-( res$summary)
+# to reload saved results summary
+# res = carstm_model( p=p, sppoly=sppoly, DS="carstm_modelled_summary")
  
 ts =  res$random$time 
 plot( mean ~ ID, ts, type="b", ylim=c(-2,2), lwd=1.5, xlab="year")
@@ -269,13 +346,34 @@ lines( quant0.025 ~ID, ts, col="gray", lty="dashed")
 lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
 
 
+# and some maps:
+map_centre = c( (p$lon0+p$lon1)/2 - 0.5, (p$lat0+p$lat1)/2   )
+map_zoom = 7
+ 
+# persistent spatial effects
+tmout = carstm_map(  res=res, vn=c( "random", "space", "combined" ), 
+    sppoly=sppoly,
+    breaks=seq(-5, 5, by=2), 
+    palette="-RdYlBu",
+    plot_elements=c( "isobaths",  "compass", "scale_bar", "legend" ),
+    # tmap_zoom= c(map_centre, map_zoom),
+    title="Bottom temperature spatial effects (Celsius)"
+)
+tmout
 
-    
+```
 
+The latter spatial effect looks like this:
+
+![](temperature_spatialeffect.png)
+
+
+Predictions can be accessed as well:
+```r
 map_centre = c( (p$lon0+p$lon1)/2 - 0.5, (p$lat0+p$lat1)/2   )
 map_zoom = 7
 
-# maps of some of the results
+# maps of some of the results .. this brings a webbrowser interface
 tmatch="2010"
 umatch="0.75"  # == 0.75*12 = 9 (ie. Sept)  
 
@@ -289,17 +387,10 @@ tmout = carstm_map(  res=res, vn="predictions", tmatch=tmatch, umatch=umatch,
 )
 tmout
 
-# persistent spatial effects
-tmout = carstm_map(  res=res, vn=c( "random", "space", "combined" ), 
-    sppoly=sppoly,
-    breaks=seq(-5, 5, by=2), 
-    palette="-RdYlBu",
-    plot_elements=c( "isobaths",  "compass", "scale_bar", "legend" ),
-    tmap_zoom= c(map_centre, map_zoom),
-    title="Bottom temperature spatial effects (Celsius)"
-)
-tmout
+```
+![](temperature_prediction.png)
 
-
+To remove random effects and leave the "latent signals" will require some more work but relatively straightforward to do as you have posterior samples to work with...
 
 # finished
+

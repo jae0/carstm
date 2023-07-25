@@ -1,6 +1,7 @@
 
-# Example
+# Example comparing model formulation with INLA, and checking they are the same as with CARSTM 
 
+```r
   # Prepare data:
   require(INLA)
 
@@ -36,8 +37,11 @@
     inla.mode="experimental"
   )
   summary(fit2)
+```
 
+Checking some plots
 
+```r
   # random effects are nearly identical 
   dev.new()
   par( mfrow=c(1,2))
@@ -61,8 +65,10 @@
 
   dev.new()
   hist(fit$summary.fitted.values$mean)
+```
 
 
+```r 
   # Same analysis, now using carstm 
   # there are extra steps as a data structure and options need to be specified 
   # and posterior sims to compute combined spatial (and spatiotemporal) effects
@@ -261,4 +267,5 @@
 
   }
 
+```
 
