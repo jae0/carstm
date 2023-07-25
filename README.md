@@ -1,6 +1,6 @@
 # carstm
 
-(C)onditional (A)uto(R)egressive (S)pace(T)ime (M)odels
+*C*onditional *A*uto*R*egressive *S*pace*T*ime *M*odels
 Conditional AutoRegressive ("CAR") models are just about th simplest possible way of accounting for spatial autorcorrelation. It is essentially the analogue of the temporal ARIMA type models but in space. It is arguably even simpler as the units of space are discrete areal units (arbitrary polygons). Originally it was formulated in lattice form and related to the Ising models in physics. Its use is most prevalent in epidemiology made accessible by the original Besag-York-Mollie paper, Leroux and Riebler, and many others.
 
 This project is basically an accounting front-end to the computational engines (INLA, sf) to facillitate the computing, storage and access to the results of these models. Relatively simple to do for a simple spatial model without carstm, however, in spatio-temporal models, a bit of a challenge. This tool is mostly written to facilitate my work flow to estimate relationships and predict in a Bayesian spato-temporal context, variables such as depth (aegis.bathymetry), substrate grain size (aegis.substrate), bottom temperature (aegis.temperature), species composition (aegis.speciescomposition), snow crab numerical abundance, size and probability of observation to estimate viable habitat (bio.snowcrab), and extentions to cod abundance, number, size and habitat (aegis.survey), etc.. Many other variables require spatiotemporal modelling (e.g., physiological condition of fish, system-level metabolism) and are planned.  
