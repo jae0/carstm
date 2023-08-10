@@ -38,27 +38,35 @@ parse_formula = function( fm ) {
 
       dimensionality=NA
 
+      # determine main variable type
       if (!grps) {
-        if (grepl("^space", vnr)) dimensionality = "s"
-        if (grepl("^time", vnr))  dimensionality = "t"
-        if (grepl("^cyclic", vnr))  dimensionality = "c"
+        if (grepl("^space", vnr))  dimensionality = "s"
+        if (grepl("^time", vnr))   dimensionality = "t"
+        if (grepl("^cyclic", vnr)) dimensionality = "c"
       } 
 
       if (grps) {
+        # group variable: 
         grpvn = strsplit( vars[rt[i]], "[[:space:]]+group[[:space:]]*[=]" )[[1]][[2]]
         grpvn = strsplit( grpvn, ",")[[1]][[1]]
         grpvn = gsub( " ", "", grpvn)
 
-        if (grepl("^space", vnr) & grepl("^time", grpvn) ) dimensionality = "st"
-        if (grepl("^time", vnr) & grepl("^space", grpvn) )  dimensionality = "ts"
+        if (grepl("^space", vnr) & grepl("^time", grpvn) )   dimensionality = "st"
         if (grepl("^space", vnr) & grepl("^cyclic", grpvn) ) dimensionality = "sc"
+        
+        if (grepl("^time", vnr) & grepl("^space", grpvn) )   dimensionality = "ts"
         if (grepl("^time", vnr) & grepl("^cyclic", grpvn) )  dimensionality = "tc"
+
+        if (grepl("^cyclic", vnr) & grepl("^space", grpvn) ) dimensionality = "cs"
+        if (grepl("^cyclic", vnr) & grepl("^time", grpvn) )  dimensionality = "ct"
+
       }
 
       random_effects  = rbind( random_effects, cbind( vn=vnr, model=vnm, level="main", dimensionality=dimensionality ) ) 
       
+      # determine group variable type
       if (grps) {
-
+        browser()
         vnrg = strsplit( vars[rt[i]], "[[:space:]]+group[[:space:]]*[=][[:space:]]*" )[[1]][2]
         vnrg = strsplit( vnrg, "[[:space:]]*,")[[1]][1]
         vnrgmod = strsplit( vars[rt[i]], vnrg )[[1]][2]
@@ -66,8 +74,9 @@ parse_formula = function( fm ) {
         vnrgac = strsplit( vnrgac, "," ) [[1]][1]
         vnrgac = gsub( "f[[:space:]]*[(]{1}|[,()=\"\']|[[:space:]]", "",  vnrgac  )
 
-        if (grepl("^space", vnrg)) dimensionality = "s"
-        if (grepl("^time", vnrg))  dimensionality = "t"
+        if (grepl("^space", vnrg))  dimensionality = "s"
+        if (grepl("^time", vnrg))   dimensionality = "t"
+        if (grepl("^cyclic", vnrg)) dimensionality = "c"
 
         random_effects = rbind( random_effects, cbind( vn=vnrg, model=vnrgac, level="group", dimensionality=dimensionality ) )
 
@@ -81,6 +90,7 @@ parse_formula = function( fm ) {
 
         if (grepl("^space", vnrr)) dimensionality = "s"
         if (grepl("^time", vnrr))  dimensionality = "t"
+        if (grepl("^cyclic", vnrr))  dimensionality = "t"
 
         random_effects = rbind( random_effects, cbind( vn=vnrr, model="iid", level="replicate", dimensionality="st" ) )
       }
@@ -96,8 +106,9 @@ parse_formula = function( fm ) {
     for (i in 1:length(ft)) {
 
       dimensionality = NA
-      if (grepl("^space", vars[ft[i]])) dimensionality = "s"
-      if (grepl("^time", vars[ft[i]]))  dimensionality = "t"
+      if (grepl("^space",  vars[ft[i]])) dimensionality = "s"
+      if (grepl("^time",   vars[ft[i]])) dimensionality = "t"
+      if (grepl("^cyclic", vars[ft[i]])) dimensionality = "c"
 
       fixed_effects = rbind( fixed_effects, cbind( vn=vars[ft[i]], model="fixed", level="main", dimensionality=dimensionality ) ) 
     }
@@ -139,12 +150,20 @@ parse_formula = function( fm ) {
   jt2 = which(random_effects$dimensionality=="ts" & random_effects$level=="main")
   if (length(jt2)==1) vnT2 = random_effects$vn[jt2]
 
+  # cyclic copy
+  vnU2 = NULL
+  ju2 = which(random_effects$dimensionality=="cs" & random_effects$level=="main")
+  if (length(ju2)==1) vnU2 = random_effects$vn[ju2]
+
+  # add others as required
+  
   vn = list(
     S = vnS,
     T = vnT,
     U = vnU,
     S2 = vnS2,
-    T2 = vnT2
+    T2 = vnT2,
+    U2 = vnU2
   )
 
 

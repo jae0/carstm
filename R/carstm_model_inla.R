@@ -702,7 +702,9 @@ carstm_model_inla = function(
     O[["summary"]][["direct"]]$dic$local.dic = NULL
     O[["summary"]][["direct"]]$dic$local.p.eff = NULL
     O[["summary"]][["direct"]]$dic$local.dic.sat = NULL
-  
+    O[["summary"]][["direct"]]$dic$family = NULL
+    
+    # extract and back transform where possible
     if (exists( "marginals.fixed", fit)) {
       m = fit$marginals.fixed  # make a copy to do transformations upon
       fi = grep("Intercept", names(m) )
