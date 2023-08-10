@@ -66,7 +66,7 @@ parse_formula = function( fm ) {
       
       # determine group variable type
       if (grps) {
-        browser()
+      
         vnrg = strsplit( vars[rt[i]], "[[:space:]]+group[[:space:]]*[=][[:space:]]*" )[[1]][2]
         vnrg = strsplit( vnrg, "[[:space:]]*,")[[1]][1]
         vnrgmod = strsplit( vars[rt[i]], vnrg )[[1]][2]
@@ -130,42 +130,48 @@ parse_formula = function( fm ) {
   js = which(random_effects$dimensionality=="s" & random_effects$level=="main")
   if (length(js)==1) vnS = random_effects$vn[js]
 
-  # time
-  vnT = NULL
-  jt = which(random_effects$dimensionality=="t" & random_effects$level=="main")
-  if (length(jt)==1) vnT = random_effects$vn[jt]
-
-  # cyclic
-  vnU = NULL
-  ju = which(random_effects$dimensionality=="c" & random_effects$level=="main")
-  if (length(ju)==1) vnU = random_effects$vn[ju]
-
   # space copy
   vnS2 = NULL
   js2 = which(random_effects$dimensionality=="st" & random_effects$level=="main")
   if (length(js2)==1) vnS2 = random_effects$vn[js2]
+  
+  # space copy
+  vnS3 = NULL
+  js3 = which(random_effects$dimensionality=="sc" & random_effects$level=="main")
+  if (length(js3)==1) vnS3 = random_effects$vn[js3]
+
+  # time
+  vnT = NULL
+  jt = which(random_effects$dimensionality=="t" & random_effects$level=="main")
+  if (length(jt)==1) vnT = random_effects$vn[jt]
 
   # time copy
   vnT2 = NULL
   jt2 = which(random_effects$dimensionality=="ts" & random_effects$level=="main")
   if (length(jt2)==1) vnT2 = random_effects$vn[jt2]
 
+
+  # cyclic
+  vnU = NULL
+  ju = which(random_effects$dimensionality=="c" & random_effects$level=="main")
+  if (length(ju)==1) vnU = random_effects$vn[ju]
+
   # cyclic copy
   vnU2 = NULL
   ju2 = which(random_effects$dimensionality=="cs" & random_effects$level=="main")
   if (length(ju2)==1) vnU2 = random_effects$vn[ju2]
 
-  # add others as required
+  # add others as required: ct, tc
   
   vn = list(
     S = vnS,
     T = vnT,
     U = vnU,
     S2 = vnS2,
+    S3 = vnS3,
     T2 = vnT2,
     U2 = vnU2
   )
-
 
   return(
     list(  
