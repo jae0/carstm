@@ -125,6 +125,7 @@ carstm_model_inla = function(
     vT = O[["fm"]]$vn$T
     vU = O[["fm"]]$vn$U
     vS2 = O[["fm"]]$vn$S2 
+    vS3 = O[["fm"]]$vn$S3 
     vT2 = O[["fm"]]$vn$T2
     vU2 = O[["fm"]]$vn$U2
 
@@ -851,7 +852,7 @@ carstm_model_inla = function(
         if (be_verbose)  message("Extracting random effects of covariates, if any" )
         if (exists("debug")) if (is.character(debug)) if ( debug =="random_covariates") browser()
  
-        raneff = setdiff( names( fit$marginals.random ), c(vS, vS2  ) )
+        raneff = setdiff( names( fit$marginals.random ), c(vS, vS2, vS3  ) )
         for (rnef in raneff) {
           m = marginal_summary( fit$marginals.random[[rnef]], invlink=invlink )
           if (test_for_error(m) =="error") {  
