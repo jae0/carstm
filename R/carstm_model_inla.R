@@ -125,7 +125,6 @@ carstm_model_inla = function(
     vT = O[["fm"]]$vn$T
     vU = O[["fm"]]$vn$U
     vS2 = O[["fm"]]$vn$S2 
-    vS3 = O[["fm"]]$vn$S3 
     vT2 = O[["fm"]]$vn$T2
     vU2 = O[["fm"]]$vn$U2
 
@@ -199,23 +198,17 @@ carstm_model_inla = function(
     }
   
     if ( !exists("dimensionality", O) ) {
-      if (any(re$dimensionality %in% c("st", "ts") ) ){
-        if (any(re$dimensionality == "c")) {
-          O[["dimensionality"]] = "space-time-cyclic"
-        } else {
-          O[["dimensionality"]] = "space-time"
-        }
-      } else if (any(re$dimensionality %in% c("st", "ts") ) ){
-          O[["dimensionality"]] = "space-time"
-      } else if (any(re$dimensionality %in% c("t", "s") ) ) {
-        if (length(which( re$dimensionality %in% c("t", "s") ) ) ==2 ) {
-          O[["dimensionality"]] = "space-time"
-        } else if  (length(which( re$dimensionality == "s") ) ==1 ) {
-          O[["dimensionality"]] = "space"
-        } else if  (length(which( re$dimensionality == "t") ) ==1 ) {
-          O[["dimensionality"]] = "time"
-        }
-      }
+      
+      DM = unique( re$dimensionality )
+      dims = c("s", "t", "c")
+
+      RR = setdiff( dims, setdiff( dims, DM ) )
+      SS = paste0(
+        c("space", "time", "cyclic")[match(RR, dims)], 
+        collapse="-"
+      )
+      O[["dimensionality"]] = SS
+
       message("Check dimensionality guessed from formula:  ", O[["dimensionality"]]) 
 
     }
@@ -852,7 +845,7 @@ carstm_model_inla = function(
         if (be_verbose)  message("Extracting random effects of covariates, if any" )
         if (exists("debug")) if (is.character(debug)) if ( debug =="random_covariates") browser()
  
-        raneff = setdiff( names( fit$marginals.random ), c(vS, vS2, vS3  ) )
+        raneff = setdiff( names( fit$marginals.random ), c(vS, vS2  ) )
         for (rnef in raneff) {
           m = marginal_summary( fit$marginals.random[[rnef]], invlink=invlink )
           if (test_for_error(m) =="error") {  

@@ -26,7 +26,8 @@ parse_formula = function( fm ) {
   n_random = length(rt)
 
   random_effects = NULL
-    if (n_random > 0) {
+  
+  if (n_random > 0) {
     for (i in 1:length(rt)) {
       rfac = strsplit( vars[rt[i]], "model[[:space:]]*=" )[[1]]
       vnr = gsub( "inla.group.*[[:space:]]*[(]{1}", " ", rfac[1] )
@@ -135,11 +136,7 @@ parse_formula = function( fm ) {
   js2 = which(random_effects$dimensionality=="st" & random_effects$level=="main")
   if (length(js2)==1) vnS2 = random_effects$vn[js2]
   
-  # space copy
-  vnS3 = NULL
-  js3 = which(random_effects$dimensionality=="sc" & random_effects$level=="main")
-  if (length(js3)==1) vnS3 = random_effects$vn[js3]
-
+ 
   # time
   vnT = NULL
   jt = which(random_effects$dimensionality=="t" & random_effects$level=="main")
@@ -161,14 +158,13 @@ parse_formula = function( fm ) {
   ju2 = which(random_effects$dimensionality=="cs" & random_effects$level=="main")
   if (length(ju2)==1) vnU2 = random_effects$vn[ju2]
 
-  # add others as required: ct, tc
+ 
   
   vn = list(
     S = vnS,
     T = vnT,
     U = vnU,
     S2 = vnS2,
-    S3 = vnS3,
     T2 = vnT2,
     U2 = vnU2
   )
