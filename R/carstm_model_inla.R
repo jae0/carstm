@@ -507,7 +507,9 @@ carstm_model_inla = function(
 
   if (!exists("modelinfo", fit)) stop("modelinfo not in fit, fit object needs to be re-run")
   O = fit$modelinfo
-  
+   
+   browser()
+
   fit$modelinfo = NULL
   gc()
 
