@@ -136,6 +136,10 @@ parse_formula = function( fm ) {
   js2 = which(random_effects$dimensionality=="st" & random_effects$level=="main")
   if (length(js2)==1) vnS2 = random_effects$vn[js2]
   
+  # space copy
+  vnS3 = NULL
+  js3 = which(random_effects$dimensionality=="sc" & random_effects$level=="main")
+  if (length(js3)==1) vnS3 = random_effects$vn[js3]
  
   # time
   vnT = NULL
@@ -166,7 +170,8 @@ parse_formula = function( fm ) {
     U = vnU,
     S2 = vnS2,
     T2 = vnT2,
-    U2 = vnU2
+    U2 = vnU2,
+    S3 = vnS2
   )
 
   return(
