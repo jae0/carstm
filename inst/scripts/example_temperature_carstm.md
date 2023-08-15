@@ -282,7 +282,7 @@ res = carstm_model(
 
 ```
 
-This provides the following as a solution:
+This provides the following as a solution (with only a simple cyclic/seasonal component):
 
 ```r
 Deviance Information Criterion (DIC) ...............: 73073.06
