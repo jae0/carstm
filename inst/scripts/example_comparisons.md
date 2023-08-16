@@ -203,13 +203,13 @@ Checking some plots
 
 
   # carstm_maps of some of the results  .. can't map unitl polygons are coverted to sf format (TODO)
-  tmout = carstm_map(  res=res, vn=c( "predictions" ), 
+  plt = carstm_map(  res=res, vn=c( "predictions" ), 
     space="region",
     plot_elements=c( "compass", "scale_bar", "legend" ),
     main=paste( "Predictions")  
   )
 
-  tmout = carstm_map(  res=res, vn=c( "random", "region", "combined" ), 
+  plt = carstm_map(  res=res, vn=c( "random", "region", "combined" ), 
     space="region",
     plot_elements=c( "compass", "scale_bar", "legend" ),
     main=paste( "Spatial effects")  

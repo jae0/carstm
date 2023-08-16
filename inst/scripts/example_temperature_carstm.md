@@ -163,10 +163,10 @@ plot( sppoly[ "AUID" ] )
 # map surface areas 
 carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="tmap", tmapmode="view" )  # interactive map
 
-carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="simple"  )  # direct plot
+carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="ggplot"  )  # default
 
 # carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="tmap", tmapmode="plot" )  # direct plot
-# carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="ggplot"  )  # direct plot
+# carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="ggplot"  )  # default plot
 
 ```
 
@@ -353,7 +353,7 @@ map_centre = c( (p$lon0+p$lon1)/2 - 0.5, (p$lat0+p$lat1)/2   )
 map_zoom = 7
  
 # persistent spatial effects
-tmout = carstm_map(  res=res, vn=c( "random", "space", "combined" ), 
+plt = carstm_map(  res=res, vn=c( "random", "space", "combined" ), 
     sppoly=sppoly,
     breaks=seq(-5, 5, by=2), 
     palette="-RdYlBu",
@@ -361,7 +361,7 @@ tmout = carstm_map(  res=res, vn=c( "random", "space", "combined" ),
     # tmap_zoom= c(map_centre, map_zoom),
     title="Bottom temperature spatial effects (Celsius)"
 )
-tmout
+plt
 
 ```
 
@@ -379,7 +379,7 @@ map_zoom = 7
 tmatch="2010"
 umatch="0.75"  # == 0.75*12 = 9 (ie. Sept)  
 
-tmout = carstm_map(  res=res, vn="predictions", tmatch=tmatch, umatch=umatch, 
+plt = carstm_map(  res=res, vn="predictions", tmatch=tmatch, umatch=umatch, 
     sppoly=sppoly,
     breaks=seq(-1, 9, by=2), 
     palette="-RdYlBu",
@@ -387,7 +387,7 @@ tmout = carstm_map(  res=res, vn="predictions", tmatch=tmatch, umatch=umatch,
     tmap_zoom= c(map_centre, map_zoom),
     title=paste( "Bottom temperature predictions", tmatch, umatch)  
 )
-tmout
+plt
 
 ```
 ![](temperature_prediction.png)

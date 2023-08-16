@@ -203,21 +203,21 @@
     
     tmap_mode( "view" )
     
-    tmout = NULL
+    plt = NULL
 
   
     # https://leaflet-extras.github.io/leaflet-providers/preview/
     # OpenTopoMap, Stamen.Watercolor, Stamen.Terrain, Stamen.TonerLite, Esri.OceanBasemap 
     if (is.null(background)) {
-      tmout = tmout +
+      plt = plt +
         tm_basemap(leaflet::providers$CartoDB.PositronNoLabels, alpha=0.8) 
   #     tm_basemap(leaflet::providers$Esri.OceanBasemap, alpha=0.9) +
   #     tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, alpha=0.8) 
     } else {
-      tmout = tmout + background
+      plt = plt + background
     }
 
-    tmout = tmout + 
+    plt = plt + 
       tm_shape( sppoly, projection=plot_crs ) +
       tm_polygons( 
         col=vn_label, 
@@ -235,26 +235,26 @@
         alpha =alpha, 
         legend.is.portrait = legend.is.portrait ) +
 
-    tmout = tmout + 
+    plt = plt + 
       tm_facets(ncol = 2, sync = TRUE) 
       # tm_facets(as.layers = TRUE) 
 
     if (!is.null(additional_features) ) {
       # e.g. management lines, etc
-      tmout = tmout + additional_features 
+      plt = plt + additional_features 
     }
 
   
     if ("scale_bar" %in% plot_elements ) {
-      tmout = tmout + 
+      plt = plt + 
         tm_scale_bar( position=scale_bar_position, width=scale_bar_width, text.size=0.7)  
     }
 
-    tmout = tmout + 
+    plt = plt + 
       tm_view(set.view = tmap_zoom, view.legend.position=legend_position  ) +
       tm_layout( legend.text.size=legend.text.size, legend.title.size=legend.title.size, scale=scale, frame=FALSE ) 
 
-    print( tmout ) 
-    return(tmout)
+    print( plt ) 
+    return(plt)
   }
 

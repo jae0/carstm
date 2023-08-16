@@ -19,32 +19,171 @@
     outscale= 1,
     digits = 3,
     transformation=NA,
-    plotmethod="tmap",
+    plotmethod="ggplot",
     tmapmode="view",
     colors=RColorBrewer::brewer.pal(5, "YlOrRd"), # display.brewer.all()
     ...) {
  
 
-    if (plotmethod=="simple") {
-      # really basic map using ggplot  
-      require(sf)
-      require(ggplot2)
-      require(RColorBrewer) 
+    ellps = list(...)
 
+
+    require(sf)
+    require(RColorBrewer) 
+
+    # if toplot not passed, create from res if given
+    if (is.null(toplot)) {
+
+      if (!is.null(res)) {
+        vv = 0
+        toplot = carstm_results_unpack( res, vn )
+
+        vv = which(dimnames(toplot)$stat == stat_var)
+        if ( exists("sppoly", res)) {
+          if (is.null(sppoly)) sppoly = res[["sppoly"]]
+        }
+        if (exists(space, res)) {
+          suid = res[[space]]
+          if (is.null(smatch)) smatch = suid
+          js = match( as.character( sppoly[["AUID"]] ), smatch )  # should match exactly but in case sppoly is a subset
+        }
+        if (exists(time, res)) {
+          tuid = res[[time]]
+          if (is.null(tmatch)) tmatch = tuid
+          jt = match( tmatch, res[[time]] )
+        }
+        if (exists(cyclic, res)) {
+          uuid = res[[cyclic]]
+          if (is.null(umatch)) umatch = uuid
+          ju = match( umatch, res[[cyclic]] )
+        }
+
+        data_dimensionality = ifelse (is.vector(toplot), 1, length(dim(toplot) ) )
+        if (data_dimensionality==2) {
+          toplot = toplot[ js, vv ]  # year only
+        } else if (data_dimensionality==3) {
+          toplot = toplot[ js, jt, vv ]  # year only
+        } else if (data_dimensionality==4) {
+          toplot = toplot[ js, jt, ju, vv ] # year/subyear
+        }
+        if (!is.na(transformation)) toplot = transformation(toplot)
+        if (exists("filter", sppoly)) toplot = toplot * sppoly[["filter"]]
+
+      }
+    }
+
+    # prepare sppoly
+    if (is.null(sppoly)) stop( "sppoly is required")
+
+    # cannot use ifelse as it is not a singleton
+    if( exists("plot_crs", ellps)) {
+      plot_crs = ellps[["plot_crs"]] 
+    } else {
+      plot_crs = st_crs( sppoly )
+    } 
+
+    sppoly = st_transform( sppoly, crs=st_crs(plot_crs) )
+
+    if (!exists(space, sppoly)) {
+      if (exists("AUID", sppoly)) {
+        sppoly[, space] = as.character(sppoly[["AUID"]])
+      } else {
+        sppoly[, space] = as.character(1:nrow(sppoly))
+      }
+    }
+
+
+    # add toplot to sppoly for final plots, but first check in case toplot is xyz data
+    if (!is.null(toplot)) {
+
+      ndata = ifelse ( is.vector(toplot), length(toplot), nrow(toplot) )
+      if (ndata != nrow(sppoly) ) {
+        # must have lon,lat in toplot
+        toplot = st_as_sf( toplot, coords= c("lon", "lat"), crs=st_crs( projection_proj4string("lonlat_wgs84") ) )
+        toplot = st_transform(toplot, st_crs( sppoly ) )
+        toplot_id = st_points_in_polygons( pts=res, polys=sppoly[, space], varname=space )
+        toplot = tapply( toplot[[vn]], toplot_id, aggregate_function, na.rm=TRUE )
+        if (!is.na(transformation)) toplot = transformation(toplot)
+        if (exists("filter", sppoly)) toplot  = toplot  * sppoly[["filter"]]
+      }
+
+      if  ( exists("breaks", ellps)) {
+        breaks = ellps[["breaks"]]
+        er = range(breaks)
+      } else{
+        er = quantile( toplot, probs=probs, na.rm=TRUE )
+        # breaks = signif( seq( er[1], er[2], length.out=7), 2)
+        breaks = pretty( er )
+      }
+
+      toplot[ which(toplot < er[1]) ] = er[1] # set levels higher than max datarange to max datarange
+      toplot[ which(toplot > er[2]) ] = er[2] # set levels higher than max datarange to max datarange
+      toplot = round( toplot, digits=digits)
+
+      if (is.vector(toplot) | ( is.array(toplot) && length(dim(toplot) <2 )) ) {
+        vn_label =  paste(vn, collapse="_")
+        sppoly[, vn_label] = toplot
+      } else {
+        vn_label = colnames(toplot) = paste(paste(vn, collapse="_"), colnames(toplot), sep="_")
+        sppoly = cbind(sppoly, toplot )
+      }
+      vn_label = gsub(" ", ".", vn_label)
+
+    } else {
+      # no data sent, assume it is an element of sppoly
+      if (length(vn) ==1 ) {
+        if (!exists(vn, sppoly)) message( paste("variable: ", vn, "not found in sppoly ..."))
+
+        if (!is.na(transformation)) sppoly[[vn]] = transformation(sppoly[[vn]])
+        if (exists("filter", sppoly)) sppoly[[vn]] = sppoly[[vn]] * sppoly[["filter"]]
+
+        if  ( exists("breaks", ellps)) {
+          breaks = ellps[["breaks"]]
+          er = range(breaks)
+        } else{
+          er = range( sppoly[[vn]],   na.rm=TRUE )
+          breaks = pretty( er )
+        }
       
-      if (!is.null(toplot)) sppoly[[vn]] = toplot
-      if (is.null(vn_label)) vn_label=""
+        if (is.null(vn_label)) vn_label = vn  # this permits direct plotting of sppoly variables (if toplot and res are not sent)
+        sppoly[, vn_label] = round( sppoly[[vn]], digits=digits)
 
-      attributes(sppoly[[vn]]) = NULL  # in case there are "units"
+      }
+    }
 
-      plt = ggplot() +
-        geom_sf( data=sppoly, aes(fill=.data[[vn]], alpha=0.9), colour="gray80" )  +
-        scale_fill_gradientn(name = vn_label, colors=colors, na.value=NA ) +
+    sppoly = st_make_valid(sppoly)
+    attributes(sppoly[[vn_label]]) = NULL
+
+ 
+ 
+    if (plotmethod=="ggplot") {
+ # copy of simple .. elaborate as required ..
+      require(ggplot2)
+
+      title = ifelse( exists("title", ellps), ellps[["title"]],  "" )
+
+      if ( exists("additional_features", ellps) ) {
+        # e.g. management lines, etc
+        plt = ellps[["additional_features"]]  
+      } else {
+        plt = ggplot() 
+      }
+
+      bb = st_bbox(sppoly)
+      xr = c(bb["xmin"], bb["xmax"])
+      yr = c(bb["ymin"], bb["ymax"])
+
+      plt = plt +
+        geom_sf( data=sppoly, aes(fill=.data[[vn_label]], alpha=0.6), colour="gray90" )  +
+        scale_fill_gradientn(name = vn_label, 
+          limits=range(breaks),
+          colors=alpha(colors, alpha=0.9) , na.value=NA ) +
         guides(fill = guide_colorbar(
-          title.theme = element_text(size = 20),
-          label.theme = element_text(size = 18) ) ) +
-        scale_alpha(range = c(0.9, 0.95), guide = "none") +
-        labs(title=vn) +
+          title.theme = element_blank(), # element_text(size = 20),
+          label.theme = element_text(size = 20) ) ) +
+        scale_alpha(range = c(0.85, 0.95), guide = "none") +
+        labs( caption = title)+
+        coord_sf(xlim =xr, ylim =yr, expand = FALSE)+
         theme(
           axis.line=element_blank(),
           axis.text.x=element_blank(),
@@ -52,68 +191,33 @@
           axis.ticks=element_blank(),
           axis.title.x=element_blank(),
           axis.title.y=element_blank(), 
-          legend.position=c( 0.1, 0.8 ),
-          plot.title = element_text(size=22, hjust=0.05, vjust = -2),
+          legend.position=c( 0.925, 0.15 ),
+          legend.title = element_blank(),
           panel.background=element_blank(),
           panel.border=element_blank(),
           panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(),
-          plot.background=element_blank() )
+          plot.background=element_blank(), 
+          plot.caption = element_text(hjust = 0, size = 14)
+        ) 
+        
 
-        if ( !is.null(outfilename) ) {
+      if ( !is.null(outfilename) ) {
           if (!file.exists( dirname(outfilename) ))  dir.create( dirname(outfilename), recursive=TRUE, showWarnings=FALSE )
           print(plt)
           ggsave( outfilename )
           # ggsave( outfilename, width=width_pts, height=height_pts, asp=asp, dpi=pres, scale=scale*outscale)
-        }
-
+          print(outfilename)
+      }
       return(plt)
     }
 
-
-    if (plotmethod=="ggplot") {
- # copy of simple .. elaborate as required ..
-      require(sf)
-      require(ggplot2)
-      require(RColorBrewer) 
-
-      if (!is.null(toplot)) sppoly[[vn]] = toplot
-      if (is.null(vn_label)) vn_label=""
-
-      attributes(sppoly[[vn]]) = NULL
-
-      plt = ggplot() +
-        geom_sf( data=sppoly, aes(fill=.data[[vn]], alpha=0.9), colour="gray80" )  +
-        scale_fill_gradientn(name = vn_label, colors=colors, na.value=NA ) +
-        guides(fill = guide_colorbar(
-          title.theme = element_text(size = 20),
-          label.theme = element_text(size = 18) ) ) +
-        scale_alpha(range = c(0.9, 0.95), guide = "none") +
-        labs(title=vn) +
-        theme(
-          axis.line=element_blank(),
-          axis.text.x=element_blank(),
-          axis.text.y=element_blank(),
-          axis.ticks=element_blank(),
-          axis.title.x=element_blank(),
-          axis.title.y=element_blank(), 
-          legend.position=c( 0.1, 0.8 ),
-          panel.background=element_blank(),
-          panel.border=element_blank(),
-          panel.grid.major=element_blank(),
-          panel.grid.minor=element_blank(),
-          plot.background=element_blank() )
-  
-    }
+    
 
     if (plotmethod=="tmap") {
 
       # thin wrapper around tmap plot mode
 
-      ellps = list(...)
-
-
-      require(sf)
       require(tmap)
 
       id = ifelse( exists("id", ellps), ellps[["id"]], "space" )
@@ -174,127 +278,6 @@
       legend.is.portrait = ifelse( exists("legend.is.portrait", ellps),   ellps[["legend.is.portrait"]],  TRUE )
   
 
-      # if toplot not passed, create from res if given
-      if (is.null(toplot)) {
-
-        if (!is.null(res)) {
-          vv = 0
-          toplot = carstm_results_unpack( res, vn )
-
-          vv = which(dimnames(toplot)$stat == stat_var)
-          if ( exists("sppoly", res)) {
-            if (is.null(sppoly)) sppoly = res[["sppoly"]]
-          }
-          if (exists(space, res)) {
-            suid = res[[space]]
-            if (is.null(smatch)) smatch = suid
-            js = match( as.character( sppoly[["AUID"]] ), smatch )  # should match exactly but in case sppoly is a subset
-          }
-          if (exists(time, res)) {
-            tuid = res[[time]]
-            if (is.null(tmatch)) tmatch = tuid
-            jt = match( tmatch, res[[time]] )
-          }
-          if (exists(cyclic, res)) {
-            uuid = res[[cyclic]]
-            if (is.null(umatch)) umatch = uuid
-            ju = match( umatch, res[[cyclic]] )
-          }
-
-          data_dimensionality = ifelse (is.vector(toplot), 1, length(dim(toplot) ) )
-          if (data_dimensionality==2) {
-            toplot = toplot[ js, vv ]  # year only
-          } else if (data_dimensionality==3) {
-            toplot = toplot[ js, jt, vv ]  # year only
-          } else if (data_dimensionality==4) {
-            toplot = toplot[ js, jt, ju, vv ] # year/subyear
-          }
-          if (!is.na(transformation)) toplot = transformation(toplot)
-          if (exists("filter", sppoly)) toplot = toplot * sppoly[["filter"]]
-
-        }
-      }
-
-      # prepare sppoly
-      if (is.null(sppoly)) stop( "sppoly is required")
-
-      # cannot use ifelse as it is not a singleton
-      if( exists("plot_crs", ellps)) {
-        plot_crs = ellps[["plot_crs"]] 
-      } else {
-        plot_crs = st_crs( sppoly )
-      } 
-  
-      sppoly = st_transform( sppoly, crs=st_crs(plot_crs) )
-
-      if (!exists(space, sppoly)) {
-        if (exists("AUID", sppoly)) {
-          sppoly[, space] = as.character(sppoly[["AUID"]])
-        } else {
-          sppoly[, space] = as.character(1:nrow(sppoly))
-        }
-      }
-
-
-      # add toplot to sppoly for final plots, but first check in case toplot is xyz data
-      if (!is.null(toplot)) {
-
-        ndata = ifelse ( is.vector(toplot), length(toplot), nrow(toplot) )
-        if (ndata != nrow(sppoly) ) {
-          # must have lon,lat in toplot
-          toplot = st_as_sf( toplot, coords= c("lon", "lat"), crs=st_crs( projection_proj4string("lonlat_wgs84") ) )
-          toplot = st_transform(toplot, st_crs( sppoly ) )
-          toplot_id = st_points_in_polygons( pts=res, polys=sppoly[, space], varname=space )
-          toplot = tapply( toplot[[vn]], toplot_id, aggregate_function, na.rm=TRUE )
-          if (!is.na(transformation)) toplot = transformation(toplot)
-          if (exists("filter", sppoly)) toplot  = toplot  * sppoly[["filter"]]
-        }
-
-        if  ( exists("breaks", ellps)) {
-          breaks = ellps[["breaks"]]
-          er = range(breaks)
-        } else{
-          er = quantile( toplot, probs=probs, na.rm=TRUE )
-          # breaks = signif( seq( er[1], er[2], length.out=7), 2)
-          breaks = pretty( er )
-        }
-
-        toplot[ which(toplot < er[1]) ] = er[1] # set levels higher than max datarange to max datarange
-        toplot[ which(toplot > er[2]) ] = er[2] # set levels higher than max datarange to max datarange
-        toplot = round( toplot, digits=digits)
-
-        if (is.vector(toplot) | ( is.array(toplot) && length(dim(toplot) <2 )) ) {
-          vn_label =  paste(vn, collapse="_")
-          sppoly[, vn_label] = toplot
-        } else {
-          vn_label = colnames(toplot) = paste(paste(vn, collapse="_"), colnames(toplot), sep="_")
-          sppoly = cbind(sppoly, toplot )
-        }
-        vn_label = gsub(" ", ".", vn_label)
-
-      } else {
-        # no data sent, assume it is an element of sppoly
-        if (length(vn) ==1 ) {
-          if (!exists(vn, sppoly)) message( paste("variable: ", vn, "not found in sppoly ..."))
-
-          if (!is.na(transformation)) sppoly[[vn]] = transformation(sppoly[[vn]])
-          if (exists("filter", sppoly)) sppoly[[vn]] = sppoly[[vn]] * sppoly[["filter"]]
-
-          if  ( exists("breaks", ellps)) {
-            breaks = ellps[["breaks"]]
-            er = range(breaks)
-          } else{
-            er = range( sppoly[[vn]],   na.rm=TRUE )
-            breaks = pretty( er )
-          }
-        
-          if (is.null(vn_label)) vn_label = vn  # this permits direct plotting of sppoly variables (if toplot and res are not sent)
-          sppoly[, vn_label] = round( sppoly[[vn]], digits=digits)
-
-        }
-      }
-
-      sppoly = st_make_valid(sppoly)
 
       tmap_mode( tmapmode )
 
