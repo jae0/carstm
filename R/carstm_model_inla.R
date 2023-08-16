@@ -1403,7 +1403,7 @@ carstm_model_inla = function(
             message( "failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
             m = fit$summary.fitted.values[, inla_tokeep ]
             names(m) = tokeep
-          } 
+        } 
 
         W = array( NA, 
           dim=c( O[["space_n"]],  length(names(m)) ),  
@@ -1613,7 +1613,6 @@ carstm_model_inla = function(
   O[["matchfrom"]] = NULL
 
   
-
   if (is.null(fn_res)) {
     message( "Saving results summary as a sublist in fit: fit$results : \n", fn_fit)
     message( "Return object is 'fit$results' (and not 'fit')")

@@ -129,8 +129,8 @@ p$spatial_domain = "halifax"
 p$areal_units_proj4string_planar_km =  p$aegis_proj4string_planar_km   # coord system to use for areal estimation and gridding for carstm
 p$areal_units_type= "tesselation" 
 p$areal_units_constraint_ntarget = length(p$yrs)   # n time slices req in each au
-p$areal_units_constraint_nmin = 5    # n time slices req in each au
-p$areal_units_resolution_km = 1   # starting resolution .. if using tesselation/ otherwise grid size ()
+p$areal_units_constraint_nmin = 10 # n time slices req in each au
+p$areal_units_resolution_km = 1    # starting resolution .. if using tesselation/ otherwise grid size ()
 p$areal_units_overlay = "none"  
 p$areal_units_timeperiod = "none"   # only relevent for groundfish polys
 
