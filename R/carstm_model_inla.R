@@ -253,7 +253,7 @@ carstm_model_inla = function(
       if (!exists("space_id", O)) stop( "space_id could not be determined from data")
       if (!exists("space_id", attributes(sppoly)) ) attributes(sppoly)$space_id = O[["space_id"]]  # copy as attribute in case
       O[["space_n"]] = length( O[[ "space_id" ]] )
-      O[["space_name"]] = attributes(sppoly)$space_name  # better formatted areal unit names (for reporting or plotting)
+      O[["space_name"]] = attributes(sppoly)$space_id  # better formatted areal unit names (for reporting or plotting)
       
       if ( is.null(O[["fm"]][["vn"]][["T"]]) ) {
         # force to carry a "time" to make dimensions of predictions simpler to manipulate 
@@ -511,6 +511,9 @@ carstm_model_inla = function(
    
   fit$modelinfo = NULL
   gc()
+
+
+  if (exists("debug")) if (is.character(debug)) if (debug=="extract") browser()
 
 
   if (exists("data_transformation", O))  {

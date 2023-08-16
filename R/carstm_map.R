@@ -161,6 +161,12 @@
       require(ggplot2)
 
       title = ifelse( exists("title", ellps), ellps[["title"]],  "" )
+      
+      if ( exists("legend.position", ellps)) {
+        legend.position = ellps[["legend.position"]] 
+      } else {
+        legend.position = c( 0.925, 0.15 ) 
+      }
 
       if ( exists("additional_features", ellps) ) {
         # e.g. management lines, etc
@@ -191,7 +197,7 @@
           axis.ticks=element_blank(),
           axis.title.x=element_blank(),
           axis.title.y=element_blank(), 
-          legend.position=c( 0.925, 0.15 ),
+          legend.position=legend.position,
           legend.title = element_blank(),
           panel.background=element_blank(),
           panel.border=element_blank(),

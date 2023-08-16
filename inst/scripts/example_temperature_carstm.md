@@ -10,19 +10,21 @@ The example data is bounded by longitudes (-65, -62) and lattitdes (45, 43). It 
 ```r
 
 set.seed(12345)
-
-require(carstm)  # data is found in this project
  
 bottemp = readRDS( system.file("extdata", "aegis_spacetime_test.RDS", package="carstm" ) )   
+bottemp$yr = year(bottemp$date )
+
 # bottemp = bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
+if (0) {
+    # check data
+    plot(lat ~ -lon, bottemp)
+    str(bottemp)
 
-plot(lat ~ -lon, bottemp)
-str(bottemp)
+    # NOTE: t=temperature (C); z=depth (m); tiyr=decimal year
 
-# NOTE: t=temperature (C); z=depth (m); tiyr=decimal year
-
-hist( bottemp$tiyr )  # decimal date
-summary(bottemp)
+    hist( bottemp$tiyr )  # decimal date
+    summary(bottemp)
+}
 ```
 
 ---
@@ -32,11 +34,18 @@ summary(bottemp)
 To begin analysis using [CARSTM](https://github.com/jae0/carstm), we bring in the required library dependencies.
 
 ```r
+
 # required R library list
-standard_libs = c( "colorspace", "lubridate",  "lattice",  "parallel", "sf", "GADMTools", "INLA" , "data.table" )
+standard_libs = c( "colorspace", "lubridate",  "lattice",  "parallel", "sf", "GADMTools", "INLA" , "data.table", "ggplot2", "RColorBrewer" )
 
 # aegis.* libs (found on github.com/jae0)
-local_libs = c("aegis", "aegis.bathymetry", "aegis.coastline",  "aegis.polygons", "aegis.substrate", "aegis.temperature", "aegis.survey" ) 
+local_libs = c(
+    "aegis",   # basic data manipulations
+    "aegis.coastline",  # handling coastline  
+    "aegis.polygons",    # handling polygons
+    "aegis.temperature",  # handing temperature data 
+    "carstm"  # for computation of model
+) 
 
 # required parameter settings:
 p = list()
@@ -98,7 +107,7 @@ p$nw = 10 # default value of 10 time steps number of intervals in time within a 
 p$tres = 1/ p$nw # time resolution .. predictions are made with models that use seasonal components
 p$dyears = (c(1:p$nw)-1) / p$nw # intervals of decimal years... fractional year breaks
 p$dyear_centre = p$dyears[ trunc(p$nw/2) ] + p$tres/2
-p$cyclic_levels = factor(p$dyears + diff(p$dyears)[1]/2, ordered=TRUE )
+p$cyclic_levels = p$dyears + diff(p$dyears)[1]/2 
 
 p$timezone="America/Halifax" 
 p$prediction_dyear = lubridate::decimal_date( lubridate::ymd("0000/Sep/01")) # used for creating timeslices and predictions  .. needs to match the values in aegis_parameters()
@@ -148,26 +157,19 @@ Next we create the areal units. If desired, these can be made manually using an 
 
 ```r
 # create polygon  :: requires aegis, aegis.coastline, aegis.polygons
+xydata = as.data.frame(bottemp[,.(lon, lat, yr) ]), 
 
-sppoly = areal_units( 
-    p=p, 
-    xydata=setDF(bottemp[,.(lon, lat, yr=floor(tiyr) ) ]), 
-    areal_units_directory=p$datadir,
-    verbose=TRUE 
-) 
+sppoly = areal_units( p=p, xydata=xydata, areal_units_directory=p$datadir, verbose=TRUE ) 
     
 # sppoly = try( areal_units( p=p, areal_units_directory=p$datadir, redo=FALSE ) )
 
 plot( sppoly[ "AUID" ] ) 
 
 # map surface areas 
-carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="tmap", tmapmode="view" )  # interactive map
+carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="tmap", tmapmode="view", legend.position=c("LEFT", "top" ) )  # interactive map 
 
-carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="ggplot"  )  # default
-
-# carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="tmap", tmapmode="plot" )  # direct plot
-# carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="ggplot"  )  # default plot
-
+carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="ggplot", legend.position=c(0.1, 0.9)  )  # default fast plot 
+ 
 ```
 
 Which gives the following representation, based upon data density:
@@ -224,6 +226,7 @@ M$AUID  = as.character(M$AUID)  # revert to factors -- should always be a charac
 
 M$space = match( M$AUID, sppoly$AUID) # require numeric index matching order of neighbourhood graph
 M$space_time = M$space  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
+M$space_cyclic = M$space  # copy for space_time component (INLA does not like to 
 
 M$time = trunc( M$tiyr)  
 M$time_space = match( M$time, p$yrs ) # group index must be numeric/integer when used as groups 
@@ -235,9 +238,10 @@ M$tiyr = NULL
 ii = which( M$dyear > 1) 
 if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next year
  
-M$dyri = discretize_data( M[["dyear"]], discretizations()[["dyear"]] )
+dylev = discretize_data( p$cyclic_levels, seq( 0, 1, by=0.1 ) )
 
-M$cyclic = as.numeric( p$cyclic_levels )  # easier to deal with numeric indices 
+M$cyclic = match( M$dyri, dylev )  # easier to deal with numeric indices 
+
 M$cyclic_space = M$cyclic # copy cyclic for space - cyclic component .. for groups, must be numeric index
  
 # "H" in formula are created on the fly in carstm ... they can be dropped in formula or better priors defined manually
@@ -252,10 +256,7 @@ formula = as.formula( paste(
     ' + f( space_time, model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE, group=time_space, hyper=H$bym2, control.group=list(model="ar1", hyper=H$ar1_group) ) '
 ) )
 
-
-
-require(carstm)
-# loadfunctions("carstm")
+ 
 
 # required names for carstm
 p$space_id = sppoly$AUID
@@ -273,9 +274,9 @@ res = carstm_model(
     # remaining args below are INLA options, passed directly to INLA
     formula=formula,
     family="gaussian",  # inla family
-    num.threads="2:2",  # adjust for your machine
+    num.threads="5:2",  # adjust for your machine
     # control.inla = list( strategy='laplace' ),  # faster
-    verbose=TRUE s
+    verbose=TRUE 
 )    
 
 (res$summary)
