@@ -218,7 +218,10 @@ carstm_model_inla = function(
       # this is about model data inputs not dimensionality of outputs
 
       if (is.null(sppoly)) if (exists("sppoly", O)) sppoly = O$sppoly
-      if (is.null(sppoly)) if (exists("areal_units")) sppoly = areal_units( O ) 
+      if (is.null(sppoly)) if (exists("areal_units")) {
+        sppoly = areal_units( O )   
+        if (!exists(sppoly)) sppoly = NULL
+      }
       if (is.null(sppoly)) stop( "sppoly is required") 
       
       # test to see if sppoly has been altered:
@@ -252,8 +255,19 @@ carstm_model_inla = function(
 
       if (!exists("space_id", O)) stop( "space_id could not be determined from data")
       if (!exists("space_id", attributes(sppoly)) ) attributes(sppoly)$space_id = O[["space_id"]]  # copy as attribute in case
+      
       O[["space_n"]] = length( O[[ "space_id" ]] )
-      O[["space_name"]] = attributes(sppoly)$space_id  # better formatted areal unit names (for reporting or plotting)
+
+      # better formatted areal unit names (for reporting or plotting) (outside of carstm))
+      if (!exists("space_name", O)) {
+        if (exists("AUID_label", sppoly)) {
+          O[["space_name"]] = sppoly[["AUID_label"]]
+        } else if (exists("space_name", attributes(sppoly))) {
+          O[["space_name"]] = attributes(sppoly)$space_name  
+        } else {
+          O[["space_name"]] = O[["space_id"]]
+        }
+      }
       
       if ( is.null(O[["fm"]][["vn"]][["T"]]) ) {
         # force to carry a "time" to make dimensions of predictions simpler to manipulate 
@@ -278,6 +292,7 @@ carstm_model_inla = function(
     }
 
     if ( !is.null(O[["fm"]][["vn"]][["T"]])  | !is.null(O[["fm"]][["vn"]][["U"]])  ) {
+      # carstm internal ID
       if (!is.null(time_id)) {
         O[["time_id"]] = time_id
         time_id = NULL
@@ -285,21 +300,46 @@ carstm_model_inla = function(
         if (exists("yrs", O)) O[["time_id"]] = O[["yrs"]]
       }
       if (!exists("time_id", O)) stop( "time_id or yrs need to be provided")
+      
       O[["time_n"]] = length( O[[ "time_id" ]] )
-      O[["time_name"]]  = as.character(O[[ "time_id" ]] ) # for plot labels, etc .. time gets swapped out for time index later
+
+      # for plot labels, etc .. time (year) gets swapped out for time index (outside of carstm)
+      if (!exists("time_name", O)) {
+        if (exists("yrs", O)) {
+          O[["time_name"]] = as.character(O[[ "yrs" ]] )
+        } else {
+          O[["time_name"]] = as.character(O[[ "time_id" ]] ) 
+        }  
+      }
   
       # sub-annual time 
       if (!is.null(O[["fm"]][["vn"]][["U"]]) )  {
+        # carstm internal ID
         if (!is.null(cyclic_id)) {
           O[["cyclic_id"]] = cyclic_id
           cyclic_id = NULL
         } else {
-          if (exists("cyclic_levels", O)) O[["cyclic_id"]] = O[["cyclic_levels"]]
+          if (exists("cyclic_levels", O)) {
+            if (is.factor(O[["cyclic_levels"]])) {
+              O[["cyclic_id"]] = as.numeric(O[["cyclic_levels"]])
+            } else {
+              O[["cyclic_id"]] = O[["cyclic_levels"]]
+            }
+          }
         }
         if (!exists("cyclic_id", O)) stop( "cyclic_id or cyclic_levels need to be provided")
+        
         O[["cyclic_n"]] = length( O[[ "cyclic_id" ]] )
-        O[["cyclic_name"]] = as.character(O[[ "cyclic_id" ]] ) # for plot labels, etc .. time gets swapped out for time index later
-       }
+
+        # for plot labels, etc .. season (time of year) gets swapped out for cyclic index   (outside of carstm)
+        if (!exists("cyclic_name", O)) {
+          if (exists("cyclic_levels", O)) {
+            O[["cyclic_name"]] = as.character(O[[ "cyclic_levels" ]] )
+          } else {
+            O[["cyclic_name"]] = as.character(O[[ "cyclic_id" ]] ) 
+          }  
+        }
+      }
     } 
 
     ii = which(is.finite(inla_args[["data"]][[vY]]))
@@ -1360,9 +1400,10 @@ carstm_model_inla = function(
 
     # prepapre prediction simulations (from joint posteriors)
     ptx = "^Predictor"
-    npredictions = diff(O[["predictions_range"]])+1 
  
     preds = O[["predictions_range"]][1]:O[["predictions_range"]][2]  
+    npredictions = length(preds)
+     
     pkk = inla_get_indices(ptx, tag=tag, start=start, len=length)
     pkk = unlist(pkk)[preds]
     predictions = array(NA, dim=c( npredictions, nposteriors  ) )

@@ -129,26 +129,24 @@ p$spatial_domain = "halifax"
 p$areal_units_proj4string_planar_km =  p$aegis_proj4string_planar_km   # coord system to use for areal estimation and gridding for carstm
 p$areal_units_type= "tesselation" 
 p$areal_units_constraint_ntarget = length(p$yrs)   # n time slices req in each au
-p$areal_units_constraint_nmin = 10 # n time slices req in each au
-p$areal_units_resolution_km = 1    # starting resolution .. if using tesselation/ otherwise grid size ()
+p$areal_units_constraint_nmin = 5 # n time slices req in each au
+p$areal_units_resolution_km = 3    # starting resolution .. if using tesselation/ otherwise grid size ()
 p$areal_units_overlay = "none"  
 p$areal_units_timeperiod = "none"   # only relevent for groundfish polys
 
 p$tus="yr" 
 
-p$fraction_todrop = 0.05 
-p$fraction_cv = 1.0   # approx poisson (binomial)
+p$fraction_todrop = 0.025
+p$fraction_cv = 0.9   # approx poisson (binomial)
 p$fraction_good_bad = 0.9 
-p$nAU_min = 30 
+p$nAU_min = 100   # min total number of areal units
 
 
 # carstm-specific parameters
 p$project_class = "carstm"
 p$carstm_model_label = "test_basic_form"
 p$carstm_modelengine = "inla"   # {model engine}.{label to use to store}
-p$carstm_inputs_prefilter = "aggregated" 
-p$carstm_inputs_prefilter_n = 100  # only used for "sampled"
-
+ 
 ```
 
 ## Areal units
@@ -157,9 +155,9 @@ Next we create the areal units. If desired, these can be made manually using an 
 
 ```r
 # create polygon  :: requires aegis, aegis.coastline, aegis.polygons
-xydata = as.data.frame(bottemp[,.(lon, lat, yr) ]), 
+xydata = as.data.frame(bottemp[,.(lon, lat, yr) ]) 
 
-sppoly = areal_units( p=p, xydata=xydata, areal_units_directory=p$datadir, verbose=TRUE ) 
+sppoly = areal_units( p=p, xydata=xydata, areal_units_directory=p$datadir, spbuffer=10, n_iter_drop=3, sa_threshold_km2=9, verbose=TRUE, redo=TRUE ) 
     
 # sppoly = try( areal_units( p=p, areal_units_directory=p$datadir, redo=FALSE ) )
 
@@ -188,7 +186,7 @@ bottemppts = st_as_sf( bottemp[,c("lon","lat")], coords=c("lon","lat"), crs=crs_
 
 # observations
 bottemp$tag ="observations"
-bottemp$time = year(bottemp$date)
+bottemp$yr = year(bottemp$date)
 bottemp$AUID = st_points_in_polygons(
     pts = bottemppts,
     polys = sppoly[, "AUID"],
@@ -212,10 +210,8 @@ n_aps = nrow(APS)
 APS = cbind( APS[ rep.int(1:n_aps, p$nt), ], rep.int( p$prediction_ts, rep(n_aps, p$nt )) )
 names(APS)[ncol(APS)] = "tiyr"
 APS$timestamp = lubridate::date_decimal( APS$tiyr, tz=p$timezone )
-APS$time = trunc( APS$tiyr)  # year ("time*" is a keyword)
-APS$dyear = APS$tiyr - APS$time 
+APS$yr = trunc( APS$tiyr)  # year ("time*" is a keyword)
  
-
 vvv = intersect( names(APS), names(bottemp) )
 M = rbind( bottemp[, vvv, with=FALSE ], APS[, vvv, with=FALSE ] )
 
@@ -228,20 +224,22 @@ M$space = match( M$AUID, sppoly$AUID) # require numeric index matching order of 
 M$space_time = M$space  # copy for space_time component (INLA does not like to re-use the same variable in a model formula) 
 M$space_cyclic = M$space  # copy for space_time component (INLA does not like to 
 
-M$time = trunc( M$tiyr)  
-M$time_space = match( M$time, p$yrs ) # group index must be numeric/integer when used as groups 
+M$year = trunc( M$tiyr)  
+M$time = match( M$year, p$yrs ) # group index must be numeric/integer when used as groups 
+M$time_space = M$time
 
-M$dyear = M$tiyr - M$time 
-M$tiyr = NULL
+M$dyear = M$tiyr - M$year 
+
+dyri_levels = seq( 0, 1, by=0.1 )
+dylev = discretize_data( p$cyclic_levels, dyri_levels )
+M$dyri = discretize_data( M[["dyear"]], dyri_levels )
 
 # do not separate out as season can be used even if not predicted upon
 ii = which( M$dyear > 1) 
 if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next year
  
-dylev = discretize_data( p$cyclic_levels, seq( 0, 1, by=0.1 ) )
 
 M$cyclic = match( M$dyri, dylev )  # easier to deal with numeric indices 
-
 M$cyclic_space = M$cyclic # copy cyclic for space - cyclic component .. for groups, must be numeric index
  
 # "H" in formula are created on the fly in carstm ... they can be dropped in formula or better priors defined manually
@@ -257,27 +255,49 @@ formula = as.formula( paste(
 ) )
 
  
-
-# required names for carstm
-p$space_id = sppoly$AUID
-p$time_id = p$yrs
-p$cyclic_id = p$cyclic_levels
-
+ 
 
 # takes about 15 minutes
 res = carstm_model( 
     p=p, 
     data=M,
     sppoly=sppoly,
+    space_id = sppoly$AUID,
+    time_id = p$yrs,
+    cyclic_id = 1:p$nw,
     posterior_simulations_to_retain=c("predictions", "random_spatial"), 
     nposteriors=100,  # 1000 to 5000 would be sufficient to sample most distributions: trade-off between file size and information content
     # remaining args below are INLA options, passed directly to INLA
     formula=formula,
     family="gaussian",  # inla family
-    num.threads="5:2",  # adjust for your machine
+    theta=c( -0.670, 0.749, 0.004, 0.981, 0.432, 3.445, 1.702, 2.507, -1.454, 0.454, 3.474, 0.064, -8.755 ),  # start closer to solution to speed up  
+    num.threads="2:1",  # adjust for your machine
+    # if problems, try any of: 
+    # control.inla = list( strategy='adaptive', int.strategy="eb" , optimise.strategy="plain", strategy='laplace', fast=FALSE),
+    # control.inla = list( strategy='adaptive', int.strategy="eb" ),
     # control.inla = list( strategy='laplace' ),  # faster
+    # redo_fit=FALSE,
+    # debug = "predictions", 
     verbose=TRUE 
 )    
+
+# params close to the final
+# maxld= -11080.768 fn= 70 theta= -0.670 0.749 0.004 0.981 0.432 3.445 1.702 2.507 -1.454 0.454 3.474 0.064 -8.755 [7.45, 16.293]
+ 
+ 	    # theta[0] = [Log precision for the Gaussian observations]
+		# theta[1] = [Log precision for time]
+		# theta[2] = [Rho_intern for time]
+		# theta[3] = [Log precision for cyclic]
+		# theta[4] = [Log precision for space_cyclic]
+		# theta[5] = [Logit phi for space_cyclic]
+		# theta[6] = [Group rho_intern for space_cyclic]
+		# theta[7] = [Log precision for space]
+		# theta[8] = [Logit phi for space]
+		# theta[9] = [Log precision for inla.group(z, method = "quantile", n = 11)]
+		# theta[10] = [Log precision for space_time]
+		# theta[11] = [Logit phi for space_time]
+		# theta[12] = [Group rho_intern for space_time]
+
 
 (res$summary)
 
