@@ -254,17 +254,18 @@ formula = as.formula( paste(
     ' + f( space_time, model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE, group=time_space, hyper=H$bym2, control.group=list(model="ar1", hyper=H$ar1_group) ) '
 ) )
 
- 
- 
+
+p$space_name = sppoly$AUID 
+p$space_id = 1:nrow(sppoly)
+p$time_id =  1:p$ny
+p$cyclic_id = 1:p$nw
+
 
 # takes about 15 minutes
 res = carstm_model( 
     p=p, 
     data=M,
     sppoly=sppoly,
-    space_id = sppoly$AUID,
-    time_id = p$yrs,
-    cyclic_id = 1:p$nw,
     posterior_simulations_to_retain=c("predictions", "random_spatial"), 
     nposteriors=100,  # 1000 to 5000 would be sufficient to sample most distributions: trade-off between file size and information content
     # remaining args below are INLA options, passed directly to INLA

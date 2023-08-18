@@ -178,12 +178,12 @@
       bb = st_bbox(sppoly)
       xr = c(bb["xmin"], bb["xmax"])
       yr = c(bb["ymin"], bb["ymax"])
-
+#, colour="gray90"
       plt = plt +
-        geom_sf( data=sppoly, aes(fill=.data[[vn_label]], alpha=0.6), colour="gray90" )  +
+        geom_sf( data=sppoly, aes(fill=.data[[vn_label]], alpha=0.9), lwd=0 )  +
         scale_fill_gradientn(name = vn_label, 
           limits=range(breaks),
-          colors=alpha(colors, alpha=0.9) , na.value=NA ) +
+          colors=alpha(colors, alpha=0.95), na.value=NA ) +
         guides(fill = guide_colorbar(
           title.theme = element_blank(), # element_text(size = 20),
           label.theme = element_text(size = 20) ) ) +

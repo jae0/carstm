@@ -268,6 +268,7 @@ carstm_model_inla = function(
           O[["space_name"]] = O[["space_id"]]
         }
       }
+      if (!exists("space_name", attributes(sppoly)) ) attributes(sppoly)$space_name = O[["space_name"]]  # copy as attribute in case
       
       if ( is.null(O[["fm"]][["vn"]][["T"]]) ) {
         # force to carry a "time" to make dimensions of predictions simpler to manipulate 
@@ -297,7 +298,13 @@ carstm_model_inla = function(
         O[["time_id"]] = time_id
         time_id = NULL
       } else {
-        if (exists("yrs", O)) O[["time_id"]] = O[["yrs"]]
+        if (exists("yrs", O)) {
+          if (is.factor(O[["yrs"]])) {
+            O[["time_id"]] = as.numeric(O[["yrs"]])
+          } else {
+            O[["time_id"]] = as.numeric(O[["yrs"]])  # redundant but make explicit
+          }
+        }
       }
       if (!exists("time_id", O)) stop( "time_id or yrs need to be provided")
       
@@ -698,7 +705,7 @@ carstm_model_inla = function(
  
     S = inla.posterior.sample( nposteriors, fit, add.names=FALSE, num.threads=mc.cores ) 
 
-    message( "Sampling complete ... now reformatting and extracting required components" )
+    message( "Sampling complete ... now reformatting parameters and extracting required components" )
 
     for (z in c("tag", "start", "length") ) assign(z, attributes(S)[[".contents"]][[z]] )  # index info
 

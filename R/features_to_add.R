@@ -36,18 +36,18 @@ features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("ca
     if (!is.null(coastline)) {
       # coastline =  c("us", "canada")s
       data =  st_transform( polygons_rnaturalearth(countries=coastline, xlim=xlim, ylim=ylim), st_crs(plot_crs) )  
-      O = O + geom_sf( data=data, colour="slategray", linewidth=0.5,  fill=NA ) + guides(colour = "colorbar",linewidth = "none", fill="none") # + theme(plot.background=element_blank())
+      O = O + geom_sf( data=data, aes(alpha=0.6), colour="slategray", lwd=0.6, fill=NA ) + guides(colour = "none",lwd = "none", alpha = "none", fill="none") # + theme(plot.background=element_blank())
     }
 
     if (!is.null(isobaths)) {
       data = aegis.bathymetry::isobath_db( depths=isobaths, project_to=plot_crs )
-      O = O + geom_sf( data=data, colour="black", linewidth=0.75) + guides(colour = "colorbar",linewidth = "none")
+      O = O + geom_sf( data=data,  aes(alpha=0.8),  colour="darkgray", lwd=0.6) + guides(colour = "none",lwd = "none", alpha = "none")
     }
 
     if (!is.null(area_lines )) {
       # area_lines = "cfa.regions"
       data = aegis.polygons::area_lines.db( DS=area_lines, returntype="sf", project_to=plot_crs )
-      O = O + geom_sf(data=data, colour="black", linewidth=3.0)  + guides(colour = "colorbar", linewidth = "none")
+      O = O + geom_sf(data=data,  aes(alpha=0.9), colour="darkgray", lwd=2.5)  + guides(colour = "none", lwd = "none", alpha = "none")
     }
 
     O = O + theme_void()
