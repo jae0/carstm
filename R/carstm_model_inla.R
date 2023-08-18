@@ -260,16 +260,20 @@ carstm_model_inla = function(
 
       # better formatted areal unit names (for reporting or plotting) (outside of carstm))
       if (!exists("space_name", O)) {
-        if (exists("AUID_label", sppoly)) {
-          O[["space_name"]] = sppoly[["AUID_label"]]
-        } else if (exists("space_name", attributes(sppoly))) {
+        if (exists("space_name", attributes(sppoly))) {
           O[["space_name"]] = attributes(sppoly)$space_name  
         } else {
           O[["space_name"]] = O[["space_id"]]
         }
       }
       if (!exists("space_name", attributes(sppoly)) ) attributes(sppoly)$space_name = O[["space_name"]]  # copy as attribute in case
-      
+
+      if (exists("AUID_label", sppoly)) {
+        # long name useful in some cases (for plotting)
+          O[["space_label"]] = sppoly[["AUID_label"]]
+          if (!exists("space_label", attributes(sppoly)) ) attributes(sppoly)$space_label = O[["space_label"]]  # copy as attribute in case
+      }
+
       if ( is.null(O[["fm"]][["vn"]][["T"]]) ) {
         # force to carry a "time" to make dimensions of predictions simpler to manipulate 
         inla_args[["data"]][["time"]] = -1  
@@ -504,15 +508,15 @@ carstm_model_inla = function(
     if (O[["dimensionality"]] == "space-time"  ) {
       O[["matchfrom"]] = list( 
         space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] , 
-        time=inla_args[["data"]][[vT]][O[["ipred"]]] 
+        time=O[["time_id"]][inla_args[["data"]][[vT]][O[["ipred"]]] ]
       )
     }
 
     if ( O[["dimensionality"]] == "space-time-cyclic" ) {
       O[["matchfrom"]] = list( 
         space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] , 
-        time=inla_args[["data"]][[vT]][O[["ipred"]]],
-        cyclic=inla_args[["data"]][[vU]][O[["ipred"]]]
+        time=O[["time_id"]][inla_args[["data"]][[vT]][O[["ipred"]]]],
+        cyclic=O[["cyclic_id"]][inla_args[["data"]][[vU]][O[["ipred"]]]]
       )
     }
 
@@ -717,7 +721,7 @@ carstm_model_inla = function(
           logdens[,i] = unlist(S[[i]]$logdens)
         }
         logdens_names =  names(S[[1]]$logdens)
-        logdens = format_results( logdens, labels=logdens_names  )# same seq as space_id ( == attributes(space)$row.names )
+        logdens = format_results( logdens, labels=logdens_names  ) # same seq as space_id ( == attributes(space)$row.names )
       }
   }
 
@@ -791,19 +795,9 @@ carstm_model_inla = function(
         fixed = invlink(fixed)
         row.names(fixed) = flabels
         O[["sims"]][["fixed_effects"]] = fixed
-
-        # same seq as space_id ( == attributes(space)$row.names )
         O[["posterior_summary"]][["fixed_effects"]] = posterior_summary(format_results( fixed, labels=flabels))
         fkk = fixed = NULL
       }      
-
-      if (be_verbose) {
-        # message( "")
-        # message( "Fixed effects")
-        # print(  O[["summary"]][["fixed_effects"]][,c("mean", "sd")] )    
-        # message( "")
-      } 
-
     }
     W = NULL
     gc()
@@ -933,10 +927,6 @@ carstm_model_inla = function(
 
         random = invlink(random)
         row.names(random) = rlabels
-        
-        # O[["summary"]][["random_effects"]] = random
-        
-        # same seq as space_id ( == attributes(space)$row.names )
         O[["posterior_summary"]][["random_effects"]] = posterior_summary( format_results( random, labels=rlabels ) )
       }
 
@@ -991,7 +981,7 @@ carstm_model_inla = function(
 
       matchto = list( space=O[["space_id"]] )
 
-      W = array( NA, dim=c( O[["space_n"]], length(tokeep) ), dimnames=list( space=O[["space_id"]], stat=tokeep ) )
+      W = array( NA, dim=c( O[["space_n"]], length(tokeep) ), dimnames=list( space=O[["space_name"]], stat=tokeep ) )
       names(dimnames(W))[1] = vS  # need to do this in a separate step ..
 
       O[["random"]] [[vS]] = list()  # space as a main effect  vS==vS
@@ -1082,7 +1072,7 @@ carstm_model_inla = function(
       if ( "random_spatial" %in% posterior_simulations_to_retain ) {
 
         # POSTERIOR SIMS
-        slabels = O[["space_id"]]
+        slabels = O[["space_name"]]
 
         space = array(NA, dim=c( O$space_n, nposteriors  ) )
         row.names(space) = slabels
@@ -1147,7 +1137,7 @@ carstm_model_inla = function(
             m = apply ( space, 1, FUN=function(x) length( which(x > exceedance_threshold[b]) ) ) / nposteriors
             m = reformat_to_array( input = m, matchfrom=matchfrom, matchto = matchto )
             names(dimnames(m))[1] = vS
-            dimnames( m )[[vS]] = O[["space_id"]]
+            dimnames( m )[[vS]] = O[["space_name"]]
             O[["random"]] [[vS]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) )
             m = NULL
           }
@@ -1160,7 +1150,7 @@ carstm_model_inla = function(
             m = apply ( space, 1, FUN=function(x) length( which(x < deceedance_threshold[b]) ) ) / nposteriors
             m = reformat_to_array( input = m, matchfrom=matchfrom, matchto=matchto  )
             names(dimnames(m))[1] = vS
-            dimnames( m )[[vS]] = O[["space_id"]]
+            dimnames( m )[[vS]] = O[["space_name"]]
             O[["random"]] [[vS]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) ) 
             m = NULL
           }
@@ -1205,7 +1195,7 @@ carstm_model_inla = function(
       
       W = array( NA, 
         dim=c( O[["space_n"]], O[["time_n"]], length(tokeep) ), 
-        dimnames=list( space=O[["space_id"]], time=O[["time_id"]], stat=tokeep ) )
+        dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=tokeep ) )
       names(dimnames(W))[1] = vS  # need to do this in a separate step ..
       names(dimnames(W))[2] = vT  # need to do this in a separate step ..
 
@@ -1349,8 +1339,8 @@ carstm_model_inla = function(
             m = reformat_to_array( input=m, matchfrom=matchfrom,  matchto=matchto )
             names(dimnames(m))[1] = vS
             names(dimnames(m))[2] = vT
-            dimnames( m )[[vS]] = O[["space_id"]]
-            dimnames( m )[[vT]] = O[["time_id"]]
+            dimnames( m )[[vS]] = O[["space_name"]]
+            dimnames( m )[[vT]] = O[["time_name"]]
             O[["random"]] [[vnST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = m
           }
           m = NULL
@@ -1363,8 +1353,8 @@ carstm_model_inla = function(
             m = apply ( space_time, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / nposteriors
             m = reformat_to_array( input = m, matchfrom=matchfrom,  matchto=matchto )
             names(dimnames(m))[1] = vS
-            names(dimnames(m))[2] = O[["time_id"]]
-            dimnames( m )[[vS]] = O[["space_id"]]
+            names(dimnames(m))[2] = O[["time_name"]]
+            dimnames( m )[[vS]] = O[["space_name"]]
             dimnames( m )[[vT]] = vT
             O[["random"]] [[vnST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = m
           }
@@ -1455,7 +1445,7 @@ carstm_model_inla = function(
 
         W = array( NA, 
           dim=c( O[["space_n"]],  length(names(m)) ),  
-          dimnames=list( space=O[["space_id"]], stat=names(m) ) )
+          dimnames=list( space=O[["space_name"]], stat=names(m) ) )
         names(dimnames(W))[1] = vS  # need to do this in a separate step ..
         
         # matchfrom already created higher up
@@ -1470,7 +1460,7 @@ carstm_model_inla = function(
         if ( "predictions" %in% posterior_simulations_to_retain ) {
           W = array( NA, 
             dim=c( O[["space_n"]], nposteriors ),  
-            dimnames=list( space=O[["space_id"]], sim=1:nposteriors ) )
+            dimnames=list( space=O[["space_name"]], sim=1:nposteriors ) )
   
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
           for (k in 1:nposteriors ) {
@@ -1508,7 +1498,7 @@ carstm_model_inla = function(
 
         W = array( NA, 
           dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
-          dimnames=list( space=O[["space_id"]], time=O[["time_id"]], stat=names(m) ) 
+          dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=names(m) ) 
         )
  
         names(dimnames(W))[1] = vS  # need to do this in a separate step ..
@@ -1527,7 +1517,7 @@ carstm_model_inla = function(
 
           W = array( NA, 
             dim=c( O[["space_n"]], O[["time_n"]], nposteriors ),  
-            dimnames=list( space=O[["space_id"]], time=O[["time_id"]], sim=1:nposteriors ) )
+            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], sim=1:nposteriors ) )
 
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
           names(dimnames(W))[2] = vT  # need to do this in a separate step ..
@@ -1570,7 +1560,7 @@ carstm_model_inla = function(
 
         W = array( NA, 
           dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], length(names(m)) ),  
-          dimnames=list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]], stat=names(m) ) )
+          dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], stat=names(m) ) )
         names(dimnames(W))[1] = vS  # need to do this in a separate step ..
         names(dimnames(W))[2] = vT  # need to do this in a separate step ..
         names(dimnames(W))[3] = vU  # need to do this in a separate step ..
@@ -1587,7 +1577,7 @@ carstm_model_inla = function(
           
           W = array( NA, 
             dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], nposteriors ),  
-            dimnames=list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]], sim=1:nposteriors ) )
+            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], sim=1:nposteriors ) )
 
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
           names(dimnames(W))[2] = vT  # need to do this in a separate step ..
@@ -1612,15 +1602,15 @@ carstm_model_inla = function(
               m = apply ( predictions, 1, FUN=function(x) length( which(x > exceedance_threshold_predictions[b] ) ) ) / nposteriors
               W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
               names(dimnames(W))[1] = vS
-              dimnames( W )[[vS]] = O[["space_id"]]
+              dimnames( W )[[vS]] = O[["space_name"]]
               m = NULL
               if ( length(O[["matchfrom"]]) > 1 ) {
                 names(dimnames(W))[2] = vT
-                dimnames( W )[[vT]] = O[["time_id"]]
+                dimnames( W )[[vT]] = O[["time_name"]]
               }
               if (length(O[["matchfrom"]]) > 2  ) {
                 names(dimnames(W))[3] = vU
-                dimnames( W )[[vU]] = O[["cyclic_id"]]
+                dimnames( W )[[vU]] = O[["cyclic_name"]]
               }
               O[["predictions_exceedance"]] [["exceedance"]] [[ as.character(exceedance_threshold_predictions[b]) ]]= W
               W = NULL
@@ -1633,15 +1623,15 @@ carstm_model_inla = function(
               m = apply ( predictions, 1, FUN=function(x) length( which(x < deceedance_threshold_predictions[b] ) ) ) / nposteriors
               W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
               names(dimnames(W))[1] = vS
-              dimnames( W )[[vS]] = O[["space_id"]]
+              dimnames( W )[[vS]] = O[["space_name"]]
               m = NULL
               if ( length(O[["matchfrom"]]) > 1 ) {
                 names(dimnames(W))[2] = vT
-                dimnames( W )[[vT]] = O[["time_id"]]
+                dimnames( W )[[vT]] = O[["time_name"]]
               }
               if ( length(O[["matchfrom"]]) > 2 ) {
                 names(dimnames(W))[3] = vU
-                dimnames( W )[[vU]] = O[["cyclic_id"]]
+                dimnames( W )[[vU]] = O[["cyclic_name"]]
               }
               O[["predictions_deceedance"]] [["deceedance"]] [[ as.character(deceedance_threshold_predictions[b]) ]]= W
               W = NULL

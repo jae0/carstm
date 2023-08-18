@@ -128,18 +128,18 @@ p$spatial_domain = "halifax"
 
 p$areal_units_proj4string_planar_km =  p$aegis_proj4string_planar_km   # coord system to use for areal estimation and gridding for carstm
 p$areal_units_type= "tesselation" 
-p$areal_units_constraint_ntarget = length(p$yrs)   # n time slices req in each au
+p$areal_units_constraint_ntarget = floor(length(p$yrs) / 3)   # n time slices req in each au
 p$areal_units_constraint_nmin = 5 # n time slices req in each au
-p$areal_units_resolution_km = 3    # starting resolution .. if using tesselation/ otherwise grid size ()
+p$areal_units_resolution_km = 1    # starting resolution .. if using tesselation/ otherwise grid size ()
 p$areal_units_overlay = "none"  
 p$areal_units_timeperiod = "none"   # only relevent for groundfish polys
 
 p$tus="yr" 
 
-p$fraction_todrop = 0.025
-p$fraction_cv = 0.9   # approx poisson (binomial)
-p$fraction_good_bad = 0.9 
-p$nAU_min = 100   # min total number of areal units
+p$fraction_todrop = 0.05  # fraction to drop randomly at each pass
+p$fraction_cv = 1.0   # approx poisson (binomial)
+p$fraction_good_bad = 0.9   # accept solution if this fraction of au's meet criteria
+p$nAU_min = 30   # min total number of areal units
 
 
 # carstm-specific parameters
@@ -157,7 +157,14 @@ Next we create the areal units. If desired, these can be made manually using an 
 # create polygon  :: requires aegis, aegis.coastline, aegis.polygons
 xydata = as.data.frame(bottemp[,.(lon, lat, yr) ]) 
 
-sppoly = areal_units( p=p, xydata=xydata, areal_units_directory=p$datadir, spbuffer=10, n_iter_drop=3, sa_threshold_km2=9, verbose=TRUE, redo=TRUE ) 
+sppoly = areal_units( p=p, xydata=xydata, 
+    areal_units_directory=p$datadir,  # save loaction
+    spbuffer=p$areal_units_resolution_km*2,  # length scale of hull and surrounding buffer
+    n_iter_drop=3,   # no. times to try to drop nodes to meet filter requirements
+    sa_threshold_km2= 4,   # min size of an areal unit
+    lenprob = 0.95, # quantile of length scales to use for boundary determination (non convex hull)
+    verbose=TRUE, redo=TRUE 
+) 
     
 # sppoly = try( areal_units( p=p, areal_units_directory=p$datadir, redo=FALSE ) )
 
@@ -255,9 +262,14 @@ formula = as.formula( paste(
 ) )
 
 
+
 p$space_name = sppoly$AUID 
 p$space_id = 1:nrow(sppoly)
+
+p$time_name = as.character(p$yrs)
 p$time_id =  1:p$ny
+
+p$cyclic_name = as.character(p$cyclic_levels)
 p$cyclic_id = 1:p$nw
 
 
@@ -272,10 +284,10 @@ res = carstm_model(
     formula=formula,
     family="gaussian",  # inla family
     theta=c( -0.670, 0.749, 0.004, 0.981, 0.432, 3.445, 1.702, 2.507, -1.454, 0.454, 3.474, 0.064, -8.755 ),  # start closer to solution to speed up  
-    num.threads="2:1",  # adjust for your machine
+    num.threads="5:2",  # adjust for your machine
     # if problems, try any of: 
     # control.inla = list( strategy='adaptive', int.strategy="eb" , optimise.strategy="plain", strategy='laplace', fast=FALSE),
-    # control.inla = list( strategy='adaptive', int.strategy="eb" ),
+    control.inla = list( strategy='adaptive', int.strategy="eb" ),
     # control.inla = list( strategy='laplace' ),  # faster
     # redo_fit=FALSE,
     # debug = "predictions", 
