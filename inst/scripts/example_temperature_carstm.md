@@ -51,6 +51,7 @@ local_libs = c(
 p = list()
 
 p$libs = RLibrary ( c(standard_libs, local_libs) )
+
 ```
 
 To the parameter list *p*, we add additional options related to areal unit configuration and modelling.
@@ -319,32 +320,36 @@ res = carstm_model(
 This provides the following as a solution (with only a simple cyclic/seasonal component):
 
 ```r
-Deviance Information Criterion (DIC) ...............: 73073.06
-Deviance Information Criterion (DIC, saturated) ....: 19974.04
-Effective number of parameters .....................: 556.18
+Deviance Information Criterion (DIC) ...............: 67154.20
+Deviance Information Criterion (DIC, saturated) ....: 20337.48
+Effective number of parameters .....................: 1488.02
 
-Watanabe-Akaike information criterion (WAIC) ...: 73045.28
-Effective number of parameters .................: 525.95
+Watanabe-Akaike information criterion (WAIC) ...: 67242.15
+Effective number of parameters .................: 1456.93
 
-Marginal log-Likelihood:  -28206.58 
+  
+Marginal log-Likelihood:  -18623.16 
  is computed 
 
 $fixed_effects
              mean    sd quant0.025 quant0.5 quant0.975          ID
-(Intercept) 6.945 1.917      3.117    6.942      10.77 (Intercept)
+(Intercept) 7.276 0.125      7.031    7.276      7.521 (Intercept)
 
 $random_effects
-                                                  mean        sd quant0.025
-SD Gaussian observations                       1.56343 8.129e-03    1.54708
-SD time                                        0.67932 1.061e-01    0.47326
-SD cyclic                                      0.27732 2.072e-01    0.09053
-SD space                                       0.71235 3.058e-02    0.65377
-SD inla.group(z, method = "quantile", n = 11)  0.89586 2.362e-01    0.48495
-SD space_time                                  0.22435 2.039e-02    0.18339
-Rho for time                                   0.04661 1.683e-01   -0.28778
-GroupRho for space_time                       -0.99999 3.855e-05   -1.00000
-Phi for space                                  0.80607 3.836e-02    0.71885
-Phi for space_time                             0.31895 1.739e-01    0.04290
+                                                 mean        sd quant0.025
+SD Gaussian observations                       1.3979 4.655e-03   1.388821
+SD time                                        0.6876 2.842e-03   0.682071
+SD cyclic                                      0.6123 2.531e-03   0.607366
+SD space_cyclic                                0.8347 3.430e-03   0.828019
+SD space                                       0.2855 1.185e-03   0.283185
+SD inla.group(z, method = "quantile", n = 11)  0.7969 3.294e-03   0.790473
+SD space_time                                  0.1760 7.276e-04   0.174624
+Rho for time                                   0.0020 4.152e-03  -0.006148
+GroupRho for space_cyclic                      0.6916 2.162e-03   0.687324
+GroupRho for space_time                       -0.9997 2.622e-06  -0.999690
+Phi for space_cyclic                           0.9691 2.494e-04   0.968589
+Phi for space                                  0.1894 1.276e-03   0.186895
+Phi for space_time                             0.5160 2.077e-03   0.511918
 
 ```
 
@@ -363,62 +368,54 @@ names(fit)
 fit$summary$dic$dic
 fit$summary$dic$p.eff
 
-plot(fit)
-plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
-
+# plot(fit)
+# plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
 
 # to reload saved results summary
 # res = carstm_model( p=p, sppoly=sppoly, DS="carstm_modelled_summary")
- 
+
+# annual component
 ts =  res$random$time 
 plot( mean ~ ID, ts, type="b", ylim=c(-2,2), lwd=1.5, xlab="year")
 lines( quant0.025 ~ ID, ts, col="gray", lty="dashed")
 lines( quant0.975 ~ ID, ts, col="gray", lty="dashed")
 
-
+# seasonal component
 ts =  res$random$cyclic
-plot( mean ~ID, ts, type="b", ylim=c(-5, 5), lwd=1.5, xlab="fractional year")
+plot( mean ~ID, ts, type="b", ylim=c(-1, 1), lwd=1.5, xlab="fractional year")
 lines( quant0.025 ~ID, ts, col="gray", lty="dashed")
 lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
 
 
-# and some maps:
-map_centre = c( (p$lon0+p$lon1)/2 - 0.5, (p$lat0+p$lat1)/2   )
-map_zoom = 7
+# maps of some of the results
  
+
 # persistent spatial effects
 plt = carstm_map(  res=res, vn=c( "random", "space", "combined" ), 
-    sppoly=sppoly,
-    breaks=seq(-5, 5, by=2), 
-    palette="-RdYlBu",
-    plot_elements=c( "isobaths",  "compass", "scale_bar", "legend" ),
-    # tmap_zoom= c(map_centre, map_zoom),
+    colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title="Bottom temperature spatial effects (Celsius)"
 )
 plt
 
+ 
 ```
 
 The latter spatial effect looks like this:
 
 ![](temperature_spatialeffect.png)
 
+Note that the light blue inshore is known as the Nova Scotia current, which runs south-west along the coastline.
 
 Predictions can be accessed as well:
 ```r
-map_centre = c( (p$lon0+p$lon1)/2 - 0.5, (p$lat0+p$lat1)/2   )
-map_zoom = 7
-
+ 
 # maps of some of the results .. this brings a webbrowser interface
 tmatch="2010"
 umatch="0.75"  # == 0.75*12 = 9 (ie. Sept)  
 
 plt = carstm_map(  res=res, vn="predictions", tmatch=tmatch, umatch=umatch, 
-    sppoly=sppoly,
     breaks=seq(-1, 9, by=2), 
-    palette="-RdYlBu",
-    plot_elements=c( "isobaths",  "compass", "scale_bar", "legend" ),
-    tmap_zoom= c(map_centre, map_zoom),
+    colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title=paste( "Bottom temperature predictions", tmatch, umatch)  
 )
 plt
