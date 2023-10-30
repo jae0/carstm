@@ -1,5 +1,5 @@
 
-features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("canada", "us"), xlim=c(-85,-35), ylim=c(35, 65), target="ggplot" ) {
+features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("canada", "united states of america"), xlim=c(-85,-35), ylim=c(35, 65), target="ggplot" ) {
 
   plot_crs = st_crs(p$aegis_proj4string_planar_km)
   
@@ -34,7 +34,7 @@ features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("ca
     O = ggplot()  
     
     if (!is.null(coastline)) {
-      # coastline =  c("us", "canada")s
+      # coastline =  c("united states of america", "canada")
       data =  st_transform( polygons_rnaturalearth(countries=coastline, xlim=xlim, ylim=ylim), st_crs(plot_crs) )  
       O = O + geom_sf( data=data, aes(alpha=0.6), colour="slategray", lwd=0.6, fill=NA ) + guides(colour = "none",lwd = "none", alpha = "none", fill="none") # + theme(plot.background=element_blank())
     }
@@ -62,7 +62,7 @@ features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("ca
       p=p, 
       area_lines="cfa.regions", 
       isobaths=c(100, 200, 300, 400), 
-      coastline =  c("canada", "us"), 
+      coastline =  c("canada", "united states of america"), 
       xlim=c(-85,-35), 
       ylim=c(35, 65),
       target="ggplot" 

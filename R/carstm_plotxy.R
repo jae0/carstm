@@ -1,6 +1,6 @@
 
   carstm_plotxy = function( X, vn=c( "fit", "summary.random", "time" ), transf=identity, subtype="xy", h=NULL, v=NULL, errorbar_labels=NULL, adj=NULL, offs=0, 
-   outfilename=NULL, width_in=9, height_in=7, width_pts=1000, height_pts=800, pres=192,  bg="white", pointsize=12, ... ) {
+   outfilename=NULL, width_in=9, height_in=7, width_pts=1000, height_pts=800, pres=192,  bg="white", pointsize=12, reverse=FALSE, ... ) {
 
     dtype = vn[1]
     if ( dtype %in% c("sims", "res", "fit") ) {
@@ -37,6 +37,14 @@
       yv_lb = transf(dta[,"quant0.025"])
       yv_ub = transf(dta[,"quant0.975"])
     }
+
+    if (reverse) {
+      # used to reverse y-values to match reversal in maps
+      yv = -yv 
+      yv_lb = - yv_lb
+      yv_ub = - yv_ub
+    }
+
 
     if ( !is.null(outfilename) ) {
     

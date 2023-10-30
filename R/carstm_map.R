@@ -4,9 +4,9 @@
     toplot=NULL,
     vn=NULL,
     vn_label=NULL,
-    space = "space_id",
-    time= "time_id",
-    cyclic="cyclic_id",
+    space = "space_name",
+    time= "time_name",
+    cyclic="cyclic_name",
     stat_var="mean",
     sppoly=NULL,
     smatch=NULL, 
@@ -180,14 +180,14 @@
       yr = c(bb["ymin"], bb["ymax"])
 #, colour="gray90"
       plt = plt +
-        geom_sf( data=sppoly, aes(fill=.data[[vn_label]], alpha=0.9), lwd=0 )  +
+        geom_sf( data=sppoly, aes(fill=.data[[vn_label]], alpha=0.8), lwd=0 )  +
         scale_fill_gradientn(name = vn_label, 
           limits=range(breaks),
-          colors=alpha(colors, alpha=0.95), na.value=NA ) +
+          colors=alpha(colors, alpha=0.9), na.value=NA ) +
         guides(fill = guide_colorbar(
           title.theme = element_blank(), # element_text(size = 20),
           label.theme = element_text(size = 20) ) ) +
-        scale_alpha(range = c(0.85, 0.95), guide = "none") +
+        scale_alpha(range = c(0.8, 0.9), guide = "none") +
         labs( caption = title)+
         coord_sf(xlim =xr, ylim =yr, expand = FALSE)+
         theme(
