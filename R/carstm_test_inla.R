@@ -30,11 +30,11 @@ carstm_test_inla = function( family = "poisson" ) {
     )
 
 
-#### form used in carstm "experimental"
+#### form used in carstm "compact"
     fit2e = inla ( r ~ x1 + offset(log(n)), data=Seeds, family="poisson"  ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
       control.predictor = list(compute=TRUE, link=1),
-      inla.mode="experimental"
+      inla.mode="compact"
     )
 
 ####
@@ -42,13 +42,13 @@ carstm_test_inla = function( family = "poisson" ) {
     fit3e = inla ( r ~ x1, offset=log(n), data=Seeds,  family="poisson" ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
       control.predictor = list(compute=TRUE, link=1),
-      inla.mode="experimental"
+      inla.mode="compact"
     )
 
     fit4e = inla ( r ~ x1, E=n, data=Seeds,  family="poisson",
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
       control.predictor = list(compute=TRUE, link=1),
-      inla.mode="experimental"
+      inla.mode="compact"
     )
 
 
@@ -250,7 +250,7 @@ carstm_test_inla = function( family = "poisson" ) {
     fit2e = inla ( r ~ n + as.factor(x1), data=Seeds, family="gaussian" ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
       control.predictor = list(compute=TRUE, link=1),
-      inla.mode="experimental"
+      inla.mode="compact"
     )
 #####
 
@@ -367,7 +367,7 @@ carstm_test_inla = function( family = "poisson" ) {
     fit2e = inla ( Y ~ as.factor(x1), data=Seeds, family="binomial"  ,
       control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
       control.predictor = list(compute=TRUE, link=1),
-      inla.mode="experimental"
+      inla.mode="compact"
     )
 ####
 

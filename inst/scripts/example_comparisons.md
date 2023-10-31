@@ -34,7 +34,7 @@
     # control.inla = list( strategy='adaptive', int.strategy='eb' ),
     control.predictor = list( compute=TRUE  ),
     control.compute = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE ),
-    inla.mode="experimental"
+    inla.mode="compact"
   )
   summary(fit2)
 ```

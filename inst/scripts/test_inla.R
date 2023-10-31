@@ -68,7 +68,7 @@ pC2marg  = unlist( sapply( mC2$marginals.fitted.values, function(u) inla.zmargin
 
 # no offets in formula
 mE0 = inla(formula1, family="poisson", data=Germany, E=E, 
-    inla.mode="experimental", 
+    inla.mode="compact", 
     control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
     control.fixed=list(prec.intercept=1),
     control.predictor = list(compute=TRUE, link=1)
@@ -84,7 +84,7 @@ pE0marg  = unlist( sapply( mE0$marginals.fitted.values, function(u) inla.zmargin
  
  # has offsets in formula
 mE2 = inla(formula2, family="poisson", data=Germany, 
-    inla.mode="experimental", 
+    inla.mode="compact", 
     control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
     control.fixed=list(prec.intercept=1),
     control.predictor = list(compute=TRUE, link=1)
@@ -101,7 +101,7 @@ pE2marg  = unlist( sapply( mE2$marginals.fitted.values, function(u) inla.zmargin
   
  # negative binomial .. has offsets in formula
 nbin0 = inla(formula2, family="nbinomial", data=Germany, 
-    # inla.mode="experimental", 
+    # inla.mode="compact", 
     control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
     control.fixed=list(prec.intercept=1),
     control.predictor = list(compute=TRUE, link=1)

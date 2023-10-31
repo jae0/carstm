@@ -356,8 +356,8 @@ carstm_model_inla = function(
     ii = which(is.finite(inla_args[["data"]][[vY]]))
 
     if ( be_verbose ) {
-      dev.new()
-      hist( inla_args[["data"]][[vY]][ii] , main="Histogram of input variable to model" )
+      # dev.new()
+      # hist( inla_args[["data"]][[vY]][ii] , main="Histogram of input variable to model" )
     }
 
     mq = quantile( inla_args[["data"]][[vY]][ii] , probs=c(0.025, 0.5, 0.975) )
@@ -442,8 +442,8 @@ carstm_model_inla = function(
      
 
     # check INLA options
-    if (!exists("inla.mode", inla_args)) inla_args[["inla.mode"]] = "experimental" 
-    if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( strategy='adaptive' ) #int.strategy='eb'
+    if (!exists("inla.mode", inla_args)) inla_args[["inla.mode"]] = "compact" # changed inla options in 2023
+    if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( strategy='adaptive', cmin=0 ) #int.strategy='eb'
     if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if (!exists("control.mode", inla_args ) ) inla_args[["control.mode"]] = list( restart=FALSE ) 
     if (!is.null(theta) ) inla_args[["control.mode"]]$theta= theta
@@ -465,7 +465,7 @@ carstm_model_inla = function(
     fit = try( do.call( inla, inla_args ) )      
 
     if (inherits(fit, "try-error" )) {
-      inla_args[["control.inla"]] = list( int.strategy='eb' )
+      inla_args[["control.inla"]] = list( int.strategy='eb', cmin=0 )
       fit = try( do.call( inla, inla_args ) )      
     }
 
