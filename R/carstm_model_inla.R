@@ -197,21 +197,24 @@ carstm_model_inla = function(
         stop("carstm_model_label should be specified")
       }
     }
-  
-    if ( !exists("dimensionality", O) ) {
-      
-      DM = unique( re$dimensionality )
-      dims = c("s", "t", "c")
 
-      RR = setdiff( dims, setdiff( dims, DM ) )
-      SS = paste0(
-        c("space", "time", "cyclic")[match(RR, dims)], 
-        collapse="-"
-      )
+    DM = unique( re$dimensionality )  
+    dims = c("s", "t", "c")
+    RR = setdiff( dims, setdiff( dims, DM ) )
+    SS = paste0(
+      c("space", "time", "cyclic")[match(RR, dims)], 
+      collapse="-"
+    ) 
+
+    if ( exists("dimensionality", O) ) {
+      if (O[["dimensionality"]] != SS ) {
+        warning("Dimensionality parameters were specified but do notmatch those in formula: " )
+        message( O[["dimensionality"]], " vs ", SS )
+        message( " Continuuing, but check dimensionality of your problem ...")
+      }
+    } else  {
       O[["dimensionality"]] = SS
-
       message("Check dimensionality guessed from formula:  ", O[["dimensionality"]]) 
-
     }
 
     if ( !is.null(O[["fm"]][["vn"]][["S"]]) ) {
@@ -465,6 +468,13 @@ carstm_model_inla = function(
     fit = try( do.call( inla, inla_args ) )      
 
     if (inherits(fit, "try-error" )) {
+      inla_args[["control.inla"]] = list( int.strategy='eb', cmin=0 )
+      fit = try( do.call( inla, inla_args ) )      
+    }
+
+    if (inherits(fit, "try-error" )) {
+      inla_args[["safe"]] = TRUE
+      inla_args[["inla.mode"]] = "classic"
       inla_args[["control.inla"]] = list( int.strategy='eb', cmin=0 )
       fit = try( do.call( inla, inla_args ) )      
     }
