@@ -5,6 +5,8 @@ carstm_test_inla = function( family = "poisson" ) {
   
   Seeds$rate = Seeds$r/ Seeds$n
 
+  # NOTE CARSTM log-transforms offset so do not transform itsss
+
   if (family=="poisson") {
 
     # compare with GLM
