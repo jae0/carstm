@@ -36,7 +36,7 @@ To begin analysis using [CARSTM](https://github.com/jae0/carstm), we bring in th
 ```r
 
 # required R library list
-standard_libs = c( "colorspace", "lubridate",  "lattice",  "parallel", "sf", "GADMTools", "INLA" , "data.table", "ggplot2", "RColorBrewer" )
+standard_libs = c( "colorspace", "lubridate",  "lattice",  "parallel", "sf",  "INLA" , "data.table", "ggplot2", "RColorBrewer" )
 
 # aegis.* libs (found on github.com/jae0)
 local_libs = c(

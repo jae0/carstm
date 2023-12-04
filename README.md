@@ -29,3 +29,25 @@ For Atlantic cod, see the preprints at:
 Another (less interesting) usage of *CARSTM* is to  replicate the "standard" analysis used by DFO Maritimes (known as "stratanal"): a really basic stratified average estimate. This is shown to be equivalent to a Gaussian linear fixed effects model. The utility becomes evident as this model-based approach can be used to incrementally improve upon the assumptions of the basic model, focussing upon the distributional assumptions of the model (Poisson, overdispersed Poisson), adding environmental covariates and then employing an INLA-based ICAR (intrinsic conditionally autoregressive models; "bym2") approach towards accounting for areal unit modelling and an AR1 temporal autocorrelation assuming separability of the spacetime autocorrelation. [See this document for more details and notes.](docs/carstm_methods.pdf)
 
 
+## Installation
+
+
+To install, run the following:
+
+```r
+  remotes::install_github( "jae0/aegis")  # helper functions
+  remotes::install_github( "jae0/carstm")
+``` 
+
+You probably will want to have an Rprofile set up properly such as:
+
+```r
+homedir = path.expand("~")
+code_root = file.path( homedir, "bio" )   ### replace with correct path to the parent directory of your git-projects
+data_root = file.path( homedir, "bio.data" )   ### replace with correct path to your data
+
+require( aegis )
+require( carstm )
+
+```
+ 
