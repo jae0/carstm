@@ -208,7 +208,7 @@ carstm_model_inla = function(
 
     if ( exists("dimensionality", O) ) {
       if (O[["dimensionality"]] != SS ) {
-        warning("Dimensionality parameters were specified but do notmatch those in formula: " )
+        message("Dimensionality parameters (left) were specified but do notmatch those in formula (right): " )
         message( O[["dimensionality"]], " vs ", SS )
         message( " Continuuing, but check dimensionality of your problem ...")
       }
