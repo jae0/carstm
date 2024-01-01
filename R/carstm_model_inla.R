@@ -208,9 +208,9 @@ carstm_model_inla = function(
 
     if ( exists("dimensionality", O) ) {
       if (O[["dimensionality"]] != SS ) {
-        message("Dimensionality parameters (left) were specified but do notmatch those in formula (right): " )
+        message("Dimensionality parameters specified (left) do not match those in formula (right): " )
         message( O[["dimensionality"]], " vs ", SS )
-        message( " Continuuing, but check dimensionality of your problem ...")
+        message( "This is OK when predicting to one time slice, but verify that this is your intent ...")
       }
     } else  {
       O[["dimensionality"]] = SS

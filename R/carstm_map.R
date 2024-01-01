@@ -8,6 +8,7 @@
     time= "time_name",
     cyclic="cyclic_name",
     stat_var="mean",
+    alpha=0.95,
     sppoly=NULL,
     smatch=NULL, 
     tmatch=NULL, 
@@ -168,44 +169,54 @@
         legend.position = c( 0.925, 0.15 ) 
       }
 
+      pltadd = NULL 
       if ( exists("additional_features", ellps) ) {
         # e.g. management lines, etc
-        plt = ellps[["additional_features"]]  
-      } else {
-        plt = ggplot() 
+        pltadd = ellps[["additional_features"]]
+        if (exists("ggplot2", pltadd ) ) pltadd = pltadd[["ggplot2"]][["layers"]]
+      } 
+      
+      annot = NULL
+      if ( exists("annotation", ellps) ) {
+        annot = labs(caption = ellps[["annotation"]] )
       }
 
       bb = st_bbox(sppoly)
       xr = c(bb["xmin"], bb["xmax"])
       yr = c(bb["ymin"], bb["ymax"])
 #, colour="gray90"
-      plt = plt +
-        geom_sf( data=sppoly, aes(fill=.data[[vn_label]], alpha=0.8), lwd=0 )  +
+ 
+      plt = ggplot() +
+        geom_sf( data=sppoly, aes(fill=.data[[vn_label]], alpha=0.95), lwd=0 )  +
         scale_fill_gradientn(name = vn_label, 
           limits=range(breaks),
-          colors=alpha(colors, alpha=0.9), na.value=NA ) +
+          colors=alpha(colors, alpha=0.99), na.value=NA ) +
         guides(fill = guide_colorbar(
-          title.theme = element_blank(), # element_text(size = 20),
-          label.theme = element_text(size = 20) ) ) +
-        scale_alpha(range = c(0.8, 0.9), guide = "none") +
-        labs( caption = title)+
-        coord_sf(xlim =xr, ylim =yr, expand = FALSE)+
+          # title.theme = element_blank(), 
+          # title.theme = element_text(size = 20),
+          label.theme = element_text(size = 16) ) ) +
+        scale_alpha(range = c(0.8, 0.95), guide = "none") +
+        annot +
+        pltadd  +
+        coord_sf(xlim =xr, ylim =yr, expand = FALSE) +
         theme(
           axis.line=element_blank(),
-          axis.text.x=element_blank(),
-          axis.text.y=element_blank(),
+          # axis.text.x=element_blank(),
+          # axis.text.y=element_blank(),
           axis.ticks=element_blank(),
           axis.title.x=element_blank(),
           axis.title.y=element_blank(), 
           legend.position=legend.position,
           legend.title = element_blank(),
-          panel.background=element_blank(),
+          # panel.background=element_blank(),
+          panel.background = element_rect(fill =NA),
           panel.border=element_blank(),
-          panel.grid.major=element_blank(),
+          # panel.grid.major=element_blank(),
+          panel.grid.major = element_line(color = "grey"),
           panel.grid.minor=element_blank(),
           plot.background=element_blank(), 
           plot.caption = element_text(hjust = 0, size = 14)
-        ) 
+      )
         
 
       if ( !is.null(outfilename) ) {
@@ -309,7 +320,9 @@
   
       if ( exists("additional_features", ellps) ) {
         # e.g. management lines, etc
-        plt = plt + ellps[["additional_features"]]  
+        pltadd = ellps[["additional_features"]] 
+        if (exists("tmap", pltadd ) ) pltadd = pltadd[["tmap"]]
+        plt = plt + pltadd 
       }
 
 
