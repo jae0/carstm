@@ -1,63 +1,59 @@
 
-features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("canada", "united states of america"), xlim=c(-85,-35), ylim=c(35, 65), target="ggplot" ) {
+features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("canada", "united states of america"), xlim=c(-85,-35), ylim=c(35, 65), redo=FALSE, target="ggplot" ) {
 
-  plot_crs = st_crs(p$aegis_proj4string_planar_km)
-  
-  if (target=="tmap") {
+   
+    fn = file.path( p$project.outputdir, "additional_mapping_features.RDS" )
+    if (!redo){
+      O = NULL
+      if (file.exists(fn)) O = readRDS(fn)
+      if (!is.null(O)) return(O)
+    }
 
-    require(tmap)
-    O =  NULL
+    plot_crs = p$aegis_proj4string_planar_km
     
+    rg = NULL
     if (!is.null(area_lines )) {
-      data = aegis.polygons::area_lines.db( DS=area_lines, returntype="sf", project_to=plot_crs )
-      O = O + tm_shape( data=data, projection=plot_crs ) + tm_lines( col="gray40", alpha=0.75, lwd=2)  
+      rg = aegis.polygons::area_lines.db( DS=area_lines, returntype="sf", project_to=plot_crs )
     }
 
+    z = NULL
     if (!is.null(isobaths)) {
-      data = aegis.bathymetry::isobath_db( depths=isobaths, project_to=plot_crs )
-      O = O + tm_shape( data=data, projection=plot_crs ) + tm_lines( col="gray80", alpha=0.4, lwd=0.5) 
+      z = aegis.bathymetry::isobath_db( depths=isobaths, project_to=plot_crs )
     }
 
+    cl = NULL
     if (!is.null(coastline)) {
       # coastline =  c("unsited states of america", "canada")
       data = st_transform( polygons_rnaturalearth(countries=coastline, xlim=xlim, ylim=ylim), st_crs(plot_crs) )
-      O = O + tm_shape( data, projection=plot_crs ) +  tm_borders( col="slategray", alpha=0.75, lwd=0.75)
     }
 
-    return(O)
-  }
+    O = list()
 
-
-  if (target=="ggplot" ) {
-
-    require(ggplot2)
-    O = ggplot()  
-    
-    if (!is.null(coastline)) {
-      # coastline =  c("united states of america", "canada")
-      data =  st_transform( polygons_rnaturalearth(countries=coastline, xlim=xlim, ylim=ylim), st_crs(plot_crs) )  
-      O = O + geom_sf( data=data, aes(alpha=0.6), colour="slategray", lwd=0.6, fill=NA ) + guides(colour = "none",lwd = "none", alpha = "none", fill="none") # + theme(plot.background=element_blank())
+    if ("ggplot" %in% target) {
+      require(ggplot2)
+      O[["ggplot"]] =  ggplot() +
+        geom_sf( data=z,  fill=NA, col = "slategray",  lwd=0.25) +
+        geom_sf( data=rg, fill=NA, col = "slategray",  lwd=2.0) + 
+        geom_sf( data=cl, fill=NA, col = "slategray", lwd=0.5)
     }
 
-    if (!is.null(isobaths)) {
-      data = aegis.bathymetry::isobath_db( depths=isobaths, project_to=plot_crs )
-      O = O + geom_sf( data=data,  aes(alpha=0.8),  colour="darkgray", lwd=0.6) + guides(colour = "none",lwd = "none", alpha = "none")
+    if ("tmap" %in% target) {
+      require(tmap)
+      O[["tmap"]] =  
+        tm_shape( z,  projection=plot_crs ) + tm_lines( col="slategray", alpha=0.5, lwd=0.2) +
+        tm_shape( rg, projection=plot_crs ) + tm_lines( col="slategray", alpha=0.75, lwd=2)   + 
+        tm_shape( cl, projection=plot_crs ) + tm_borders( col = "slategray", alpha=0.5, lwd=0.5)
     }
 
-    if (!is.null(area_lines )) {
-      # area_lines = "cfa.regions"
-      data = aegis.polygons::area_lines.db( DS=area_lines, returntype="sf", project_to=plot_crs )
-      O = O + geom_sf(data=data,  aes(alpha=0.9), colour="darkgray", lwd=2.5)  + guides(colour = "none", lwd = "none", alpha = "none")
-    }
 
-    O = O + theme_void()
-
+    dir.create( p$project.outputdir, showWarnings = FALSE, recursive = TRUE )
+    saveRDS( O, file=fn, compress=TRUE )
     return(O)
 
   }
 
   if (0) {
-  
+    # example
     o = features_to_add( 
       p=p, 
       area_lines="cfa.regions", 
