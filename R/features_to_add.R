@@ -2,7 +2,7 @@
 features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("canada", "united states of america"), xlim=c(-85,-35), ylim=c(35, 65), redo=FALSE, target="ggplot" ) {
 
    
-    fn = file.path( p$project.outputdir, "additional_mapping_features.RDS" )
+    fn = file.path( p$data_root, "additional_mapping_features.RDS" )
     if (!redo){
       O = NULL
       if (file.exists(fn)) O = readRDS(fn)
@@ -24,7 +24,7 @@ features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("ca
     cl = NULL
     if (!is.null(coastline)) {
       # coastline =  c("unsited states of america", "canada")
-      data = st_transform( polygons_rnaturalearth(countries=coastline, xlim=xlim, ylim=ylim), st_crs(plot_crs) )
+      cl = st_transform( polygons_rnaturalearth(countries=coastline, xlim=xlim, ylim=ylim), st_crs(plot_crs) )
     }
 
     O = list()
@@ -46,25 +46,24 @@ features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("ca
     }
 
 
-    dir.create( p$project.outputdir, showWarnings = FALSE, recursive = TRUE )
+    dir.create( p$data_root, showWarnings = FALSE, recursive = TRUE )
     saveRDS( O, file=fn, compress=TRUE )
     return(O)
-
-  }
-
-  if (0) {
-    # example
-    o = features_to_add( 
-      p=p, 
-      area_lines="cfa.regions", 
-      isobaths=c(100, 200, 300, 400), 
-      coastline =  c("canada", "united states of america"), 
-      xlim=c(-85,-35), 
-      ylim=c(35, 65),
-      target="ggplot" 
-    )
   
-  }
+
+    if (0) {
+      # example
+      o = features_to_add( 
+        p=p, 
+        area_lines="cfa.regions", 
+        isobaths=c(100, 200, 300, 400), 
+        coastline =  c("canada", "united states of america"), 
+        xlim=c(-85,-35), 
+        ylim=c(35, 65),
+        target="ggplot" 
+      )
+    
+    }
 }
 
 
