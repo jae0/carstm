@@ -1,5 +1,5 @@
 
-features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("canada", "united states of america"), xlim=c(-85,-35), ylim=c(35, 65), redo=FALSE, target="ggplot" ) {
+features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("Canada", "United States of America"), xlim=c(-85,-35), ylim=c(35, 65), redo=FALSE, target="ggplot" ) {
 
    
     fn = file.path( p$data_root, "additional_mapping_features.RDS" )
@@ -57,7 +57,7 @@ features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("ca
         p=p, 
         area_lines="cfa.regions", 
         isobaths=c(100, 200, 300, 400), 
-        coastline =  c("canada", "united states of america"), 
+        coastline =  c("Canada", "United States of America"), 
         xlim=c(-85,-35), 
         ylim=c(35, 65),
         target="ggplot" 
