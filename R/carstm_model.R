@@ -76,6 +76,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
 
   O = NULL
   if (DS=="carstm_modelled_summary") {  # carstm_model.*carstm_modelled
+  browser()
     if (!is.null(fn_res)) {
       # message("Loading  data summary:  ", fn_res )
       O = NULL

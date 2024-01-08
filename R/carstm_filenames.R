@@ -3,11 +3,14 @@ carstm_filenames = function( p=list(), returnvalue="full_filename", fn=NULL, ...
   p = parameters_add(p, list(...)) # add passed args to parameter list, priority to args
 
   # returntype, areal_units_fn=NULL, variabletomodel, carstm_modelengine="inla"
-
-  if (!exists("areal_units_fn", p)) {
+  args = list(...)
+  if (exists("sppoly", args)) {
+    sppoly = args[["sppoly"]]
+  } else {
     sppoly = areal_units( p=p )  # required by car fit
-    p$areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
   }
+
+  p$areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
 
   if (!exists("fnroot", p)) {
     
