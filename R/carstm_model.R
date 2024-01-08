@@ -2,7 +2,7 @@
 carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL, DS="redo", 
     space_id=NULL, time_id=NULL, cyclic_id=NULL, theta=NULL, carstm_directory=NULL, 
     nposteriors=NULL, posterior_simulations_to_retain=NULL,
-    compress="gzip", compression_level=1, fn_fit=NULL, fn_res=NULL, debug=FALSE,
+    compress="gzip", compression_level=1, fn_fit=NULL, fn_res=NULL, debug=FALSE, 
     ... ) {
 
      if (0) {
@@ -76,7 +76,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
 
   O = NULL
   if (DS=="carstm_modelled_summary") {  # carstm_model.*carstm_modelled
-  browser()
+
     if (!is.null(fn_res)) {
       # message("Loading  data summary:  ", fn_res )
       O = NULL
