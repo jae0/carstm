@@ -4,13 +4,16 @@ carstm_filenames = function( p=list(), returnvalue="full_filename", fn=NULL, ...
 
   # returntype, areal_units_fn=NULL, variabletomodel, carstm_modelengine="inla"
   args = list(...)
-  if (exists("sppoly", args)) {
-    sppoly = args[["sppoly"]]
-  } else {
-    sppoly = areal_units( p=p )  # required by car fit
-  }
 
-  p$areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
+  if (!exists("areal_units_fn", p)) {
+    if (exists("sppoly", args)) {
+      sppoly = args[["sppoly"]]
+      p$areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
+    } else {
+      p$areal_units_fn = areal_units_filename(p)
+    }
+  }  
+
 
   if (!exists("fnroot", p)) {
     

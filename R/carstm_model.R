@@ -57,7 +57,8 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
     fn_res = file.path( carstm_directory, basename( fn_res) )
   }
 
-
+  print(fn_res)
+  
   fit = NULL
   if (DS=="carstm_modelled_fit") {
     if (!is.null(fn_fit)) {

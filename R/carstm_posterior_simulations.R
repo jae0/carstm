@@ -1,5 +1,5 @@
 
-carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=NULL, sppoly=NULL, qmax=NULL,
+carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=NULL, qmax=NULL,
   wgts_min=0, wgts_max=NULL, N_min=0, N_max=NULL, B_min=0, B_max=NULL, max_value=NULL, degree_day=FALSE, 
   pa_threshold=0.05, hurdle_direct=FALSE, denoise="", carstm_directory=NULL ) {
   
@@ -26,7 +26,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   if ( "generic" %in% operation) {
     # simple wrapper to data .. direct access would give more control if a single set is wanted .. 
     # this is more useful when complex transformations are required using multiple sims (e.g. 2 or 3-operations below)
-    gen = carstm_model( p=pW, DS="carstm_modelled_summary", sppoly=sppoly, carstm_directory=carstm_directory  )
+    gen = carstm_model( p=pW, DS="carstm_modelled_summary", carstm_directory=carstm_directory  )
 
     if ( denoise == "" ) {
       gen =  gen[["sims"]][["predictions"]]
@@ -63,7 +63,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
 
   if ( "presence_absence" %in% operation ) {
-    pa = carstm_model( p=pH, DS="carstm_modelled_summary", sppoly=sppoly, carstm_directory=carstm_directory    )
+    pa = carstm_model( p=pH, DS="carstm_modelled_summary", carstm_directory=carstm_directory    )
     if ( denoise == "" ) {
       pa = pa[["sims"]][["predictions"]]
     } else {
@@ -87,7 +87,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
   # construct meansizes matrix used to convert number to weight
   if ( "meansize" %in% operation) {
-    wgts = carstm_model( p=pW, DS="carstm_modelled_summary", sppoly=sppoly, carstm_directory=carstm_directory  )
+    wgts = carstm_model( p=pW, DS="carstm_modelled_summary", carstm_directory=carstm_directory  )
     if ( denoise == "" ) {
       wgts = wgts[["sims"]][["predictions"]]
     } else {
@@ -122,7 +122,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
 
   if ( "biomass" %in% operation) {
-    biom = carstm_model( p=pB, DS="carstm_modelled_summary", sppoly=sppoly, carstm_directory=carstm_directory   )
+    biom = carstm_model( p=pB, DS="carstm_modelled_summary", carstm_directory=carstm_directory   )
     if ( denoise == "" ) {
       biom = biom[["sims"]][["predictions"]]
     } else {
@@ -156,7 +156,7 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
 
   if ( "number" %in% operation ) {
-    nums = carstm_model( p=pN, DS="carstm_modelled_summary", sppoly=sppoly, carstm_directory=carstm_directory  )
+    nums = carstm_model( p=pN, DS="carstm_modelled_summary", carstm_directory=carstm_directory  )
         
     if ( denoise == "" ) {
       nums = nums[["sims"]][["predictions"]]
