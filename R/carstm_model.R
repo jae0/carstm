@@ -27,16 +27,8 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
     carstm_modelengine ="inla" # glm and gam also possible ... though not very useful
   )
 
-
-  if (is.null(sppoly)) {
-    message("sppoly not specified, loading from file using parameters provided ..." )
-    sppoly = try(  areal_units( p=p ) , silent = TRUE ) # required by car fit
-    message("\n")
-  }
-
-  if (!inherits( sppoly, "try-error" )) {
-    if (is.null(areal_units_fn))  areal_units_fn = attributes(sppoly)[["areal_units_fn"]]
-  }
+ 
+  if (is.null(areal_units_fn))  areal_units_fn = areal_units_filename(p)
   
   if (exists("carstm_modelengine", p)) carstm_modelengine = p$carstm_modelengine
 
