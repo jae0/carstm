@@ -1,4 +1,20 @@
 ---
+title: Spatiotemporal models of variability -- discrete Conditional
+  autoregressive space-time models
+author: "Jae S. Choi"
+toc: true
+number-sections: true
+highlight-style: pygments
+editor:
+  render-on-save: false
+format:
+  html: 
+    code-fold: true
+    html-math-method: katex
+    embed-resources: true
+  pdf:
+    pdf-engine: lualatex
+  docx: default 
 abstract: |
   This is a review of areal unit (AU) models of spatiotemporal
   variability in a fisheries oceanography context. We demonstrate the
@@ -16,20 +32,57 @@ abstract: |
   assessments that are constrained by static areal units defined by
   adhoc management which generally do not map well onto dynamic
   environmental and biological space-time processes.
-author:
-- Jae S. Choi
-title: Spatiotemporal models of variability -- discrete Conditional
-  autoregressive space-time models
-
-Convert PDF's to PNG's
 ---
+ 
+
+<!-- This is a Markdown/Quarto document -->
+
+<!-- 
+Copy this file to a work directory (e.g., ~/tmp/ ) 
+and run Quarto from there:
+
+# quarto render *.qmd --to html 
+
+Can add "--to docx --to pdf" as additional documents, but their formatting is awkward and will require more work.  
+
+## Examples
+
+```r
+#| eval: true
+#| output: false
+#| warning: false
+#| error: false
+# code evaluation
+```
+
+
+```r
+#| eval: true
+#| output: true
+#| label: predator_list
+#| tbl-cap: "All predators of snow crab on Scotian Shelf of Atlantic Canada. Of 58287 finfish stomach samples, 159 had snow crab (0.28%). There is no indormation on snow crab diet in the database."
+# table
+```
+
+```{r}
+#| eval: false
+#| output: false
+#| label: temp_depth
+#| fig-cap: "Temperature and depths of snow crab predation on the Scotian Shelf of Atlantic Canada. Grey is all species observations in diet data base. Red is snow crab as prey."
+#| fig-dpi: 144
+#| fig-height: 4
+# figure
+```
 
 Comparing CARSTM to Stranal results:
 
 NOTE:: remove GLM methods that do not make sense
 
-
 Challenger Drive, Dartmouth, Nova Scotia, Canada
+
+-->
+
+ 
 
 Version: 20/12/2018
 
@@ -244,7 +297,7 @@ heterogeneity; $\varepsilon^{*}\sim N(0,I)$ is the unstructured random
 error with fixed standard deviation of 1; and the ICAR random variable
 scaled so that $\text{{Var}}(\phi^{*}=\phi/v)\approx1$. These
 assumptions ensure that $\text{{Var}}(\varepsilon)\approx$
-$\text{{Var}}(\phi)\approx1$ which in turn ensures that $\psi$ can be
+$\text{{Var}}(\phi)\approx1$ whichAtlantic cod comparison of CAR (ICAR/BYM) Poisson process models in turn ensures that $\psi$ can be
 interpreted as an overall standard deviation. The priors can then be
 more conventionally understood and assigned as some prior of the
 standard deviation such as a half-normal or a half-t or exponential
@@ -1019,20 +1072,16 @@ used for plotting and surface area calculations. It also defines the the
 polygons to be used, (by default, pre-2014 definitions) as well as
 ensuring that the variable trawlable_units is defined.
 
-> p = carstm::carstm_parameters(
->
-> > id =Atlantic cod summer standardtow, \# identifier
-> >
-> > speciesname = Atlantic_cod,
-> >
-> > groundfish_species_code = 10, \# 10= cod for data selection later on
-> >
-> > yrs = yrs, \# study years for data selection, later on
-> >
-> > trawlable_units = standardtow \# choices are standardtow, towlength,
-> > sweptarea
->
-> )
+```r
+p = carstm::carstm_parameters(
+   id = "Atlantic cod summer standardtow", # identifier
+   speciesname = "Atlantic_cod",
+   groundfish_species_code = 10, # 10= cod for data selection later on
+   yrs = yrs, # study years for data selection, later on
+   trawlable_units = "standardtow" # choices are standardtow, towlength, sweptarea
+)
+```
+
 
 After setting up the data environment, additions to the parameter list
 are made that control data extraction from the groundfish databases. The
@@ -1040,44 +1089,25 @@ expectation is that the aegis databases are all set up. This data can be
 downloaded upon request, or, alternatively set up on a server and code
 run remotely.
 
-> p\$selection=list(
->
-> > biologicals=list(
-> >
-> > > spec_bio = bio.taxonomy::taxonomy.recode(
-> > >
-> > > > from=spec, to=parsimonious, tolookup=p\$groundfish_species_code
-> > >
-> > > ) \# aegis uses an internal code
-> >
-> > ),
-> >
-> > survey=list(
-> >
-> > > data.source = groundfish,
-> > >
-> > > yr = p\$yrs, \# years are already specified above
-> > >
-> > > months=6:8, \# which months to use
-> > >
-> > > settype = 1, \# set quality indicator used in groundfish surveys
-> > > .. 1=good
-> > >
-> > > gear = c(Western IIA trawl, Yankee #36 otter trawl), \# choice of
-> > > gear types
-> > >
-> > > strata_toremove=c(Gulf, Georges_Bank, Spring, Deep_Water), \# for
-> > > stratanal
-> > >
-> > > polygon_enforce=TRUE \# make sure data positions are inside the
-> > > polygons: incorrect strata or positions
-> >
-> > )
->
-> )
->
-> set = survey.db( p=p, DS=filter add_groundfish_strata=TRUE ) \# the
-> call that returns the filtered data
+```r
+p$selection=list(
+   biologicals=list(
+      spec_bio = bio.taxonomy::taxonomy.recode(
+         from="spec", to="parsimonious", tolookup=p$groundfish_species_code)  # aegis uses an internal code
+   ),
+   survey=list(
+      data.source = "groundfish",
+      yr = p$yrs, # years are already specified above
+      months=6:8, # which months to use
+      settype = 1, # set quality indicator used in groundfish surveys .. 1=good
+      gear = c("Western IIA trawl", "Yankee #36 otter trawl"), # choice of  gear types
+      strata_toremove=c("Gulf", "Georges_Bank", "Spring", "Deep_Water"), # for stratanal
+      polygon_enforce=TRUE # make sure data positions are inside the polygons: incorrect strata or positions
+   )
+)
+
+set = survey.db( p=p, DS="filter", add_groundfish_strata=TRUE ) # the call that returns the filtered data
+```
 
 The selection mechanism is quite general. If a survey variable is passed
 with an explicit list, then only data matching that list will be
@@ -1090,19 +1120,15 @@ easily extended for alternate methods.
 
 Also of more general interest are the following functions:
 
-> weight_year = meanweights_by_strata(
->
-> > set=set,
-> >
-> > StrataID=as.character( sppoly\$StrataID ),
-> >
-> > yrs=p\$yrs,
-> >
-> > fillall=TRUE,
-> >
-> > annual_breakdown=TRUE
->
-> )
+```r
+weight_year = meanweights_by_strata(
+   set=set,
+   StrataID=as.character( sppoly$StrataID ),
+   yrs=p$yrs,
+   fillall=TRUE,
+   annual_breakdown=TRUE
+)
+```
 
 which generates a matrix of mean weights broken down by strata and year.
 This is used to convert numbers to weights.
@@ -1110,29 +1136,27 @@ This is used to convert numbers to weights.
 Environmental covariates interpolated via **stmv** can be extracted from
 the **aegis** data tables through a simple call:
 
-> covars = c(t, tmin, tmax, degreedays, z, dZ, ddZ )
->
-> res = aegis_db_extract_by_polygon(
->
-> > sppoly=sppoly, \# polygons to overlay onto covariate fields
-> >
-> > vars=covars,
-> >
-> > yrs=p\$yrs,
-> >
-> > dyear=0.6 \# 0.6\*12 months = 7.2 = early July
->
-> )
+```r
+covars = c(t, tmin, tmax, degreedays, z, dZ, ddZ )
+res = aegis_db_extract_by_polygon(
+   sppoly=sppoly, # polygons to overlay onto covariate fields
+   vars=covars,
+   yrs=p\$yrs,
+   dyear=0.6 # 0.6\*12 months = 7.2 = early July
+)
+```
 
 When modeling, the input data likely will not have measured the
 appropriate variables of interest at the time of sampling. These can be
 filled via a fast lookup by location (longitude, latitude) and possibly
 a (POSIXct) timestamp . This can be accomplished via the following call:
 
-> covars = c(t, tmin, tmax, degreedays, z, dZ, ddZ )
->
-> set = aegis_db_lookup( X=set, lookupvars=covars, xy_vars=c(lon, lat),
-> time_var=timestamp )
+```r
+
+covars = c("t", "tmin", "tmax", "degreedays", "z", "dZ", "ddZ" )
+set = aegis_db_lookup( X=set, lookupvars=covars, xy_vars=c("lon", "lat"), time_var="timestamp" )
+
+```
 
 where, set\$timestamp is a POSIXct variable, and set\$lon is longitude
 and set\$lat is latitude.
@@ -1141,40 +1165,32 @@ The list of variable names are defined by the user and so is project
 driven and growing. The generic environmental variables that might be of
 interest to most are:
 
-> z = depth (m)
->
-> dZ = bottom slope (m/km)
->
-> ddZ = bottom curvature (m/km\^2)
->
-> substrate.grainsize = mean grain size of bottom substrate (mm)
->
-> t = temperature (C) -- subannual
->
-> tlb = temperature lower 95% bound (C) --subannual
->
-> tub = temperature upper 95% bound (C) --subannual
->
-> tmean = mean annual temperature
->
-> tsd = standard deviation of the mean annual temperature
->
-> tmin = minimum value of temperature in a given year -- annual
->
-> tmax= maximum value of temperature in a given year -- annual
->
-> tamplitude = amplitude of temperature swings in a year (tmax-tmin) --
-> annual
->
-> degreedays = number of degree days in a given year -- annual
+```code
+z = depth (m)
+dZ = bottom slope (m/km)
+ddZ = bottom curvature (m/km\^2)
+substrate.grainsize = mean grain size of bottom substrate (mm)
+t = temperature (C) -- subannual
+tlb = temperature lower 95% bound (C) --subannual
+tub = temperature upper 95% bound (C) --subannual
+tmean = mean annual temperature
+tsd = standard deviation of the mean annual temperature
+tmin = minimum value of temperature in a given year -- annual
+tmax= maximum value of temperature in a given year -- annual
+tamplitude = amplitude of temperature swings in a year (tmax-tmin) -- annual
+degreedays = number of degree days in a given year -- annual
+```
+
+
 
 Finally, the output from res = aegis_db_extract_by_polygon(\...), above,
 can be reformatted into a simple tabular form that facilitates plotting
 and prediction:
 
-> APS = aegis_prediction_surface( aegis_data=res\$means )
->
-> predictions = predict( model_fit, newdata=APS, type=response )
+```r
+APS = aegis_prediction_surface( aegis_data=res$means )
+predictions = predict( model_fit, newdata=APS, type="response" )
+```
 
 # Using INLA
 
@@ -1204,8 +1220,8 @@ scaling of the problem that shrinks towards the defined null/base model
 (prior). In the case of variance parameters, this scaling would be
 ideally be independently obtained and potentially informed; here we
 cheat and use the standard deviation of the data to scale these PC
-priors (see https://github.com/jae0/carstm
-/blob/master/inst/scripts/04_cod_comparisons_car.R) using the default
+priors (see https://github.com/jae0/aegis.survey
+/blob/master/inst/scripts/10_cod_carstm_tesseleation.md) using the default
 type 2 Gumbel distribution that shrinks the distribution towards zero.
 For the AR1 process we use the the cor0 PC prior which as has a base
 model of 0 correlation, that is, no correlation. For the spatial process

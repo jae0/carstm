@@ -5,8 +5,7 @@
   # Prepare data:
   require(INLA)
 
-  inla.pardiso.check()  # get it if you can and turn it on with:
-
+  # inla.pardiso.check()  # get it if you can and turn it on with:
   # inla.setOption(pardiso.license="~/paradiso.license" )  # point "pardiso.license" to the physical location of your license
 
 
@@ -42,6 +41,9 @@
 Checking some plots
 
 ```r
+  
+  plot( fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=TRUE, single=TRUE )
+   
   # random effects are nearly identical 
   dev.new()
   par( mfrow=c(1,2))
