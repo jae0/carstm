@@ -1,8 +1,8 @@
 
-toy_spatial_data = function(seed = 123) {
+toy_spatial_data = function(seed = 123, nx=10) {
   # generate some spatial data
   set.seed(seed)
-  east = north = 1:10
+  east = north = 1:nx
   Grid = expand.grid(east, north)
   K = nrow(Grid)
 
