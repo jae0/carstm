@@ -22,7 +22,7 @@ and various aegis*. and bio.snowcrab packages make heavy use of it.
 
 The R project is basically an accounting front-end to the computational engines (INLA, sf) to facillitate the computing, storage and access to the results of these models. Relatively simple to do for a simple spatial model without CARSTM, however, in spatio-temporal models, a bit of a challenge. This tool is mostly written to facilitate my work flow to estimate relationships and predict in a Bayesian spatiotemporal context.
 
-[Here is an example of a real use case that fully shows the space-time-seasonal approach: modelling ocean bottom temperature near Halifax, Nova Scotia, with season discretized to 10 units (to improve data density) is here.](inst/scripts/example_temperature_carstm.md)  
+An example of a real use case that fully shows the space-time-seasonal approach here: [modelling ocean bottom temperature](inst/scripts/example_temperature_carstm.md) near Halifax, Nova Scotia, with season discretized to 10 units (to improve data density).  
 
 As it operates with other aegis.* projects, each of the following are modelled and becomes accessible as covariates: ocean depth (aegis.bathymetry), ocean substrate grain size (aegis.substrate), ocean bottom temperature (aegis.temperature), demersal species composition (aegis.speciescomposition), Snow crab numerical abundance, size and probability of observation to estimate viable habitat (bio.snowcrab), and extentions to cod abundance, number, size and habitat (aegis.survey), etc. Many other variables require spatiotemporal modelling (e.g., physiological condition of fish, system-level metabolism) and are planned for one of these days.  
 
