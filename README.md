@@ -4,7 +4,7 @@ Conditional AutoRegressive ("CAR") models are just about th simplest possible wa
 
 For the Julia implementation, see examples and progression of model building in:
 
-    - [notes_carstm_julia.qmd](./docs/notes_carstm_julia.qmd)
+    - [notes_carstm_julia.qmd](docs/notes_carstm_julia.qmd)
     - [notes_gaussian_process_comparisons.qmd](./docs/notes_gaussian_process_comparisons.qmd)
     - [notes_carstm_julia.qmd](/docs/notes_carstm_julia.qmd)
     
