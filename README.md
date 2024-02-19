@@ -2,7 +2,7 @@
 
 Conditional AutoRegressive ("CAR") models are just about th simplest possible way of accounting for spatial autorcorrelation. It is essentially the analogue of the temporal ARIMA type models but in space. It is arguably even simpler as the units of space are discrete areal units (arbitrary polygons). Originally it was formulated in lattice form and related to the Ising models in physics. Its use is most prevalent in epidemiology made accessible by the original Besag-York-Mollie paper, Leroux and Riebler, and many others.
 
-For the Julia implementation, eee examples and progression of model building in:
+For the Julia implementation, see examples and progression of model building in:
 
     - ![](notes_carstm_julia.qmd)
     - ![](notes_gaussian_process_comparisons.qmd)
