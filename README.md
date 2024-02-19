@@ -12,9 +12,9 @@ For the Julia implementation, see examples and progression of model building in:
     
 For the R implementation, they are structured to be installed as a package (see below) and documentation in:
     
-[](./docs/carstm_methods.md)
+[./docs/carstm_methods.md](./docs/carstm_methods.md)
 
-[](./inst/scripts/example_temperature_carstm.md)
+[./inst/scripts/example_temperature_carstm.md](./inst/scripts/example_temperature_carstm.md)
 
 and various aegis*. and bio.snowcrab packages make heavy use of it. 
 
