@@ -1,13 +1,24 @@
 # CARSTM
 
-## Conditional AutoRegressive Space-Time Models (in R)
-
 Conditional AutoRegressive ("CAR") models are just about th simplest possible way of accounting for spatial autorcorrelation. It is essentially the analogue of the temporal ARIMA type models but in space. It is arguably even simpler as the units of space are discrete areal units (arbitrary polygons). Originally it was formulated in lattice form and related to the Ising models in physics. Its use is most prevalent in epidemiology made accessible by the original Besag-York-Mollie paper, Leroux and Riebler, and many others.
 
-This project is basically an accounting front-end to the computational engines (INLA, sf) to facillitate the computing, storage and access to the results of these models. Relatively simple to do for a simple spatial model without CARSTM, however, in spatio-temporal models, a bit of a challenge. This tool is mostly written to facilitate my work flow to estimate relationships and predict in a Bayesian spatiotemporal context.
+For the Julia implementation, eee examples and progression of model building in:
+
+    - ![](notes_carstm_julia.qmd)
+    - ![](notes_gaussian_process_comparisons.qmd)
+    - ![](notes_carstm_julia.qmd)
+    
+For the R implementation, they are structured to be installed as a package (see below) and documentation in:
+    
+    - ![](docs/carstm_methods.md)
+    - ![](inst/scripts/example_temperature_carstm.md]
+    - and various aegis*. and bio.snowcrab packages make heavy use of it. 
+
+## Conditional AutoRegressive Space-Time Models (in R)
+
+The R project is basically an accounting front-end to the computational engines (INLA, sf) to facillitate the computing, storage and access to the results of these models. Relatively simple to do for a simple spatial model without CARSTM, however, in spatio-temporal models, a bit of a challenge. This tool is mostly written to facilitate my work flow to estimate relationships and predict in a Bayesian spatiotemporal context.
 
 [Here is an example of a real use case that fully shows the space-time-seasonal approach: modelling ocean bottom temperature near Halifax, Nova Scotia, with season discretized to 10 units (to improve data density) is here.](inst/scripts/example_temperature_carstm.md)  
-
 
 As it operates with other aegis.* projects, each of the following are modelled and becomes accessible as covariates: ocean depth (aegis.bathymetry), ocean substrate grain size (aegis.substrate), ocean bottom temperature (aegis.temperature), demersal species composition (aegis.speciescomposition), Snow crab numerical abundance, size and probability of observation to estimate viable habitat (bio.snowcrab), and extentions to cod abundance, number, size and habitat (aegis.survey), etc. Many other variables require spatiotemporal modelling (e.g., physiological condition of fish, system-level metabolism) and are planned for one of these days.  
 
@@ -27,11 +38,10 @@ For Atlantic cod, see the preprints at:
 
 ---
 
-Another (less interesting) usage of *CARSTM* is to  replicate the "standard" analysis used by DFO Maritimes (known as "stratanal"): a really basic stratified average estimate. This is shown to be equivalent to a Gaussian linear fixed effects model. The utility becomes evident as this model-based approach can be used to incrementally improve upon the assumptions of the basic model, focussing upon the distributional assumptions of the model (Poisson, overdispersed Poisson), adding environmental covariates and then employing an INLA-based ICAR (intrinsic conditionally autoregressive models; "bym2") approach towards accounting for areal unit modelling and an AR1 temporal autocorrelation assuming separability of the spacetime autocorrelation. [See this document for more details and notes.](docs/carstm_methods.pdf)
+Another (less interesting) usage of *CARSTM* is to replicate the "standard" analysis used by DFO Maritimes (known as "stratanal"): a really basic stratified average estimate. This is shown to be equivalent to a Gaussian linear fixed effects model. The utility becomes evident as this model-based approach can be used to incrementally improve upon the assumptions of the basic model, focussing upon the distributional assumptions of the model (Poisson, overdispersed Poisson), adding environmental covariates and then employing an INLA-based ICAR (intrinsic conditionally autoregressive models; "bym2") approach towards accounting for areal unit modelling and an AR1 temporal autocorrelation assuming separability of the spacetime autocorrelation. [See this document for more details and notes.](docs/carstm_methods.pdf)
 
 
-## Installation
-
+### Installation in R
 
 To install, run the following:
 
@@ -53,7 +63,7 @@ require( carstm )
 ```
 
 
-## ## Conditional AutoRegressive Space-Time Models (in Julia) and other approaches: 
+## Conditional AutoRegressive Space-Time Models (in Julia) and other approaches: 
 
 - CAR/ICAR/BYM areal unit models (space)
 - GP models in time or space or covariates ("features")
@@ -68,6 +78,8 @@ Ultimately, we use Julia/Turing due to simplicity and speed and attempt to devel
 
 It is similar in scope to the github.com/jae0/carstm, however, with no reliance upon INLA for computation. 
 
+### Installation ... clone the repository or copy/download the Julia files
+
 
 ## Useful references
 
@@ -78,8 +90,6 @@ Max Joseph: Exact sparse CAR models in Stan: https://github.com/mbjoseph/CARstan
 https://github.com/ConnorDonegan/Stan-IAR
 https://github.com/ConnorDonegan/survey-HBM#car-models-in-stan
 
-
-## papers:
 https://www.mdpi.com/1660-4601/18/13/6856
 
 Besag, Julian, Jeremy York, and Annie Mollié. "Bayesian image restoration, with two applications in spatial statistics." Annals of the institute of statistical mathematics 43.1 (1991): 1-20.
