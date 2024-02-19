@@ -1,6 +1,7 @@
 # CARSTM
 
-Conditional AutoRegressive Space-Time Models
+## Conditional AutoRegressive Space-Time Models (in R)
+
 Conditional AutoRegressive ("CAR") models are just about th simplest possible way of accounting for spatial autorcorrelation. It is essentially the analogue of the temporal ARIMA type models but in space. It is arguably even simpler as the units of space are discrete areal units (arbitrary polygons). Originally it was formulated in lattice form and related to the Ising models in physics. Its use is most prevalent in epidemiology made accessible by the original Besag-York-Mollie paper, Leroux and Riebler, and many others.
 
 This project is basically an accounting front-end to the computational engines (INLA, sf) to facillitate the computing, storage and access to the results of these models. Relatively simple to do for a simple spatial model without CARSTM, however, in spatio-temporal models, a bit of a challenge. This tool is mostly written to facilitate my work flow to estimate relationships and predict in a Bayesian spatiotemporal context.
@@ -50,4 +51,40 @@ require( aegis )
 require( carstm )
 
 ```
- 
+
+
+## ## Conditional AutoRegressive Space-Time Models (in Julia) and other approaches: 
+
+- CAR/ICAR/BYM areal unit models (space)
+- GP models in time or space or covariates ("features")
+- Temporal (dynamical) models  
+- Spacetime models that combine all of the above using Julia/Turing
+
+Most didactic are the examples that use STAN (see info copied from various sources in "docs/example_car_stan.md"). 
+
+The INLA/R, BRMS/R, Turing/Julia (subdirectory examples) implementations are confirming parameter estimates.
+
+Ultimately, we use Julia/Turing due to simplicity and speed and attempt to develop a useful statistical and dynamical model of snow crab spatiotemporal processes.
+
+It is similar in scope to the github.com/jae0/carstm, however, with no reliance upon INLA for computation. 
+
+
+## Useful references
+
+Mitzi Morris: https://mc-stan.org/users/documentation/case-studies/icar_stan.html (very thorough)
+
+Max Joseph: Exact sparse CAR models in Stan: https://github.com/mbjoseph/CARstan 
+
+https://github.com/ConnorDonegan/Stan-IAR
+https://github.com/ConnorDonegan/survey-HBM#car-models-in-stan
+
+
+## papers:
+https://www.mdpi.com/1660-4601/18/13/6856
+
+Besag, Julian, Jeremy York, and Annie Mollié. "Bayesian image restoration, with two applications in spatial statistics." Annals of the institute of statistical mathematics 43.1 (1991): 1-20.
+
+Gelfand, Alan E., and Penelope Vounatsou. "Proper multivariate conditional autoregressive models for spatial data analysis." Biostatistics 4.1 (2003): 11-15.
+
+Jin, Xiaoping, Bradley P. Carlin, and Sudipto Banerjee. "Generalized hierarchical multivariate CAR models for areal data." Biometrics 61.4 (2005): 950-961.
+
