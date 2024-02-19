@@ -4,9 +4,9 @@ Conditional AutoRegressive ("CAR") models are just about th simplest possible wa
 
 For the Julia implementation, see examples and progression of model building in:
 
-    - [notes_carstm_julia.qmd](https://github.com/jae0/carstm/blob/master/docs/notes_carstm_julia.qmd)
-    - [notes_gaussian_process_comparisons.qmd](https://github.com/jae0/carstm/blob/master/docs/notes_gaussian_process_comparisons.qmd)
-    - [notes_carstm_julia.qmd](https://github.com/jae0/carstm/blob/master/docs/notes_carstm_julia.qmd)
+    - ![notes_carstm_julia.qmd](https://github.com/jae0/carstm/blob/master/docs/notes_carstm_julia.qmd)
+    - ![notes_gaussian_process_comparisons.qmd](https://github.com/jae0/carstm/blob/master/docs/notes_gaussian_process_comparisons.qmd)
+    - ![notes_carstm_julia.qmd](https://github.com/jae0/carstm/blob/master/docs/notes_carstm_julia.qmd)
     
 For the R implementation, they are structured to be installed as a package (see below) and documentation in:
     
