@@ -4,14 +4,14 @@ Conditional AutoRegressive ("CAR") models are just about th simplest possible wa
 
 For the Julia implementation, see examples and progression of model building in:
 
-    - [notes_carstm_julia.qmd](docs/notes_carstm_julia.qmd)
-    - [notes_gaussian_process_comparisons.qmd](./docs/notes_gaussian_process_comparisons.qmd)
-    - [notes_carstm_julia.qmd](/docs/notes_carstm_julia.qmd)
+    - [notes_carstm_julia.qmd](https://github.com/jae0/carstm/blob/master/docs/notes_carstm_julia.qmd)
+    - [notes_gaussian_process_comparisons.qmd](https://github.com/jae0/carstm/blob/master/docs/notes_gaussian_process_comparisons.qmd)
+    - [notes_carstm_julia.qmd](https://github.com/jae0/carstm/blob/master/docs/notes_carstm_julia.qmd)
     
 For the R implementation, they are structured to be installed as a package (see below) and documentation in:
     
-    - [](./docs/carstm_methods.md)
-    - [](./inst/scripts/example_temperature_carstm.md]
+    - [](https://github.com/jae0/carstm/blob/master/docs/carstm_methods.md)
+    - [](https://github.com/jae0/carstm/blob/master/inst/scripts/example_temperature_carstm.md]
     - and various aegis*. and bio.snowcrab packages make heavy use of it. 
 
 ## Conditional AutoRegressive Space-Time Models (in R)
