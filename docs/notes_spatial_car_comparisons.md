@@ -260,8 +260,8 @@ toydata = toy_spatial_data(seed=123, nx=10, fn="~/tmp/toy_spatial_data.RData" )
 
 attach(toydata)  # (data, wb)
 
-str(data)
-str(wb)
+str(dat)
+str(W)
   
  
 require(INLA)
@@ -279,8 +279,21 @@ fit <- inla(formula, data =dat, family="binomial", Ntrials=size,
       control.compute = list( waic=TRUE, dic=TRUE, config=TRUE), # waic=TRUE
       control.predictor=list(compute=TRUE, link=1 ), # compute=TRUE on each data location
       verbose = F)
+summary(fit)
 
+formula = y~ offset(log(size)) + x1 + x2 + f(ID, model="bym2", graph=W, scale.model = TRUE, constr = TRUE, 
+  # priors
+  hyper = list(theta1 = list("PCprior", c(1, 0.01)),  
+  # Pr(sd<1) = 0.01, unlikely to have rr>3just based on the spatial confounding
+              theta2 = list("PCprior", c(0.5, 0.5))) 
+  # Pr(phi<0.5)=0.5, we believe that the unmeasured spatial confounding
+  # is driven 50% from the structured and 50% from the unstructured random effect
+)
 
+fit <- inla(formula, data =dat, family="poisson", Ntrials=size,
+      control.compute = list( waic=TRUE, dic=TRUE, config=TRUE), # waic=TRUE
+      control.predictor=list(compute=TRUE, link=1 ), # compute=TRUE on each data location
+      verbose = F)
 summary(fit)
 ```
 
@@ -315,7 +328,84 @@ Posterior summaries for the linear predictor and the fitted values are computed
 (Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
 ~~~
 
+## brms (in R) poisson
 
+Fit a CAR model with brms.
+
+Note brms's solutions results are slightly different as another random seed is used
+
+```r
+
+library(brms)
+
+fit = brm(y ~ x1 + x2 + car(W, gr=ID) + offset(log(size)), 
+           data = dat, data2 = list(W = W),
+           family = poisson()) 
+
+summary(fit)
+
+ Family: poisson 
+  Links: mu = log 
+Formula: y ~ x1 + x2 + car(W, gr = ID) + offset(log(size)) 
+   Data: dat (Number of observations: 100) 
+  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+         total post-warmup draws = 4000
+
+Correlation Structures:
+      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+car       0.82      0.17     0.33     0.99 1.01      451      324
+sdcar     0.29      0.06     0.19     0.41 1.02      456      973
+
+Population-Level Effects: 
+          Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+Intercept    -0.98      0.08    -1.15    -0.85 1.02      268      115
+x1            0.52      0.03     0.46     0.59 1.00     1973     2656
+x2            0.47      0.03     0.42     0.53 1.00     2737     3167
+
+Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).
+
+ 
+```
+
+## brms (in R) binomial  
+
+Fit a CAR model with brms.
+ 
+```r
+
+library(brms)
+library(rstan)
+
+fit = brm(y | trials(size) ~ x1 + x2 + car(W, gr=ID), 
+           data = dat, data2 = list(W = W),
+           family = binomial()) 
+summary(fit)
+
+ Family: binomial 
+  Links: mu = logit 
+Formula: y | trials(size) ~ x1 + x2 + car(W, gr = ID) 
+   Data: dat (Number of observations: 100) 
+  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+         total post-warmup draws = 4000
+
+Correlation Structures:
+      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+car       0.91      0.09     0.65     1.00 1.06       48       23
+sdcar     0.54      0.09     0.38     0.73 1.00      754     1167
+
+Population-Level Effects: 
+          Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+Intercept    -0.19      0.25    -0.50     0.70 1.11       66       13
+x1            1.08      0.06     0.96     1.19 1.00     2577     2269
+x2            1.04      0.05     0.94     1.15 1.00     3194     2809
+
+Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).
+```
+ 
 
 
 ## Turing implementation in Julia
@@ -400,32 +490,6 @@ Model hyperparameters:
 Precision for ID 7.029 2.012      3.937    6.742     11.790 6.193
 Phi for ID       0.806 0.146      0.439    0.844      0.982 0.946
 
-
-And brms's solutions (below, currently broken)
-
-Note brms's solutions results are slightly different as another random seed is used
-
-Family: binomial 
-  Links: mu = logit 
-Formula: y | trials(size) ~ x1 + x2 + car(W) 
-   Data: dat (Number of observations: 100) 
-  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
-         total post-warmup draws = 4000
-
-Correlation Structures:
-      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-car       0.91      0.11     0.61     1.00 1.02      574     1132
-sdcar     0.47      0.10     0.29     0.68 1.01      420      751
-
-Population-Level Effects: 
-          Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-Intercept     0.92      0.13     0.65     1.17 1.04      227      268
-x1            1.03      0.05     0.93     1.13 1.00     3272     3225
-x2            1.02      0.06     0.91     1.13 1.00     2471     2760
-
-Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
-and Tail_ESS are effective sample size measures, and Rhat is the potential
-scale reduction factor on split chains (at convergence, Rhat = 1).
 
 ~~~
 
@@ -600,46 +664,6 @@ Continued in .. ![](notes_gaussian_process_comparisons.qmd)
 ```
 
  
-
-## brms (in R)
-
-Fit a CAR model with brms.
-
-NOTE: example or brm seems broken 2023/06/22 .. (skip for now)
-
-```r
-
-library(brms)
-
-fit = brm(y | trials(size) ~ x1 + x2 + car(W, gr=ID), 
-           data = dat, data2 = list(W = W),
-           family = binomial()) 
-summary(fit)
-```
-
-~~~
- Family: binomial 
-  Links: mu = logit 
-Formula: y | trials(size) ~ x1 + x2 + car(W) 
-   Data: dat (Number of observations: 100) 
-  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
-         total post-warmup draws = 4000
-
-Correlation Structures:
-      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-car       0.91      0.11     0.61     1.00 1.02      574     1132
-sdcar     0.47      0.10     0.29     0.68 1.01      420      751
-
-Population-Level Effects: 
-          Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-Intercept     0.92      0.13     0.65     1.17 1.04      227      268
-x1            1.03      0.05     0.93     1.13 1.00     3272     3225
-x2            1.02      0.06     0.91     1.13 1.00     2471     2760
-
-Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
-and Tail_ESS are effective sample size measures, and Rhat is the potential
-scale reduction factor on split chains (at convergence, Rhat = 1).
-~~~
 
 ```r
 # specify autocor terms within the formula
