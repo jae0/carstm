@@ -20,27 +20,22 @@ pkgs_startup = [
     "StaticArrays", "LazyArrays", "FillArrays", "SparseArrays", "Graphs",
     "Flux", "Optim", "KernelFunctions", "AbstractGPs", 
     "Distributions", "DistributionsAD", "AdvancedVI",
-    "ModelingToolkit", "DifferentialEquations", "Interpolations", "LinearAlgebra",
+    "Interpolations", "LinearAlgebra",
     "Turing"  # should be last
 ]
- 
-print( "Loading libraries:\n\n" )
-for pk in pkgs; 
-    print(pk, "\n"); @eval using $(Symbol(pk)); 
-end    
- 
- 
+  
 if @isdefined pkgs 
     pkgs = unique!( [pkgs_startup; pkgs] )
 else 
     pkgs = pkgs_startup
 end
     
+
 print( "Loading libraries:\n\n" )
 for pk in pkgs; 
-    print(pk, "\n")
-    @eval using $(Symbol(pk)); 
+    print(pk, "\n"); @eval using $(Symbol(pk)); 
 end    
+ 
 
 colorscheme!("Monokai24bit") # for REPL
 

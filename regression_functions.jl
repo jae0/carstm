@@ -1,5 +1,5 @@
 
-function example_data(; N=1000)
+function example_data(; N=1000,  cov2lev = ("1"=>1, "2"=>1.25, "3"=>2, "4"=>1.5), alpha=0.1 )
     # make random data for analysis
     # NOTE: utility in terms of creating model matrix using schemas, etc
     
@@ -8,17 +8,17 @@ function example_data(; N=1000)
     df = DataFrame(
         xvar = xvar,
         covar1 = string.(rand( [1, 2, 3, 4], N)  ),  # factorial
-        covar2 = vec(randn(N))
+        covar2 = vec(randn(N)),
+        covar3 = vec(trunc.( Int, randn(N)*3 ) )
     )
-    
-    # group means
-    cov2 = replace(df.covar1, "1"=>1.0, "2" =>1.25, "3"=>2, "4"=>1.5) 
-    yvar = sin.(vec(xvar)) + df.covar2 .* 0.1  .+ 0.5 .* rand.(Normal.(cov2, 0.1))
+
+    cov2 = replace(df.covar1, cov2lev[1], cov2lev[2], cov2lev[3], cov2lev[4] ) 
+    df.yvar = sin.(vec(xvar)) + df.covar2 .* alpha .+ rand.(Normal.(cov2, 0.1))
     schm = StatsModels.schema(df, Dict(:covar1 => EffectsCoding()) )
     dm = StatsModels.apply_schema(StatsModels.term.((:xvar, :covar1, :covar2)), schm ) 
-    dmat = StatsModels.modelcols(StatsModels.MatrixTerm( dm ), df)
-    dmatnm = StatsModels.coefnames( dm )   # coef names of design matrix 
-    tnm = StatsModels.termnames( dm)  # coef names of model data
+    modelcols = StatsModels.modelcols(StatsModels.MatrixTerm( dm ), df)
+    coefnames = StatsModels.coefnames( dm )   # coef names of design matrix 
+    termnames = StatsModels.termnames( dm)  # coef names of model data
     
     # alternative access:
     # fm = StatsModels.@formula( yvar ~ 1 + xvar + covar1 + covar2)
@@ -26,8 +26,9 @@ function example_data(; N=1000)
     # cols = modelcols(z, df)
     # o = reduce(hcat, cols)
     
-    return yvar, df, dmat, dmatnm, tnm
+    return df, modelcols, coefnames, termnames, cov2lev
 end
+
 
 function example_nonlinear_data(Xl = -7:0.1:7, ) 
     
@@ -96,64 +97,94 @@ function quantiles(X, q; dims, drop=false)
     Q = mapslices(x -> quantile(x, q), X, dims=dims)
     out = drop ? dropdims(Q, dims=dims) : Q
     return out
-  end
-  
-       
-  # Squared-exponential covariance function
-  sqexp_cov_fn(D, phi, eps=1e-3) = exp.(-D^2 / phi) + LinearAlgebra.I * eps
-  
-  # Exponential covariance function
-  exp_cov_fn(D, phi) = exp.(-D / phi)
-  
-  @model function GP(Y, X, m=0, s=1, cov_fn=exp_cov_fn)
-  
-      # Dimensions of predictors 
-      N, P = size(X)
-      
-      # Distance matrix
-      D = pairwise(Distances.Euclidean(), X, dims=1)
-      
-      # Priors
-      mu ~ Normal(m, s)
-      sig2 ~ LogNormal(0, 1)
-      phi ~ LogNormal(0, 1)
-      
-      # Realized covariance function
-      K = cov_fn(D, phi)
-      
-      # Sampling Distribution
-      # The latent variables have been marginalized out here,
-      # so there's only one level.
-      Y ~ MvNormal(mu * ones(N), K + sig2 * LinearAlgebra.I(N))
-  end
+end
 
 
-
-# This funciton returns a function for predicting at new points given parameter values.
-function make_gp_predict_fn(Xnew, Y, X, cov_fn)
-    N = size(X, 1)
-    M = size(Xnew, 1)
-    Q = N + M
-    Z = [Xnew; X]
-    D = pairwise(Euclidean(), Z, dims=1)
+function summarize_samples(S)
+  smean = mean(S, dims=1)
+  slb = quantiles(S, 0.025, dims=1)
+  sub = quantiles(S, 0.975, dims=1)
+  return smean, slb, sub
+end
     
-    return (mu, sig2, phi) -> let
-        K = cov_fn(D, phi)
-        Koo_inv = inv(K[(M+1):end, (M+1):end])
-        Knn = K[1:M, 1:M]
-        Kno = K[1:M, (M+1):end]
-        C = Kno * Koo_inv
-        m = C * (Y .- mu) .+ mu
-        S = Matrix(LinearAlgebra.Hermitian(Knn - C * Kno'))
-        mvn = MvNormal(m, S + sig2 * LinearAlgebra.I)
-        rand(mvn)
+# Squared-exponential covariance function
+sqexp_cov_fn(D, phi, eps=1e-3) = exp.(-D^2 / phi) + LinearAlgebra.I * eps
+
+# Exponential covariance function
+exp_cov_fn(D, phi) = exp.(-D / phi)
+
+
+Turing.@model function gaussian_process_basic(; Y, D, cov_fn=exp_cov_fn, nY=length(Y) )
+    mu ~ Normal(0.0, 1.0); # mean process
+    sig2 ~ LogNormal(0, 1) # "nugget" variance
+    phi ~ LogNormal(0, 1) # phi is ~ lengthscale along Xstar (range parameter)
+    # sigma = cov_fn(D, phi) + sig2 * LinearAlgebra.I(nY) # Realized covariance function + nugget variance
+
+    vcov = cov_fn(D, phi) + sig2 .* LinearAlgebra.I(nY )
+    Y ~ MvNormal(mu * ones(nY), Symmetric(vcov) )     # likelihood
+
+end
+
+
+Turing.@model function gaussian_process_covars(; Y, X, D, cov_fn=exp_cov_fn, nY=length(Y), nF=size(X,2) )
+    # model matrix for fixed effects (X)
+    beta ~ filldist( Normal(0.0, 1.0), nF); 
+    sig2 ~ LogNormal(0, 1) # "nugget" variance
+    phi ~ LogNormal(0, 1) # phi is ~ lengthscale along Xstar (range parameter)
+    # sigma = cov_fn(D, phi) + sig2 * LinearAlgebra.I(nY) # Realized covariance function + nugget variance
+    
+    mu = X * beta # mean process
+    vcov = cov_fn(D, phi) + sig2 .* LinearAlgebra.I(nY )
+    Y ~ MvNormal(mu, Symmetric(vcov) )     # likelihood
+end
+
+
+
+Turing.@model function gaussian_process_ar1(; Y, X, D, ar1, cov_fn=exp_cov_fn, 
+    nY=length(Y), nF=size(X,2), nT=maximum(ar1)-minimum(ar1)+1 )
+
+    alpha_ar1 ~ Normal(0,1)
+    beta_ar1 ~ Normal(0,1)
+    sigma_ar1 ~ LogNormal(0, 1) # "nugget" variance
+
+    yr ~ filldist( Normal(0.0, 1.0), nT);  # -- means by time 
+    # -- collects like years and 
+    for n in 2:nT
+        yr[n] ~ Normal(alpha_ar1 + beta_ar1 * yr[n-1], sigma_ar1 );
     end
+
+    # # mean process model matrix  
+    beta ~ filldist( Normal(0.0, 1.0), nF); 
+    mu = X * beta .+ yr[ar1] 
+
+    sig2 ~ LogNormal(0, 1) # "nugget" variance
+    phi ~ LogNormal(0, 1) # phi is ~ lengthscale along Xstar (range parameter)
+    # sigma = cov_fn(D, phi) + sig2 * LinearAlgebra.I(nY) # Realized covariance function + nugget variance
+    # vcov = cov_fn(D, phi) + sig2 .* LinearAlgebra.I(nY )
+    
+    Y ~ MvNormal(mu, Symmetric(cov_fn(D, phi) .+ sig2 * eps() * I(nY) ) )     # likelihood
 end
 
 
-function make_extractor_avdi(m, q, nsamples=1000)
-    # To extract parameters from ADVI model.
-    qsamples = rand(q, nsamples)
-    _, sym2range = Bijectors.bijector(m, Val(true));
-    return sym -> qsamples[collect(sym2range[sym][1]), :]
+
+
+
+
+function gp_predictions(; Y, D, mu, sig2, phi, cov_fn=exp_cov_fn, nN=length(Xnew), nP=size(chain, 1) ) 
+    ynew = Vector{Float64}()
+    for i in sample(1:size(chain,1), nP, replace=true)
+        K = cov_fn(D, phi[i])
+        Koo_inv = inv(K[(nN+1):end, (nN+1):end])
+        Knn = K[1:nN, 1:nN]
+        Kno = K[1:nN, (nN+1):end]
+        C = Kno * Koo_inv
+        mvn = MvNormal( 
+            C * (Y .- mu[i]) .+ mu[i], 
+            Matrix(LinearAlgebra.Hermitian(Knn - C * Kno')) + sig2[i] * LinearAlgebra.I 
+        ) 
+        ynew = vcat(ynew, [rand(mvn) ] )
+    end
+    ynew = stack(ynew, dims=1)  # rehape to matrix   
+    return ynew
 end
+

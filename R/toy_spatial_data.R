@@ -1,5 +1,5 @@
 
-toy_spatial_data = function(seed = 123, nx=10) {
+toy_spatial_data = function(seed = 123, nx=10, fn=NULL) {
   # generate some spatial data
   set.seed(seed)
   east = north = 1:nx
@@ -23,6 +23,7 @@ toy_spatial_data = function(seed = 123, nx=10) {
   dat = data.frame(y, size, x1, x2)
   dat$ID = 1:K
   row.names(W) = dat$ID
-  
-  return(list(dat=dat, W=W))
+  out = list(dat=dat, W=W)
+  if (!is.null(fn)) save(out, file=fn, compress=TRUE) 
+  return( out)
 }

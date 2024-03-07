@@ -1,5 +1,5 @@
 
-# Example comparing model formulation with INLA, and checking they are the same as with CARSTM 
+# Example comparing a simple spatial only model (BYM) formulation with INLA, and checking they are the same as with CARSTM 
 
 ```r
   # Prepare data:

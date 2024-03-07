@@ -239,11 +239,11 @@ end
 
  
 
-Turing.@model function turing_icar_direct_test( node1, node2; ysd=std(skipmissing(y))  )
+Turing.@model function turing_icar_direct_test( node1, node2; ysd=std(skipmissing(y)), nY=size(y,1)  )
     # equivalent to Morris' "simple_iar' .. testing pairwise difference formulation
     # see (https://mc-stan.org/users/documentation/case-studies/icar_stan.html)
 
-    phi ~ filldist( Normal(0.0, ysd), N)   # 10 is std from data: std(y)=7.9 stan goes from U(-Inf,Inf) .. not sure why 
+    phi ~ filldist( Normal(0.0, ysd), nY)   # 10 is std from data: std(y)=7.9 stan goes from U(-Inf,Inf) .. not sure why 
     dphi = phi[node1] - phi[node2]
     lp_phi =  -0.5 * dot( dphi, dphi )
     Turing.@addlogprob! lp_phi
@@ -251,20 +251,20 @@ Turing.@model function turing_icar_direct_test( node1, node2; ysd=std(skipmissin
     # soft sum-to-zero constraint on phi)
     # equivalent to mean(phi) ~ normal(0,0.001)
     sum_phi = sum(phi)
-    sum_phi ~ Normal(0, 0.001 * N);  
+    sum_phi ~ Normal(0, 0.001 * nY);  
   
     # no data likelihood -- just prior sampling  -- 
 end
 
   
-Turing.@model function turing_icar_direct_bym( X, log_offset, y, nX, node1, node2; ysd=std(skipmissing(y)) )
+Turing.@model function turing_icar_direct_bym( X, log_offset, y, nX, node1, node2; ysd=std(skipmissing(y)),  nY=size(X,1) )
     # BYM
     # alpha ~ Uniform(0.0, 1.0); # alpha = 0.9 ; alpha==1 for BYM / iCAR
      # tau ~ Gamma(2.0, 1.0/2.0);  # tau=0.9
      beta ~ filldist( Normal(0.0, 5.0), nX);
-     theta ~ filldist( Normal(0.0, 1.0), N) # unstructured (heterogeneous effect)
-     # phi ~ filldist( Laplace(0.0, ysd), N) # spatial effects: stan goes from -Inf to Inf .. 
-     phi ~ filldist( Normal(0.0, ysd), N) # spatial effects: stan goes from -Inf to Inf .. 
+     theta ~ filldist( Normal(0.0, 1.0), nY) # unstructured (heterogeneous effect)
+     # phi ~ filldist( Laplace(0.0, ysd), nY) # spatial effects: stan goes from -Inf to Inf .. 
+     phi ~ filldist( Normal(0.0, ysd), nY) # spatial effects: stan goes from -Inf to Inf .. 
  
      # pairwise difference formulation ::  prior on phi on the unit scale with sd = 1
      # see (https://mc-stan.org/users/documentation/case-studies/icar_stan.html)
@@ -275,7 +275,7 @@ Turing.@model function turing_icar_direct_bym( X, log_offset, y, nX, node1, node
      # soft sum-to-zero constraint on phi)
      # equivalent to mean(phi) ~ normal(0, 0.001)
      sum_phi = sum(phi)
-     sum_phi ~ Normal(0, 0.001 * N);  
+     sum_phi ~ Normal(0, 0.001 * nY);  
 
      tau_theta ~ Gamma(3.2761, 1.0/1.81);  # Carlin WinBUGS priors
      tau_phi ~ Gamma(1.0, 1.0);            # Carlin WinBUGS priors
@@ -376,7 +376,7 @@ Turing.@model function turing_icar_direct_bym2_groups( X, log_offset, y, auid, n
 end 
 
 
-Turing.@model function turing_icar_latent_bym2( X, log_offset, y, auid, nX, nY, nAU, node1, node2, 
+Turing.@model function turing_icar_latent_bym2( X, log_offset, y, auid, nX, nAU, node1, node2, 
     scaling_factor )
 
     beta ~ filldist( Normal(0.0, 1.0), nX); 
@@ -433,7 +433,7 @@ Turing.@model function turing_icar_latent_bym2_gp1( X, G, log_offset, y, z, auid
  
     k = ( kernel_var * SqExponentialKernel() ) ∘ ScaleTransform(kernel_scale) 
 
-    kmat = kernelmatrix( k, G, obsdim=1 ) + l2reg*I # makes PD and cholesky, add regularization
+    kmat = Symmetric( kernelmatrix( k, G, obsdim=1 ) + l2reg*I ) # makes PD and cholesky, add regularization
     chkm = cholesky(kmat)
  
     # "latent" GP of G on unit scales
@@ -667,6 +667,6 @@ function turing_icar_latent_bym2_predict( res, X; log_offset=0, scaling_factor=1
     @warn  "Insufficient number of solutions" 
     end
 
-    return (md, mn, mb, trace, trace_bio, trace_time )
+    return md, mn, mb, trace, trace_bio, trace_time 
 
 end
