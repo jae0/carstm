@@ -349,6 +349,7 @@ $f(x)=(x+4)(x+1)(x−1)(x−3)f(x)=(x+4)(x+1)(x−1)(x−3)$
 using KernelFunctions
 using LinearAlgebra
 using Distributions
+using Turing 
 
 using Plots;
 default(; lw=2.0, legendfontsize=11.0, ylims=(-150, 500));
@@ -363,12 +364,10 @@ code_directory = "/home/jae/bio/carstm/"
 
 include( joinpath( code_directory, "regression_functions.jl"  ))  
 
-Xl, yl, Xp, Xo, yo = example_nonlinear_data() 
+Xl, yl, Xo, yo, Xp = example_nonlinear_data() 
 
-Xp = Xl  # predict upon the same X as latent  
-
-plot(Xl, yl; label=raw"$f(x)$")  # latent "truth"
-scatter!(Xo, yo; seriescolor=1, label="observations")
+plot(Xl, yl; label=raw"$f(x)$ latent 'truth'", legend=:top)  # latent "truth"
+scatter!(Xo, yo; seriescolor=:orange, label="observations with error")
 
 
 ```
@@ -393,8 +392,8 @@ Predictions $\hat{y}_*$ at test inputs $x_{*}$ are obtained from:  $\hat{y}_* = 
 beta = (Xo' * Xo) \ (Xo' * yo)
 
 yp = Xp * beta 
-
-plot!(Xp, yp; label="linear fit")
+ 
+plot!(Xp, yp; marker=(:circle,3), label="linear fit")
 
 ```
 
@@ -420,21 +419,19 @@ function featurize_poly(Xin, degree=1)
     return repeat(Xin, 1, degree + 1) .^ (0:degree)'
 end
 
-Xl, yl, Xp, Xo, yo = example_nonlinear_data() 
-
-Xp = Xl  # predict upon the same X as latent  
+Xl, yl, Xo, yo, Xp = example_nonlinear_data() 
 
 degree = 3
 Xof = featurize_poly(Xo, degree)
 Xpf = featurize_poly(Xp, degree)
-yp = linear_regression(Xof, yo, Xpf )
-scatter!(Xp, yp; legend=false, title="fit of order $degree")
+yp = linear_regression(Xof, yo, Xpf ) 
+plot!(Xp, yp; width=3, marker=(:star,5),label ="fit of order $degree", legend=:top )
 
 degree = 4
 Xof = featurize_poly(Xo, degree)
 Xpf = featurize_poly(Xp, degree)
 yp = linear_regression(Xof, yo, Xpf )
-scatter!(Xp, yp; legend=false, title="fit of order $degree")
+plot!(Xp, yp; width=3, marker=(:star,5),label ="fit of order $degree", legend=:top )
 
 
 ```
@@ -457,27 +454,27 @@ function ridge_regression(X, y, Xstar, lambda)
     return Xstar * beta
 end
 
-Xl, yl, Xp, Xo, yo = example_nonlinear_data() 
-
-Xp = Xl  # predict upon the same X as latent  
-
+Xl, yl, Xo, yo, Xp = example_nonlinear_data() 
 
 degree = 3
 Xof = featurize_poly(Xo, degree)
 Xpf = featurize_poly(Xp, degree)
 
 lambda = 1e-3
-yp = ridge_regression(Xof, yo, Xpf, lambda) 
-scatter!(Xp, yp; legend=false, title="fit of order $degree and \$\\lambda=$lambda\$")
- 
+yp = ridge_regression(Xof, yo, Xpf, lambda)  
+
+plot!(Xp, yp; width=3, marker=(:triangle,3), label ="fit of order $degree and \$\\lambda=$lambda\$", legend=:top )
+
+
 degree = 4
 Xof = featurize_poly(Xo, degree)
 Xpf = featurize_poly(Xp, degree)
 
 lambda = 1e-1
 yp = ridge_regression(Xof, yo, Xpf, lambda) 
-scatter!(Xp, yp; legend=false, title="fit of order $degree and \$\\lambda=$lambda\$")
-  
+
+plot!(Xp, yp; width=3, marker=(:triangle,3), label ="fit of order $degree and \$\\lambda=$lambda\$", legend=:top )
+
 ```
 
 
@@ -510,16 +507,14 @@ $\hat{y}_* = x_*  \beta = \langle x_* \beta \rangle = k_* (K + \lambda 1)^{-1} y
 where $(k_*)_n = k(x_*,x_n)$
 
 ```julia
-
+ 
 function kernel_ridge_regression(X, y, Xstar, lambda, kern)
     K = kernelmatrix(kern, X)
     kstar = kernelmatrix(kern, Xstar, X)
     return kstar * ((K + lambda * I) \ y)
 end;
 
-Xl, yl, Xp, Xo, yo = example_nonlinear_data() 
-
-Xp = Xl  # predict upon the same X as latent  
+Xl, yl, Xo, yo, Xp = example_nonlinear_data() 
 
 # some possible kernels:
 kernel = PolynomialKernel(; degree=1, c=1) #  polynomial feature expansion
@@ -531,8 +526,7 @@ kernel = MaternKernel(ν=2.5)  # Matern 52
 
 lambda = 1e-3
 yp = kernel_ridge_regression(Xo, yo, Xp, lambda, kernel )
-scatter!(Xp, yp; legend=false, title="fit of order $degree and \$\\lambda=$lambda\$")
-  
+plot!(Xp, yp;  marker=(:square,3), label="fit of order $degree and \$\\lambda=$lambda\$")
  
 ```
 
@@ -581,13 +575,12 @@ using Plots
 using BenchmarkTools
  
 
-Xl, yl, Xp, Xo, yo = example_nonlinear_data() 
+Xl, yl, Xo, yo, Xp = example_nonlinear_data() 
 
-Xp = Xl  # predict upon the same X as latent  
 
-plot(Xl, yl; label=raw"$f(x)$")  # latent "truth"
-scatter!(Xo, yo; seriescolor=1, label="observations")
- 
+plot(Xl, yl; label=raw"$f(x)$ latent 'truth'", legend=:top)  # latent "truth"
+scatter!(Xo, yo; seriescolor=:orange, label="observations with error")
+
 # here there are 4 possible parameters to tune: lambda, variance compoents (2) and scale 
 # this example is about implementation and not tuning so, just picking a few values:
 
@@ -606,7 +599,7 @@ Kp = kernelmatrix(k, Xp, Xo)
 
 # 0: directly
 yp = gp_kernel_ridge_regression_cholesky( sigma, scale, lambda, Xo, Xp, yo )
-scatter!(Xp, yp; label="predictions0", alpha=0.75, lw=5 )
+plot!(Xp, yp;  marker=(:square,3),  label="functional cholesky \$\\lambda=$lambda\$")
 
 @benchmark let
     yp = gp_kernel_ridge_regression_cholesky( sigma, scale, lambda, Xo, Xp, yo )
@@ -616,11 +609,11 @@ end
 # 1: let julia decide
 yp = Kp * ( (Ko + lambda * I ) \ yo )  # note:: A\B == inv(A)*B
 # yp = kernelmatrix(k, Xp, Xo) * ((kernelmatrix(k, Xo) + lambda * I) \ yo)
-scatter!(Xp, yp; label="predictions1", alpha=0.75, lw=5 )  
+plot!(Xp, yp;  marker=(:triangle,3),   label="direct kernel matrix \$\\lambda=$lambda\$")
 
 @benchmark let
     yp = Kp * ( inv(Ko + lambda * I ) * yo )
-    # (mean ± σ):   7.475 μs ±  10.684 μs  
+    # (mean ± σ):   7.475 μs ±  10.684 μs    # modal
 end
 
 
@@ -632,12 +625,12 @@ end
         A\B == inv(A)*B  
     =#
 
-yp = Kp * ( inv(Ko + lambda * I ) * yo )
-scatter!(Xp, yp; label="predictions2", alpha=0.75, lw=5 )
+yp = Kp * ( inv(Ko + lambda * I ) * yo ) 
+plot!(Xp, yp;  marker=(:star,3),  label="direct inverse \$\\lambda=$lambda\$")
 
 @benchmark let
     yp = Kp * ( (Ko + lambda * I ) \ yo )  
-    #  (mean ± σ):   4.620 μs ±   7.988 μs 
+    #  (mean ± σ):   4.620 μs ±   7.988 μs # long tail
 end
 
 
@@ -646,28 +639,25 @@ end
 
 L = cholesky(Ko + lambda * I).L
 yp = Kp * ( L' \ (L \ yo) )  
-scatter!(Xp, yp; label="predictions3", alpha=0.75, lw=5 )
+plot!(Xp, yp;  marker=(:star,3),  label="Cholesky -- fastest \$\\lambda=$lambda\$")
 
 @benchmark let
     L = cholesky(Ko + lambda * I)
     yp = Kp * ( L.U \ (L.L \ yo) )  
-    #  (mean ± σ):   3.810 μs ±   9.623 μs   <-- winner
+    #  (mean ± σ):   3.810 μs ±   9.623 μs   <-- winner, but long tailed
 end
 
 
 KP = Kp'
 L = cholesky(Ko + lambda * I).L
 yp = transpose( L \ KP ) * ( L \ yo )  
-scatter!(Xp, yp; label="predictions4", alpha=0.75, lw=5 )
+plot!(Xp, yp;  marker=(:star,3),  label="Cholesky tranposed \$\\lambda=$lambda\$")
 
 @benchmark let
     L = cholesky(Ko + lambda * I).L
     yp = transpose( L \ KP ) * ( L \ yo )  
-    #  (mean ± σ):   16.492 μs ± 29.256 μs 
+    #  (mean ± σ):   16.492 μs ± 29.256 μs   # very slow
 end
-
-
- 
 
 
 ```
@@ -712,9 +702,10 @@ because:
 
 $\Sigma = E[ (x-u)(x-u)^T ] = A \cdot E[v v^T] \cdot A^T \ = A A^T$
 
-```julia 
 
-# same data but with more noise
+## Same data but with more noise
+
+```julia 
 
 using KernelFunctions
 using LinearAlgebra
@@ -726,55 +717,44 @@ default(; lw=2.0, legendfontsize=11.0, ylims=(-150, 500));
 using Random: seed!
 seed!(42);
 
-# Data ("truth")
-Y(x) = (x + 4) * (x + 1) * (x - 1) * (x - 3)
 
-x = -5:0.5:5  # column vector: 
+# same data 
+Xl, yl, Xo, yo, Xp = example_nonlinear_data() 
+yo = yo .+ rand(Normal(0, 20), length(yo))
 
-x_obs  = round.( rand( Uniform(-5,5), 100 ), digits=1 )  
-x_pred = -5:0.5:5
-
-
-noise = rand(Normal(0, 20), length(x_obs))
-yo = round.( Y.(x_obs) + noise, digits=1 )
-
-y_real = Y.(x_pred)
-
-Plots.plot( x_pred, y_real;  label="truth",  legendfontsize=10.0, legend=true )   
-Plots.scatter!(x_obs, yo; seriescolor=1, label="observations with error", markersize=6, alpha=0.8)
- 
-
+plot(Xl, yl; label=raw"$f(x)$ latent 'truth'", legend=:top)  # latent "truth"
+scatter!(Xo, yo; seriescolor=:orange, label="observations with more error")
+   
 lambda = 1e-4
 k = (500 * SqExponentialKernel() ) ∘ ScaleTransform(0.1)
 
-Ko  = kernelmatrix(k, x_obs)
-
-Kp = kernelmatrix(k, x_pred, x_obs)
-
+Ko  = kernelmatrix(k, Xo)
+Kp = kernelmatrix(k, Xl, Xo)
 L = cholesky(Ko + lambda * I)
 
 # y_mean_process = Ko * ( inv(Ko + lambda * I ) * yo )
 y_mean_process = Ko * ( L.U \ (L.L \ yo) )   # faster equivalent, # note:: A\B == inv(A)*B
 
-Plots.scatter!(x_obs, y_mean_process; label="predictions3", alpha=0.75, markersize=3 )
-
+plot!(Xp, yp;  marker=(:star,3),  label="Cholesky kernel matrix with more noise \$\\lambda=$lambda\$")
+ 
 # random normal of correct length
 v =  rand(Normal(0, 1), length(y_mean_process))
-
 y_random_sample = L.L * v + y_mean_process
 
-Plots.scatter!(x_obs, y_random_sample;  label="sample", markersize=2, alpha=0.4)
+plot!(Xp, y_random_sample;  marker=(:star,3),  label="Random samples")
+ 
+```
+
+## Speed tests:
 
 
-# speed test:
-
-
+```julia 
 using BenchmarkTools
 
 lambda = 1e-4
 k = (500 * SqExponentialKernel() ) ∘ ScaleTransform(0.1)
 
-Ko  = kernelpdmat(k, x_obs)
+Ko  = kernelpdmat(k, Xo)
 
 L = Ko.chol.L  # kernelpdmat precomputes cholesky
 U = Ko.chol.U
@@ -795,8 +775,6 @@ end
 end
 # 1.9  μs 
 
-
- 
 ```
   
 ## ![Autoregressive (AR) processes](https://en.wikipedia.org/wiki/Autoregressive_model)

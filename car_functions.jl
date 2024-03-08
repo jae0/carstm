@@ -389,7 +389,7 @@ Turing.@model function turing_icar_latent_bym2( X, log_offset, y, auid, nX, nAU,
     sigma ~ truncated( Normal(0.0, 1.0), 0, Inf) ; 
     rho ~ Beta(0.5, 0.5);
 
-    # spatial effects:  
+    # spatial effects:  nAU
     convolved_re = sigma .*( sqrt.(1 .- rho) .* theta .+ sqrt.(rho ./ scaling_factor) .* phi )
 
     lambda =  X * beta +  convolved_re[auid] + log_offset 

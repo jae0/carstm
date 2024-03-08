@@ -281,22 +281,6 @@ fit <- inla(formula, data =dat, family="binomial", Ntrials=size,
       verbose = F)
 summary(fit)
 
-formula = y~ offset(log(size)) + x1 + x2 + f(ID, model="bym2", graph=W, scale.model = TRUE, constr = TRUE, 
-  # priors
-  hyper = list(theta1 = list("PCprior", c(1, 0.01)),  
-  # Pr(sd<1) = 0.01, unlikely to have rr>3just based on the spatial confounding
-              theta2 = list("PCprior", c(0.5, 0.5))) 
-  # Pr(phi<0.5)=0.5, we believe that the unmeasured spatial confounding
-  # is driven 50% from the structured and 50% from the unstructured random effect
-)
-
-fit <- inla(formula, data =dat, family="poisson", Ntrials=size,
-      control.compute = list( waic=TRUE, dic=TRUE, config=TRUE), # waic=TRUE
-      control.predictor=list(compute=TRUE, link=1 ), # compute=TRUE on each data location
-      verbose = F)
-summary(fit)
-```
-
 ~~~
 Time used:
     Pre = 4.21, Running = 0.265, Post = 0.114, Total = 4.59 
@@ -326,87 +310,55 @@ Marginal log-Likelihood:  -233.31
  is computed 
 Posterior summaries for the linear predictor and the fitted values are computed
 (Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
-~~~
 
-## brms (in R) poisson
 
-Fit a CAR model with brms.
+## as Poisson:
+formula = y~ offset(log(size)) + x1 + x2 + f(ID, model="bym2", graph=W, scale.model = TRUE, constr = TRUE, 
+  # priors
+  hyper = list(theta1 = list("PCprior", c(1, 0.01)),  
+  # Pr(sd<1) = 0.01, unlikely to have rr>3just based on the spatial confounding
+              theta2 = list("PCprior", c(0.5, 0.5))) 
+  # Pr(phi<0.5)=0.5, we believe that the unmeasured spatial confounding
+  # is driven 50% from the structured and 50% from the unstructured random effect
+)
 
-Note brms's solutions results are slightly different as another random seed is used
-
-```r
-
-library(brms)
-
-fit = brm(y ~ x1 + x2 + car(W, gr=ID) + offset(log(size)), 
-           data = dat, data2 = list(W = W),
-           family = poisson()) 
-
+fit <- inla(formula, data =dat, family="poisson", # Ntrials=size,
+      control.compute = list( waic=TRUE, dic=TRUE, config=TRUE), # waic=TRUE
+      control.predictor=list(compute=TRUE, link=1 ), # compute=TRUE on each data location
+      verbose = F)
 summary(fit)
 
- Family: poisson 
-  Links: mu = log 
-Formula: y ~ x1 + x2 + car(W, gr = ID) + offset(log(size)) 
-   Data: dat (Number of observations: 100) 
-  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
-         total post-warmup draws = 4000
+Fixed effects:
+              mean    sd 0.025quant 0.5quant 0.975quant   mode kld
+(Intercept) -0.975 0.028     -1.030   -0.975     -0.921 -0.975   0
+x1           0.518 0.034      0.454    0.518      0.586  0.518   0
+x2           0.470 0.029      0.415    0.470      0.528  0.470   0
 
-Correlation Structures:
-      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-car       0.82      0.17     0.33     0.99 1.01      451      324
-sdcar     0.29      0.06     0.19     0.41 1.02      456      973
+Random effects:
+  Name	  Model
+    ID BYM2 model
 
-Population-Level Effects: 
-          Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-Intercept    -0.98      0.08    -1.15    -0.85 1.02      268      115
-x1            0.52      0.03     0.46     0.59 1.00     1973     2656
-x2            0.47      0.03     0.42     0.53 1.00     2737     3167
+Model hyperparameters:
+                  mean     sd 0.025quant 0.5quant 0.975quant   mode
+Precision for ID 33.03 13.273     14.913   30.479     66.211 25.963
+Phi for ID        0.73  0.193      0.275    0.775      0.977  0.928
 
-Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
-and Tail_ESS are effective sample size measures, and Rhat is the potential
-scale reduction factor on split chains (at convergence, Rhat = 1).
+Deviance Information Criterion (DIC) ...............: 616.14
+Deviance Information Criterion (DIC, saturated) ....: 145.37
+Effective number of parameters .....................: 36.31
 
- 
-```
+Watanabe-Akaike information criterion (WAIC) ...: 613.72
+Effective number of parameters .................: 27.27
 
-## brms (in R) binomial  
+Marginal log-Likelihood:  -269.40 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
 
-Fit a CAR model with brms.
- 
-```r
 
-library(brms)
-library(rstan)
 
-fit = brm(y | trials(size) ~ x1 + x2 + car(W, gr=ID), 
-           data = dat, data2 = list(W = W),
-           family = binomial()) 
-summary(fit)
-
- Family: binomial 
-  Links: mu = logit 
-Formula: y | trials(size) ~ x1 + x2 + car(W, gr = ID) 
-   Data: dat (Number of observations: 100) 
-  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
-         total post-warmup draws = 4000
-
-Correlation Structures:
-      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-car       0.91      0.09     0.65     1.00 1.06       48       23
-sdcar     0.54      0.09     0.38     0.73 1.00      754     1167
-
-Population-Level Effects: 
-          Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-Intercept    -0.19      0.25    -0.50     0.70 1.11       66       13
-x1            1.08      0.06     0.96     1.19 1.00     2577     2269
-x2            1.04      0.05     0.94     1.15 1.00     3194     2809
-
-Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
-and Tail_ESS are effective sample size measures, and Rhat is the potential
-scale reduction factor on split chains (at convergence, Rhat = 1).
 ```
  
-
 
 ## Turing implementation in Julia
 
@@ -446,7 +398,8 @@ y = dat.y
 Ntrial = floor.(Int, dat.size)
 dat.intercept = ones(100)
 X = Matrix( dat[:,[ :x1, :x2]] )
- 
+
+# binomial
 m = turing_icar_direct_bym2_binomial(y, Ntrial, X, nX, nAU, node1, node2, scaling_factor) 
 
 # ~ 800 sec
@@ -475,21 +428,7 @@ showall( summarize(o) )
   
 recovers sigma ~ 0.4
 rho : nn when distance <= 1 .. exp(-0.1 *1) = 0.94
-
-
-Comparing to INLA's solution:
-
-Fixed effects:
-             mean    sd 0.025quant 0.5quant 0.975quant  mode kld
-(Intercept) -0.452 0.040     -0.531   -0.452     -0.372 -0.452   0
-x1           1.101 0.058      0.988    1.101      1.216  1.101   0
-x2           1.041 0.053      0.938    1.040      1.145  1.040   0
-
-Model hyperparameters:
-                  mean    sd 0.025quant 0.5quant 0.975quant  mode
-Precision for ID 7.029 2.012      3.937    6.742     11.790 6.193
-Phi for ID       0.806 0.146      0.439    0.844      0.982 0.946
-
+ 
 
 ~~~
 
@@ -634,22 +573,25 @@ sigma           0.52    0.00 0.09  0.37  0.51  0.70   978 1.00
 rho             0.88    0.01 0.13  0.52  0.93  1.00   605 1.01
 
 vs INLA:
+              mean    sd 0.025quant 0.5quant 0.975quant   mode kld
+(Intercept) -0.975 0.028     -1.030   -0.975     -0.921 -0.975   0
+x1           0.518 0.034      0.454    0.518      0.586  0.518   0
+x2           0.470 0.029      0.415    0.470      0.528  0.470   0
  
-                  mean        sd 0.025quant   0.5quant 0.975quant       mode          kld
-(Intercept) -0.2215948 0.1265029 -0.4711830 -0.2215091 0.02705429 -0.2214959 1.472228e-08
-x            0.3706808 0.1320332  0.1054408  0.3725290 0.62566048  0.3762751 4.162445e-09
+Model hyperparameters:
+                  mean     sd 0.025quant 0.5quant 0.975quant   mode
+Precision for ID 33.03 13.273     14.913   30.479     66.211 25.963
+Phi for ID        0.73  0.193      0.275    0.775      0.977  0.928
 
 
 ```
 
 ### Grouped areas 
 
-Function not complete: turing_icar_direct_bym2_groups needs to use model matrix construction ...  
-
-Continued in .. ![](notes_gaussian_process_comparisons.qmd)  
+NOTE: Function not complete.
 
 ```julia
-  # bym2 grouped model (multiple groups or disconnected groups): this is not finished 
+
   groups_unique = unique(sort(groups))
   gi = Vector{Vector{Int64}}()
   for g in groups_unique
@@ -658,30 +600,106 @@ Continued in .. ![](notes_gaussian_process_comparisons.qmd)
   end
 
   scaling_factor = scaling_factor_bym2(node1, node2, groups)  # same function (overloaded)
-  m = turing_icar_direct_bym2_groups(X, log_offset, y, auid, nX, nAU, node1, node2, scaling_factor, groups)  # incomplete for now
+  
+  # incomplete for now
+  m = turing_icar_direct_bym2_groups(X, log_offset, y, auid, nX, nAU, node1, node2, scaling_factor, groups) 
 
 
 ```
 
- 
+  
+# A brms solution (in R) 
 
+## brms poisson
+
+Fit a CAR model with brms.
+
+Note brms's solutions results are slightly different as another random seed is used as well
+
+```r
+
+library(brms)
+
+fit = brm(y ~ x1 + x2 + car(W, gr=ID) + offset(log(size)), 
+           data = dat, data2 = list(W = W),
+           family = poisson()) 
+
+summary(fit)
+
+ Family: poisson 
+  Links: mu = log 
+Formula: y ~ x1 + x2 + car(W, gr = ID) + offset(log(size)) 
+   Data: dat (Number of observations: 100) 
+  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+         total post-warmup draws = 4000
+
+Correlation Structures:
+      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+car       0.82      0.17     0.33     0.99 1.01      451      324
+sdcar     0.29      0.06     0.19     0.41 1.02      456      973
+
+Population-Level Effects: 
+          Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+Intercept    -0.98      0.08    -1.15    -0.85 1.02      268      115
+x1            0.52      0.03     0.46     0.59 1.00     1973     2656
+x2            0.47      0.03     0.42     0.53 1.00     2737     3167
+
+Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).
+
+ 
+```
+
+## brms binomial  
+
+Fit a CAR model with brms. .. seems closer to inla solutions
+ 
+```r
+
+library(brms)
+library(rstan)
+
+fit = brm(y | trials(size) ~ x1 + x2 + car(W, gr=ID), 
+           data = dat, data2 = list(W = W),
+           family = binomial()) 
+summary(fit)
+
+ Family: binomial 
+  Links: mu = logit 
+Formula: y | trials(size) ~ x1 + x2 + car(W, gr = ID) 
+   Data: dat (Number of observations: 100) 
+  Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
+         total post-warmup draws = 4000
+
+Correlation Structures:
+      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+car       0.91      0.09     0.65     1.00 1.06       48       23
+sdcar     0.54      0.09     0.38     0.73 1.00      754     1167
+
+Population-Level Effects: 
+          Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+Intercept    -0.19      0.25    -0.50     0.70 1.11       66       13
+x1            1.08      0.06     0.96     1.19 1.00     2577     2269
+x2            1.04      0.05     0.94     1.15 1.00     3194     2809
+
+Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
+and Tail_ESS are effective sample size measures, and Rhat is the potential
+scale reduction factor on split chains (at convergence, Rhat = 1).
+```
+
+## brms (in R) wih ar1 ... an aside
 ```r
 # specify autocor terms within the formula
 y ~ x + arma(p = 1, q = 1) + car(M)
-#> y ~ x + arma(p = 1, q = 1) + car(M)
-#> <environment: 0x0000000048121c30>
-
+ 
 # specify autocor terms in the 'autocor' argument
 bf(y ~ x, autocor = ~ arma(p = 1, q = 1) + car(M))
-#> y ~ x 
-#> autocor ~ arma(p = 1, q = 1) + car(M)
-
+ 
 # specify autocor terms via 'acformula'
 bf(y ~ x) + acformula(~ arma(p = 1, q = 1) + car(M))
-#> y ~ x 
-#> autocor ~ arma(p = 1, q = 1) + car(M)
-
 ```
+
 
 ## Greta (in R)
 

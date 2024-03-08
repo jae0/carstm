@@ -41,22 +41,25 @@ function example_nonlinear_data(Xl = -7:0.1:7, )
 
     # "Observations" with noise
     Xo = -5:0.5:5   
-    yo = Y.(X) + rand(Uniform(-20, 20), length(Xo))
+    yo = Y.(Xo) + rand(Uniform(-20, 20), length(Xo))
     
-    return Xl, yl, Xp, Xo, yo
+    # Prediction locations
+    Xp = -6:1:6
+
+    return Xl, yl, Xo, yo, Xp
 end
 
-
-function linear_regression(X, y, Xstar)
-    beta = (X' * X) \ (X' * y)
-    return Xstar * beta
-end;
 
 function featurize_poly(Xin, degree=1)
     # add higher order polynomials
     return repeat(Xin, 1, degree + 1) .^ (0:degree)'
 end
  
+function linear_regression(X, y, Xstar)
+    beta = (X' * X) \ (X' * y)
+    return Xstar * beta
+end;
+
 
 function ridge_regression(X, y, Xstar, lambda)
     beta = (X' * X + lambda * I) \ (X' * y)
@@ -64,7 +67,7 @@ function ridge_regression(X, y, Xstar, lambda)
 end
 
 
-function kernel_ridge_regression(k, X, y, Xstar, lambda)
+function kernel_ridge_regression(X, y, Xstar, lambda, k)
     K = kernelmatrix(k, X)
     kstar = kernelmatrix(k, Xstar, X)
     return kstar * ((K + lambda * I) \ y)
