@@ -2,14 +2,7 @@
 
 Conditional AutoRegressive ("CAR") models are just about th simplest possible way of accounting for spatial autorcorrelation. It is essentially the analogue of the temporal ARIMA type models but in space. It is arguably even simpler as the units of space are discrete areal units (arbitrary polygons). Originally it was formulated in lattice form and related to the Ising models in physics. Its use is most prevalent in epidemiology made accessible by the original Besag-York-Mollie paper, Leroux and Riebler, and many others.
 
-For the Julia implementation, see examples and progression of model building in:
-
-[notes_carstm_julia.qmd](./docs/notes_carstm_julia.qmd)
-    
-[notes_gaussian_process_comparisons.qmd](./docs/notes_gaussian_process_comparisons.qmd)
-    
-[notes_carstm_julia.qmd](./docs/notes_carstm_julia.qmd)
-    
+     
 For the R implementation, they are structured to be installed as a package (see below) and documentation in:
     
 [./docs/carstm_methods.md](./docs/carstm_methods.md)
@@ -66,25 +59,7 @@ require( carstm )
 
 ```
 
-
-## Conditional AutoRegressive Space-Time Models (in Julia) and other approaches: 
-
-- CAR/ICAR/BYM areal unit models (space)
-- GP models in time or space or covariates ("features")
-- Temporal (dynamical) models  
-- Spacetime models that combine all of the above using Julia/Turing
-
-Most didactic are the examples that use STAN (see info copied from various sources in "docs/example_car_stan.md"). 
-
-The INLA/R, BRMS/R, Turing/Julia (subdirectory examples) implementations are confirming parameter estimates.
-
-Ultimately, we use Julia/Turing due to simplicity and speed and attempt to develop a useful statistical and dynamical model of snow crab spatiotemporal processes.
-
-It is similar in scope to the github.com/jae0/carstm, however, with no reliance upon INLA for computation. 
-
-### Installation ... clone the repository or copy/download the Julia files
-
-
+ 
 ## Useful references
 
 Mitzi Morris: https://mc-stan.org/users/documentation/case-studies/icar_stan.html (very thorough)
