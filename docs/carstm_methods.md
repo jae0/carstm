@@ -45,7 +45,7 @@ and run Quarto from there:
 
 Can add "--to docx --to pdf" as additional documents, but their formatting is awkward and will require more work.  
 
-## Examples
+Example section templates:
 
 ```r
 #| eval: true
@@ -55,7 +55,6 @@ Can add "--to docx --to pdf" as additional documents, but their formatting is aw
 # code evaluation
 ```
 
-
 ```r
 #| eval: true
 #| output: true
@@ -64,7 +63,7 @@ Can add "--to docx --to pdf" as additional documents, but their formatting is aw
 # table
 ```
 
-```{r}
+```r
 #| eval: false
 #| output: false
 #| label: temp_depth

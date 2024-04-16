@@ -5,7 +5,7 @@
 
 This is a small subset of real data for the area close to Halifax, Nova Scotia, Canada. 
 
-The example data is bounded by longitudes (-65, -62) and lattitdes (45, 43). It is stored as test data for carstm. We load it as follows:
+The example data is bounded by longitudes (-65, -62) and latitudes (45, 43). It is stored as test data for carstm. We load it as follows:
 
 ```r
 
