@@ -635,7 +635,7 @@ carstm_model_inla = function(
   marginal_summary = function(Z, invlink=NULL ) {
     
     if (!is.null(invlink)) {
-      Z = try( apply_generic( Z, inla.tmarginal, fun=invlink) )
+      Z = try( apply_generic( Z, inla.tmarginal, fun=invlink, n=4096L) )
       if (test_for_error(Z) =="error") {
         class(m) = "try-error"
         return(m) 
@@ -768,10 +768,10 @@ carstm_model_inla = function(
       m = fit$marginals.fixed  # make a copy to do transformations upon
       fi = grep("Intercept", names(m) )
  
-      m = try( apply_generic( m, function(x) marginal_clean( inla.tmarginal( invlink, x, n=4096)) ), silent=TRUE  )
+      m = try( apply_generic( m, function(x) marginal_clean( inla.tmarginal( invlink, x, n=4096L)) ), silent=TRUE  )
 
       if ( exists("data_transformation", O))  {
-        m[[fi]] = inla.tmarginal( O$data_transformation$backward, m[[fi]]  ) # on user scale
+        m[[fi]] = inla.tmarginal( O$data_transformation$backward, m[[fi]] , n=4096L ) # on user scale
       }
 
       m = try(apply_simplify( m, FUN=inla.zmarginal, silent=TRUE ), silent=TRUE)
@@ -822,7 +822,7 @@ carstm_model_inla = function(
       if (length(prcs) > 0) {
   
         m = fit$marginals.hyperpar[prcs]
-        m = try( apply_generic( m, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )), silent=TRUE)
+        m = try( apply_generic( m, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps ), n = 4096L ), silent=TRUE)
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         m = try( simplify2array( m ), silent=TRUE)
         if (test_for_error(m) =="error") {  
@@ -1004,7 +1004,7 @@ carstm_model_inla = function(
 
         m = fit$marginals.random[[vS]]
  
-        m = try( apply_generic( m, inla.tmarginal, fun=invlink) , silent=TRUE )
+        m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=4096L ) , silent=TRUE )
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE ), silent=TRUE )
         m = try( simplify2array( m ), silent=TRUE)
         m = try( list_simplify( m ), silent=TRUE )
@@ -1054,7 +1054,7 @@ carstm_model_inla = function(
           
           m = fit$marginals.random[[vnS]]
          
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink), silent=TRUE  )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=4096L), silent=TRUE  )
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE) , silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE) 
           m = try( list_simplify(m), silent=TRUE  )
@@ -1217,7 +1217,7 @@ carstm_model_inla = function(
         if (exists(vnST, fit$marginals.random )) {
  
           m = fit$marginals.random[[vnST]]
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink) , silent=TRUE )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=4096L) , silent=TRUE )
 
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE), silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE)
@@ -1265,7 +1265,7 @@ carstm_model_inla = function(
           model_name = re$model[ iST[j] ]  
  
           m = fit$marginals.random[[vnST]]
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink), silent=TRUE )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=4096L), silent=TRUE )
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE)
           m = try( list_simplify( m ), silent=TRUE )
