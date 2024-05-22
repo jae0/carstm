@@ -717,7 +717,11 @@ carstm_model_inla = function(
     }
     message( "Sampling from joint posteriors: n = ", nposteriors )
  
-    S = inla.posterior.sample( nposteriors, fit, add.names=FALSE, num.threads=mc.cores ) 
+    S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, num.threads=mc.cores ), silent=TRUE)
+    if ( "try-error" %in%  class(S) ) {
+      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, use.improved.mean=FALSE, skew.corr =FALSE, seed=123L ), silent=TRUE)
+    }
+    if ( "try-error" %in%  class(S) ) stop("posterior sampling error")
 
     message( "Sampling complete ... now reformatting parameters and extracting required components" )
 
