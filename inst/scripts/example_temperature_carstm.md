@@ -529,11 +529,10 @@ print(plt)
 
 
 # maps of some of the results
-  
-# persistent spatial effects "re_total" ( icar neighbourhood random effects + unstructured random effects ) 
-plt = carstm_map(  
-    res=carstm_model( p=p,  DS="carstm_randomeffects" ) , 
-    vn=c(  "space", "re_total" ), 
+ 
+
+# persistent spatial effects "re"
+plt = carstm_map(  res=res, vn=c( "random", "space", "re" ), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title="Bottom temperature spatial effects (Celsius)"
 )

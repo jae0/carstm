@@ -968,8 +968,9 @@ carstm_model_inla = function(
 
       if (length(iSP) == 1) {
 
-        # vS = fmre$vn[ iSP ]  # == vS as it is a single spatial effect
-        model_name = fmre$model[ iSP ]  # iid (re_unstructured)
+        # vS = re$vn[ iSP ]  # == vS as it is a single spatial effect
+        
+        model_name = re$model[ iSP ]  # iid (ue)
 
         m = fit$marginals.random[[vS]]
         m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization ) , silent=TRUE )
@@ -984,32 +985,31 @@ carstm_model_inla = function(
         } 
         
         if ( model_name %in% c("bym", "bym2") ) {
-          # bym2 effect is coded by INLA as a double length vector: re_total and re_neighbourhood  
-          Z = expand.grid( space=O[["space_id"]], type = c("re_total", "re_neighbourhood"), stringsAsFactors =FALSE )
+          # bym2 effect is coded by INLA as a double length vector: re and ne  
+          Z = expand.grid( space=O[["space_id"]], type = c("re", "ne"), stringsAsFactors =FALSE )
 
-          #  extract re_total main effects
-          ire = which(Z$type=="re_total")
+          #  extract re main effects
+          ire = which(Z$type=="re")
           matchfrom = list( space=Z[["space"]][ire] )
 
           for (k in 1:length(tokeep)) {
             W[,k] = reformat_to_array( input = unlist(m[ire, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
- 
-          Orandom[[vS]] [["re_total"]] = W [, tokeep, drop =FALSE]
+          O[["random"]] [[vS]] [["re"]] = W [, tokeep, drop =FALSE]
 
         } else {
           # single spatial effect that is not bym2
           # this is redundant with iSP being a single factor, but approach is generalizable for higher dims 
-          Z = expand.grid( space=O[["space_id"]], type="re_neighbourhood", stringsAsFactors =FALSE )
+          Z = expand.grid( space=O[["space_id"]], type="ne", stringsAsFactors =FALSE )
         }
 
-        ine =  which(Z$type=="re_neighbourhood")
+        ine =  which(Z$type=="ne")
         matchfrom = list( space=Z[["space"]][ine] )
         W[] = NA
         for (k in 1:length(tokeep)) {
           W[,k] = reformat_to_array( input = unlist(m[ine, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
         }
-        Orandom[[vS]] [["re_neighbourhood"]] = W [, tokeep, drop =FALSE]
+        O[["random"]] [[vS]] [["ne"]] = W [, tokeep, drop =FALSE]
 
       }
 
@@ -1045,6 +1045,109 @@ carstm_model_inla = function(
       Z = m = matchfrom = NULL
       gc()
 
+
+      if ( "random_spatial" %in% posterior_simulations_to_retain ) {
+
+        # POSTERIOR SIMS
+        slabels = O[["space_name"]]
+
+        space = array(NA, dim=c( O$space_n, nposteriors  ) )
+        row.names(space) = slabels
+
+        space1 = space2 = NULL
+
+        if (length(iSP) == 1) {
+
+          stx1 = paste("^", re$vn[iSP], "$", sep="")
+          if (re$model[iSP] %in% c("bym2", "bym") ) {
+            # special case bym2 has two factors rolled together
+            space1 = array(NA, dim=c( O$space_n, nposteriors  ) )
+            space2 = array(NA, dim=c( O$space_n, nposteriors  ) )
+            row.names(space1) = slabels
+            row.names(space2) = slabels
+
+            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
+            for (i in 1:nposteriors) {
+              space[,i]  = S[[i]]$latent[skk1[["re"]],] 
+              space2[,i] = S[[i]]$latent[skk1[["ne"]],]
+            }      
+            space1 = space - space2  # ue (iid)
+
+          } else {
+            # single spatial effect of some kind
+            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  
+            skk1 = unlist(skk1)
+            for (i in 1:nposteriors) {
+              space[,i] = S[[i]]$latent[skk1,] 
+            }      
+          }
+        }
+ 
+        if (length(iSP) == 2) {
+          # Assume additive 
+          space1 = array(NA, dim=c( O$space_n, nposteriors  ) )
+          space2 = array(NA, dim=c( O$space_n, nposteriors  ) )
+          row.names(space1) = slabels
+          row.names(space2) = slabels
+          model_name1 = re$model[ iSP[1] ] 
+          model_name2 = re$model[ iSP[2] ] 
+          stx1 = paste("^", re$vn[iSP[1]], "$", sep="")
+          stx2 = paste("^", re$vn[iSP[i]], "$", sep="")
+          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+          skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+          for (i in 1:nposteriors) {
+            space1[,i] = S[[i]]$latent[skk1[[1]],]  
+            space2[,i] = S[[i]]$latent[skk2[[1]],]
+          }      
+          space = space1 + space2
+        }
+
+        space = invlink(space) 
+        row.names(space) = slabels
+        matchfrom = list( space=O[["space_id"]] )
+
+        if (!is.null(exceedance_threshold)) {
+          if (be_verbose)  message("Extracting random spatial errors exceedence"  )
+
+          for ( b in 1:length(exceedance_threshold)) {
+            m = apply ( space, 1, FUN=function(x) length( which(x > exceedance_threshold[b]) ) ) / nposteriors
+            m = reformat_to_array( input = m, matchfrom=matchfrom, matchto = matchto )
+            names(dimnames(m))[1] = vS
+            dimnames( m )[[vS]] = O[["space_name"]]
+            O[["random"]] [[vS]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) )
+            m = NULL
+          }
+        }
+
+        if (!is.null(deceedance_threshold)) {
+          if (be_verbose)  message("Extracting random spatial errors deceedance"  )
+          # redundant but generalizable to higher dims
+          for ( b in 1:length(deceedance_threshold)) {
+            m = apply ( space, 1, FUN=function(x) length( which(x < deceedance_threshold[b]) ) ) / nposteriors
+            m = reformat_to_array( input = m, matchfrom=matchfrom, matchto=matchto  )
+            names(dimnames(m))[1] = vS
+            dimnames( m )[[vS]] = O[["space_name"]]
+            O[["random"]] [[vS]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) ) 
+            m = NULL
+          }
+        }
+
+        m = posterior_summary( format_results( space, labels=slabels  ) )
+        W[] = NA
+        for (k in 1:length(tokeep)) {
+          W[,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
+        }
+        O[["random"]] [[vS]] [["re"]] = W[, tokeep, drop =FALSE] 
+
+        if ( "random_spatial" %in% posterior_simulations_to_retain ) {
+          O[["sims"]] [[vS]] [["re"]] = space  # already inverse link scale
+        }
+
+        if ( "random_spatial12" %in% posterior_simulations_to_retain ) {
+          if (!is.null(space1)) O[["sims"]] [[vS]] [[model_name1]] =  invlink(space1) 
+          if (!is.null(space2)) O[["sims"]] [[vS]] [[model_name2]] =  invlink(space2) 
+        }
+      }
     }
   }  # end random spatial effects
 
@@ -1090,31 +1193,31 @@ carstm_model_inla = function(
           } 
         
           if ( model_name %in% c("bym", "bym2")  ) {
-            # bym2 effect: re_total and re_neighbourhood with annual results
-            Z = expand.grid( space=O[["space_id"]], type = c("re_total", "re_neighbourhood"), time=O[["time_id"]], stringsAsFactors =FALSE )
+            # bym2 effect: re and ne with annual results
+            Z = expand.grid( space=O[["space_id"]], type = c("re", "ne"), time=O[["time_id"]], stringsAsFactors =FALSE )
 
             #  spatiotemporal interaction effects 
-            ire = which(Z$type=="re_total")
+            ire = which(Z$type=="re")
             matchfrom = list( space=Z[["space"]][ire], time=Z[["time"]][ire]  )
 
             for (k in 1:length(tokeep)) {
               W[,,k] = reformat_to_array(  input = unlist(m[ire, tokeep[k]]), matchfrom = matchfrom, matchto = matchto )
             }
-            Orandom[[vnST]] [["re_total"]] =  W [,, tokeep, drop =FALSE] 
+            O[["random"]] [[vnST]] [["re"]] =  W [,, tokeep, drop =FALSE] 
 
           } else {
             # besag effect: with annual results
-            Z = expand.grid( space=O[["space_id"]], type ="re_neighbourhood", time=O[["time_id"]], stringsAsFactors =FALSE )
+            Z = expand.grid( space=O[["space_id"]], type ="ne", time=O[["time_id"]], stringsAsFactors =FALSE )
           }
 
-          #  spatiotemporal interaction effects 
-          ine =  which(Z$type=="re_neighbourhood")
+          #  spatiotemporal interaction effects  bym
+          ine =  which(Z$type=="ne")
           matchfrom = list( space=Z[["space"]][ine], time=Z[["time"]][ine]  )
             
           for (k in 1:length(tokeep)) {
             W[,,k] = reformat_to_array( input = unlist(m[ine,tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
-          Orandom[[vnST]] [["re_neighbourhood"]] =   W [,, tokeep, drop =FALSE] 
+          O[["random"]] [[vnST]] [["ne"]] =   W [,, tokeep, drop =FALSE] 
 
         }
       }
@@ -1122,8 +1225,8 @@ carstm_model_inla = function(
       if (length(iST) == 2) {
 
         for (j in 1:length(iST)) {
-          vnST = fmre$vn[ iST[j] ]
-          model_name = fmre$model[ iST[j] ]  
+          vnST = re$vn[ iST[j] ]
+          model_name = re$model[ iST[j] ]  
 
           m = fit$marginals.random[[vnST]]
           m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization), silent=TRUE )
@@ -1146,6 +1249,107 @@ carstm_model_inla = function(
           m = NULL
         }
       }
+
+      if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
+        # posterior simulations
+
+        space_time1 = space_time2  = space_time = array( NA, 
+          dim=c( O[["space_n"]] * O[["time_n"]] , nposteriors  ) )
+        L = CJ( time=O[["time_id"]], space=O[["space_id"]] )  # note:: CJ has reverse order vs expand.grid
+        stlabels = paste(L[["space"]], L[["time"]], sep="_")
+
+        if (length(iST) == 1) {
+          stx1 = paste("^", re$vn[iST], "$", sep="")
+          if (re$model[iST] %in% c("bym", "bym2") ) {
+            # special case bym2 has two factors rolled together
+            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
+            for (i in 1:nposteriors) {
+              space_time[,i]  = S[[i]]$latent[skk1[["re"]],]  
+              space_time2[,i] = S[[i]]$latent[skk1[["ne"]],]
+            }    
+            space_time1 = space_time - space_time2   # ue
+            row.names(space_time1) = stlabels
+            row.names(space_time2) = stlabels
+            row.names(space_time) = stlabels
+
+          } else {
+            # single spatial effect of some kind
+            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+            skk1 = unlist(skk1)
+            for (i in 1:nposteriors) {
+              space_time[,i] = S[[i]]$latent[skk1,] 
+            }      
+          }
+        }
+        
+        if (length(iST) == 2) {
+          model_name1 = re$model[ iST[1] ] 
+          model_name2 = re$model[ iST[2] ] 
+          stx1 = paste("^", re$vn[iST[1]], "$", sep="")
+          stx2 = paste("^", re$vn[iST[2]], "$", sep="")
+          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+          skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+          for (i in 1:nposteriors) {
+            space_time1[,i] = S[[i]]$latent[skk1[[1]],] 
+            space_time2[,i] = S[[i]]$latent[skk2[[1]],]
+          }      
+          space_time  = space_time1 + space_time2  # assume additive
+          row.names(space_time1) = stlabels
+          row.names(space_time2) = stlabels 
+        }
+      
+        space_time = invlink(space_time)
+        row.names(space_time) = stlabels
+
+        Z = expand.grid( space=O[["space_id"]], type ="re", time=O[["time_id"]], stringsAsFactors =FALSE )
+        jst =  which(Z$type=="re")
+        matchfrom = list( space=Z[["space"]][jst], time=Z[["time"]][jst]  )
+
+        if (!is.null(exceedance_threshold)) {
+          if (be_verbose)  message("Extracting random spatiotemporal errors exceedence"  )
+
+          for ( b in 1:length(exceedance_threshold)) {
+            m = apply ( space_time, 1, FUN=function(x) length( which(x > exceedance_threshold[b] ) ) ) / nposteriors
+            m = reformat_to_array( input=m, matchfrom=matchfrom,  matchto=matchto )
+            names(dimnames(m))[1] = vS
+            names(dimnames(m))[2] = vT
+            dimnames( m )[[vS]] = O[["space_name"]]
+            dimnames( m )[[vT]] = O[["time_name"]]
+            O[["random"]] [[vnST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = m
+          }
+          m = NULL
+        }
+
+        if (!is.null(deceedance_threshold)) {
+          if (be_verbose)  message("Extracting random spatiotemporal errors deceedance"  )
+
+          for ( b in 1:length(deceedance_threshold)) {
+            m = apply ( space_time, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / nposteriors
+            m = reformat_to_array( input = m, matchfrom=matchfrom,  matchto=matchto )
+            names(dimnames(m))[1] = vS
+            names(dimnames(m))[2] = O[["time_name"]]
+            dimnames( m )[[vS]] = O[["space_name"]]
+            dimnames( m )[[vT]] = vT
+            O[["random"]] [[vnST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = m
+          }
+          m = NULL
+        }
+  
+        W[] = NA
+        m = posterior_summary(format_results( space_time, labels=stlabels ))
+        for (k in 1:length(tokeep)) {
+          W[,,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
+        }
+        O[["random"]] [[vnST]] [["re"]] = W[,, tokeep, drop =FALSE] 
+
+        if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
+          O[["sims"]] [[vnST]] [["re"]] = space_time
+        }
+        if ( "random_spatiotemporal12" %in% posterior_simulations_to_retain ) {
+          if (!is.null(space_time1)) O[["sims"]] [[vnST]] [[model_name1]] = invlink(space_time1)
+          if (!is.null(space_time2)) O[["sims"]] [[vnST]] [[model_name2]] = invlink(space_time2)
+        }
+      } 
       Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL
   
     }
