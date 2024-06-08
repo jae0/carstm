@@ -73,7 +73,7 @@ Checking some plots
 ```r 
   # Same analysis, now using carstm 
   # there are extra steps as a data structure and options need to be specified 
-  # and posterior sims to compute combined spatial (and spatiotemporal) effects
+  # and posterior sims to compute combined spatial (and spatiotemporal) effects "re"
   
   require(carstm)  # carstm options are sent via one controlling parameter list  
   # loadfunctions("carstm")
@@ -211,7 +211,7 @@ Checking some plots
     main=paste( "Predictions")  
   )
 
-  plt = carstm_map(  res=res, vn=c( "random", "region", "combined" ), 
+  plt = carstm_map(  res=res, vn=c( "random", "region", "re" ), 
     space="region",
     plot_elements=c( "compass", "scale_bar", "legend" ),
     main=paste( "Spatial effects")  
