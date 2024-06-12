@@ -29,12 +29,12 @@ inla_get_indices = function( X, model="", tag, start, len ) {
 
     if (model=="")  return(ip)
 
-    if (model=="bym2") {
-        # bym2: Z = expand.grid( space=modelinfo$space, type = c("iid", model_name), time=modelinfo$time, stringsAsFactors =FALSE ) 
+    if (model %in% c("bym2", "bym") ) {
+        # bym2: Z = expand.grid( space=modelinfo$space, type = c("re", "ne"), time=modelinfo$time, stringsAsFactors =FALSE ) 
         ns = length(ip[[1]])/2
         ibym2 = list(
-            iid = ip[[1]][1:ns],
-            bym = ip[[1]][(ns+1):(ns*2)]
+            re = ip[[1]][1:ns],   # random effects = neighbourhood effects + unstructured effects 
+            ne = ip[[1]][(ns+1):(ns*2)]  ## neighbourhood effects 
         )
         return(ibym2)
     }

@@ -445,23 +445,18 @@ carstm_model_inla = function(
      
 
     # check INLA options
-    if (!exists("inla.mode", inla_args)) inla_args[["inla.mode"]] = "compact" # changed inla options in 2023
+
     if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( strategy='adaptive', cmin=0 ) #int.strategy='eb'
     if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if (!exists("control.mode", inla_args ) ) inla_args[["control.mode"]] = list( restart=FALSE ) 
     if (!is.null(theta) ) inla_args[["control.mode"]]$theta= theta
     
     if (!exists("control.compute", inla_args)) inla_args[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
-      if ( inla_args[["inla.mode"]] == "classic") {
-        # if ( !exists("control.results", inla_args ) ) inla_args[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
-        inla_args[["control.compute"]]$return.marginals.predictor  = TRUE  # location of this option has moved ... might move again
-      }
+
 
     # if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = list(mean.intercept=0.0, prec.intercept=0.001, mean=0, prec=0.001)
     if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = H$fixed
 
-    O[["inla.mode"]] = inla_args[["inla.mode"]]  # copy for later
-    
     setDF(inla_args[["data"]]) # in case .. INLA requires this ?
  
  
@@ -474,7 +469,6 @@ carstm_model_inla = function(
 
     if (inherits(fit, "try-error" )) {
       inla_args[["safe"]] = TRUE
-      inla_args[["inla.mode"]] = "classic"
       inla_args[["control.inla"]] = list( int.strategy='eb', cmin=0 )
       fit = try( do.call( inla, inla_args ) )      
     }
@@ -529,13 +523,7 @@ carstm_model_inla = function(
         cyclic=O[["cyclic_id"]][inla_args[["data"]][[vU]][O[["ipred"]]]]
       )
     }
-
-    # 2023 change in behaviour .. predictions do not require offsets in experimental and classical modes .. already incorporated
-    # if (!is.null(vO)) {
-    #   if ( O[["inla.mode"]] == "experimental" ) {
-    #     O[["Offset"]] = inla_args[["data"]][[vO]][ O[["ipred"]] ] 
-    #   }
-    # }
+ 
 
     O[["carstm_prediction_surface_parameters"]] = NULL
     
@@ -1011,7 +999,7 @@ carstm_model_inla = function(
 
         # vS = re$vn[ iSP ]  # == vS as it is a single spatial effect
         
-        model_name = re$model[ iSP ]  # should be iid
+        model_name = re$model[ iSP ]  # iid (ue)
 
         m = fit$marginals.random[[vS]]
  
@@ -1026,33 +1014,32 @@ carstm_model_inla = function(
           names(m) =  tokeep
         } 
         
-        if ( model_name == "bym2" ) {
-          # bym2 effect is coded by INLA as a double length vector: bym and iid simultaneously
-          # this first part captures the iid part while the part outside of the if * captures the bym
-          Z = expand.grid( space=O[["space_id"]], type = c("iid", model_name), stringsAsFactors =FALSE )
+        if ( model_name %in% c("bym", "bym2") ) {
+          # bym2 effect is coded by INLA as a double length vector: re and ne  
+          Z = expand.grid( space=O[["space_id"]], type = c("re", "ne"), stringsAsFactors =FALSE )
 
-          #  extract iid main effects
-          iid = which(Z$type=="iid")
-          matchfrom = list( space=Z[["space"]][iid] )
+          #  extract re main effects
+          ire = which(Z$type=="re")
+          matchfrom = list( space=Z[["space"]][ire] )
 
           for (k in 1:length(tokeep)) {
-            W[,k] = reformat_to_array( input = unlist(m[iid, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
+            W[,k] = reformat_to_array( input = unlist(m[ire, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["random"]] [[vS]] [["iid"]] = W [, tokeep, drop =FALSE]
+          O[["random"]] [[vS]] [["re"]] = W [, tokeep, drop =FALSE]
 
         } else {
           # single spatial effect that is not bym2
           # this is redundant with iSP being a single factor, but approach is generalizable for higher dims 
-          Z = expand.grid( space=O[["space_id"]], type=model_name, stringsAsFactors =FALSE )
+          Z = expand.grid( space=O[["space_id"]], type="ne", stringsAsFactors =FALSE )
         }
 
-        bym2 =  which(Z$type==model_name)
-        matchfrom = list( space=Z[["space"]][bym2] )
+        ine =  which(Z$type=="ne")
+        matchfrom = list( space=Z[["space"]][ine] )
         W[] = NA
         for (k in 1:length(tokeep)) {
-          W[,k] = reformat_to_array( input = unlist(m[bym2, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
+          W[,k] = reformat_to_array( input = unlist(m[ine, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
         }
-        O[["random"]] [[vS]] [[model_name]] = W [, tokeep, drop =FALSE]
+        O[["random"]] [[vS]] [["ne"]] = W [, tokeep, drop =FALSE]
 
       }
 
@@ -1103,7 +1090,7 @@ carstm_model_inla = function(
         if (length(iSP) == 1) {
 
           stx1 = paste("^", re$vn[iSP], "$", sep="")
-          if (re$model[iSP] == "bym2") {
+          if (re$model[iSP] %in% c("bym2", "bym") ) {
             # special case bym2 has two factors rolled together
             space1 = array(NA, dim=c( O$space_n, nposteriors  ) )
             space2 = array(NA, dim=c( O$space_n, nposteriors  ) )
@@ -1112,14 +1099,14 @@ carstm_model_inla = function(
 
             skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
             for (i in 1:nposteriors) {
-              space1[,i] = S[[i]]$latent[skk1[["iid"]],] 
-              space2[,i] = S[[i]]$latent[skk1[["bym"]],]
+              space[,i]  = S[[i]]$latent[skk1[["re"]],] 
+              space2[,i] = S[[i]]$latent[skk1[["ne"]],]
             }      
-            space = space1 + space2
+            space1 = space - space2  # ue (iid)
 
           } else {
             # single spatial effect of some kind
-            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  
             skk1 = unlist(skk1)
             for (i in 1:nposteriors) {
               space[,i] = S[[i]]$latent[skk1,] 
@@ -1128,16 +1115,15 @@ carstm_model_inla = function(
         }
  
         if (length(iSP) == 2) {
+          # Assume additive 
           space1 = array(NA, dim=c( O$space_n, nposteriors  ) )
           space2 = array(NA, dim=c( O$space_n, nposteriors  ) )
           row.names(space1) = slabels
           row.names(space2) = slabels
-
-          i1 = which(re$model[iSP[1]] == "iid")
-          i2 = which(re$model[iSP[2]] %in% c("besag", "bym") )    # add others as required
-          if (length(i1)==0 | length(i2)==0) stop( "Unexpected situation: two spatial effects found, expecting one to be iid, and a second to be besag or bym, but it was not." )
-          stx1 = paste("^", re$vn[iSP[i1]], "$", sep="")
-          stx2 = paste("^", re$vn[iSP[i2]], "$", sep="")
+          model_name1 = re$model[ iSP[1] ] 
+          model_name2 = re$model[ iSP[2] ] 
+          stx1 = paste("^", re$vn[iSP[1]], "$", sep="")
+          stx2 = paste("^", re$vn[iSP[i]], "$", sep="")
           skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
           skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
           for (i in 1:nposteriors) {
@@ -1182,15 +1168,15 @@ carstm_model_inla = function(
         for (k in 1:length(tokeep)) {
           W[,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
         }
-        O[["random"]] [[vS]] [["combined"]] = W[, tokeep, drop =FALSE] 
+        O[["random"]] [[vS]] [["re"]] = W[, tokeep, drop =FALSE] 
 
         if ( "random_spatial" %in% posterior_simulations_to_retain ) {
-          O[["sims"]] [[vS]] [["combined"]] = space  # already inverse link scale
+          O[["sims"]] [[vS]] [["re"]] = space  # already inverse link scale
         }
 
         if ( "random_spatial12" %in% posterior_simulations_to_retain ) {
-          if (!is.null(space1)) O[["sims"]] [[vS]] [["iid"]]  =  invlink(space1) 
-          if (!is.null(space2)) O[["sims"]] [[vS]] [["bym2"]] =  invlink(space2) 
+          if (!is.null(space1)) O[["sims"]] [[vS]] [[model_name1]] =  invlink(space1) 
+          if (!is.null(space2)) O[["sims"]] [[vS]] [[model_name2]] =  invlink(space2) 
         }
       }
     }
@@ -1239,32 +1225,32 @@ carstm_model_inla = function(
             names(m) = tokeep
           } 
         
-          if ( model_name == "bym2" ) {
-            # bym2 effect: bym and iid with annual results
-            Z = expand.grid( space=O[["space_id"]], type = c("iid", model_name), time=O[["time_id"]], stringsAsFactors =FALSE )
+          if ( model_name %in% c("bym", "bym2")  ) {
+            # bym2 effect: re and ne with annual results
+            Z = expand.grid( space=O[["space_id"]], type = c("re", "ne"), time=O[["time_id"]], stringsAsFactors =FALSE )
 
-            #  spatiotemporal interaction effects  iid
-            iid = which(Z$type=="iid")
-            matchfrom = list( space=Z[["space"]][iid], time=Z[["time"]][iid]  )
+            #  spatiotemporal interaction effects 
+            ire = which(Z$type=="re")
+            matchfrom = list( space=Z[["space"]][ire], time=Z[["time"]][ire]  )
 
             for (k in 1:length(tokeep)) {
-              W[,,k] = reformat_to_array(  input = unlist(m[iid, tokeep[k]]), matchfrom = matchfrom, matchto = matchto )
+              W[,,k] = reformat_to_array(  input = unlist(m[ire, tokeep[k]]), matchfrom = matchfrom, matchto = matchto )
             }
-            O[["random"]] [[vnST]] [["iid"]] =  W [,, tokeep, drop =FALSE] 
+            O[["random"]] [[vnST]] [["re"]] =  W [,, tokeep, drop =FALSE] 
 
           } else {
             # besag effect: with annual results
-            Z = expand.grid( space=O[["space_id"]], type =model_name, time=O[["time_id"]], stringsAsFactors =FALSE )
+            Z = expand.grid( space=O[["space_id"]], type ="ne", time=O[["time_id"]], stringsAsFactors =FALSE )
           }
 
           #  spatiotemporal interaction effects  bym
-          bym2 =  which(Z$type==model_name)
-          matchfrom = list( space=Z[["space"]][bym2], time=Z[["time"]][bym2]  )
+          ine =  which(Z$type=="ne")
+          matchfrom = list( space=Z[["space"]][ine], time=Z[["time"]][ine]  )
             
           for (k in 1:length(tokeep)) {
-            W[,,k] = reformat_to_array( input = unlist(m[bym2,tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
+            W[,,k] = reformat_to_array( input = unlist(m[ine,tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["random"]] [[vnST]] [[model_name]] =   W [,, tokeep, drop =FALSE] 
+          O[["random"]] [[vnST]] [["ne"]] =   W [,, tokeep, drop =FALSE] 
 
         }
       }
@@ -1274,7 +1260,7 @@ carstm_model_inla = function(
         for (j in 1:length(iST)) {
           vnST = re$vn[ iST[j] ]
           model_name = re$model[ iST[j] ]  
- 
+
           m = fit$marginals.random[[vnST]]
           m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=4096L), silent=TRUE )
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE )
@@ -1307,16 +1293,17 @@ carstm_model_inla = function(
 
         if (length(iST) == 1) {
           stx1 = paste("^", re$vn[iST], "$", sep="")
-          if (re$model[iST] == "bym2") {
+          if (re$model[iST] %in% c("bym", "bym2") ) {
             # special case bym2 has two factors rolled together
             skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
             for (i in 1:nposteriors) {
-              space_time1[,i] = S[[i]]$latent[skk1[["iid"]],]  
-              space_time2[,i] = S[[i]]$latent[skk1[["bym"]],]
+              space_time[,i]  = S[[i]]$latent[skk1[["re"]],]  
+              space_time2[,i] = S[[i]]$latent[skk1[["ne"]],]
             }    
-            space_time = space_time1 + space_time2  
+            space_time1 = space_time - space_time2   # ue
             row.names(space_time1) = stlabels
             row.names(space_time2) = stlabels
+            row.names(space_time) = stlabels
 
           } else {
             # single spatial effect of some kind
@@ -1329,27 +1316,26 @@ carstm_model_inla = function(
         }
         
         if (length(iST) == 2) {
-          i1 = which(re$model[iST] == "iid")
-          i2 = which(re$model[iST] %in% c("besag", "bym") )   # add others as required
-          if (length(i1)==0 | length(i2)==0) stop( "Unexpected situation: two spatial-time effects found, expecting one to be iid, and a second to be besag or bym, but it was not." )
-          stx1 = paste("^", re$vn[iST[i1]], "$", sep="")
-          stx2 = paste("^", re$vn[iST[i2]], "$", sep="")
+          model_name1 = re$model[ iST[1] ] 
+          model_name2 = re$model[ iST[2] ] 
+          stx1 = paste("^", re$vn[iST[1]], "$", sep="")
+          stx2 = paste("^", re$vn[iST[2]], "$", sep="")
           skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
           skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
           for (i in 1:nposteriors) {
             space_time1[,i] = S[[i]]$latent[skk1[[1]],] 
             space_time2[,i] = S[[i]]$latent[skk2[[1]],]
           }      
-          space_time  = space_time1 + space_time2
+          space_time  = space_time1 + space_time2  # assume additive
           row.names(space_time1) = stlabels
-          row.names(space_time2) = stlabels
+          row.names(space_time2) = stlabels 
         }
       
         space_time = invlink(space_time)
         row.names(space_time) = stlabels
 
-        Z = expand.grid( space=O[["space_id"]], type =model_name, time=O[["time_id"]], stringsAsFactors =FALSE )
-        jst =  which(Z$type==model_name)
+        Z = expand.grid( space=O[["space_id"]], type ="re", time=O[["time_id"]], stringsAsFactors =FALSE )
+        jst =  which(Z$type=="re")
         matchfrom = list( space=Z[["space"]][jst], time=Z[["time"]][jst]  )
 
         if (!is.null(exceedance_threshold)) {
@@ -1387,14 +1373,14 @@ carstm_model_inla = function(
         for (k in 1:length(tokeep)) {
           W[,,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
         }
-        O[["random"]] [[vnST]] [["combined"]] = W[,, tokeep, drop =FALSE] 
+        O[["random"]] [[vnST]] [["re"]] = W[,, tokeep, drop =FALSE] 
 
         if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
-          O[["sims"]] [[vnST]] [["combined"]] = space_time
+          O[["sims"]] [[vnST]] [["re"]] = space_time
         }
         if ( "random_spatiotemporal12" %in% posterior_simulations_to_retain ) {
-          if (!is.null(space_time1)) O[["sims"]] [[vnST]] [["iid"]] =  invlink(space_time1)
-          if (!is.null(space_time2)) O[["sims"]] [[vnST]] [["bym2"]] = invlink(space_time2)
+          if (!is.null(space_time1)) O[["sims"]] [[vnST]] [[model_name1]] = invlink(space_time1)
+          if (!is.null(space_time2)) O[["sims"]] [[vnST]] [[model_name2]] = invlink(space_time2)
         }
       } 
       Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL
@@ -1443,17 +1429,7 @@ carstm_model_inla = function(
       if ( O[["dimensionality"]] == "space" ) {
 
         m = fit$marginals.fitted.values[O[["ipred"]]]  # already incorporates offsets
-
-        # 2023 change in behaviour .. predictions do not require offsets in experimental and classical modes .. already incorporated
-        # if (!is.null(vO)) {
-        #   if ( O[["inla.mode"]] == "experimental" ) {
-        #     for ( i in 1:length(O[["ipred"]]) ) m[[i]][,1] = m[[i]][,1] + O[["Offset"]][i]
-        #   } 
-        # }
-        
-        # 2023 change in behaviour .. no longer needs invlink as marginals.fitted.values is on response scale
-        # m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )
-
+ 
         if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
@@ -1497,16 +1473,6 @@ carstm_model_inla = function(
       if (O[["dimensionality"]] == "space-time"  ) {
 
         m = fit$marginals.fitted.values[O[["ipred"]]]   
-
-        # 2023 change in behaviour .. predictions do not require offsets in experimental and classical modes .. already incorporated
-        # if (!is.null(vO)) {
-        #   if ( O[["inla.mode"]] == "experimental" ) {
-        #     for ( i in 1:length(O[["ipred"]]) ) m[[i]][,1] = m[[i]][,1] + O[["Offset"]][i]
-        #   } 
-        # }
-
-        # 2023 change in behaviour .. no longer needs invlink as marginals.fitted.values is on response scale
-        # m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
  
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
@@ -1557,17 +1523,6 @@ carstm_model_inla = function(
       if ( O[["dimensionality"]] == "space-time-cyclic" ) {
 
         m = fit$marginals.fitted.values[O[["ipred"]]]   
-
-        # 2023 change in behaviour .. predictions do not require offsets in experimental and classical modes .. already incorporated
-        # if (!is.null(vO)) {
-        # if ( O[["inla.mode"]] == "experimental" ) {
-        #   # offsets required in experimental mode ... do not ask me why
-        #   for ( i in 1:length(O[["ipred"]]) ) m[[i]][,1] = m[[i]][,1] + O[["Offset"]][i] 
-        # } 
-        #}
- 
-        # 2023 change in behaviour .. no longer needs invlink as marginals.fitted.values is on response scale
-        # m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 

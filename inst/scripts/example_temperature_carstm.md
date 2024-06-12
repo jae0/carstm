@@ -390,8 +390,8 @@ lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
 # maps of some of the results
  
 
-# persistent spatial effects
-plt = carstm_map(  res=res, vn=c( "random", "space", "combined" ), 
+# persistent spatial effects "re"
+plt = carstm_map(  res=res, vn=c( "random", "space", "re" ), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title="Bottom temperature spatial effects (Celsius)"
 )
