@@ -531,14 +531,8 @@ carstm_model_inla = function(
 
     # check INLA options
 
-    if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list(strategy = "auto", optimiser="default") 
-
-    if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list()
-
-    # these are required to know the scale of predictions
-    inla_args[["control.predictor"]]$compute = TRUE   # force
-    inla_args[["control.predictor"]]$link = 1  # force
-
+    if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( strategy='adaptive', cmin=0 ) #int.strategy='eb'
+    if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if (!exists("control.mode", inla_args ) ) inla_args[["control.mode"]] = list( restart=TRUE ) 
     if (!is.null(theta) ) inla_args[["control.mode"]]$theta= theta
     
@@ -585,21 +579,7 @@ carstm_model_inla = function(
 
     if (inherits(fit, "try-error" )) {
       inla_args[["safe"]] = TRUE
-      inla_args[["control.inla"]]$h = NULL
-      inla_args[["control.inla"]]$step.factor = NULL
-      inla_args[["control.inla"]]$cmin = 0
-      inla_args[["control.inla"]]$diagonal = 1e-6 
-
-      fit = try( do.call( inla, inla_args ) )      
-    }
-
-    if (inherits(fit, "try-error" )) {
-      inla_args[["safe"]] = TRUE
-      inla_args[["control.inla"]]$h = NULL
-      inla_args[["control.inla"]]$step.factor = NULL
-      inla_args[["control.inla"]]$cmin = 0
-      inla_args[["control.inla"]]$diagonal = 1e-6 
-      inla_args[["control.inla"]]$int.strategy='eb'
+      inla_args[["control.inla"]] = list( int.strategy='eb', cmin=0 )
       fit = try( do.call( inla, inla_args ) )      
     }
 
@@ -617,8 +597,38 @@ carstm_model_inla = function(
  
     setDT(inla_args[["data"]]) # revert to DT for faster / efficient operations
     fit$.args = NULL  # reduce size
-    inla_args= NULL; 
     gc()
+
+    if (  O[["dimensionality"]] == "space" ) {
+        # filter by S and T in case additional data in other areas and times are used in the input data
+      O[["matchfrom"]] = list( 
+        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] 
+      ) 
+    }
+
+    if (O[["dimensionality"]] == "space-time"  ) {
+      O[["matchfrom"]] = list( 
+        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] , 
+        time=O[["time_id"]][inla_args[["data"]][[vT]][O[["ipred"]]] ]
+      )
+    }
+
+    if ( O[["dimensionality"]] == "space-time-cyclic" ) {
+      O[["matchfrom"]] = list( 
+        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] , 
+        time=O[["time_id"]][inla_args[["data"]][[vT]][O[["ipred"]]]],
+        cyclic=O[["cyclic_id"]][inla_args[["data"]][[vU]][O[["ipred"]]]]
+      )
+    }
+ 
+
+    O[["carstm_prediction_surface_parameters"]] = NULL
+    
+    fit$modelinfo = O  # store in case a restart is needed
+
+    fit$.args = NULL
+
+    inla_args= NULL; gc()
  
     read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
     if (be_verbose)  message( "\nModel fit saved as: \n", fn_fit )
@@ -1474,6 +1484,11 @@ carstm_model_inla = function(
         } 
 
         if ( O[["dimensionality"]] == "space" ) {
+
+        m = fit$marginals.fitted.values[O[["ipred"]]]  # already incorporates offsets
+ 
+        if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
+
           W = array( NA, 
             dim=c( O[["space_n"]],  length(names(m)) ),  
             dimnames=list( space=O[["space_name"]], stat=names(m) ) )
@@ -1814,7 +1829,104 @@ carstm_model_inla = function(
               space_time[,i] = S[[i]]$latent[skk1,] 
             }      
           }
+          Osamples[["predictions"]] = W[, drop =FALSE]
+          W = NULL 
+      }
+
+
+      if (O[["dimensionality"]] == "space-time"  ) {
+
+        m = fit$marginals.fitted.values[O[["ipred"]]]   
+ 
+        if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
+        m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+        if (test_for_error(m) =="error") {  
+            message( "failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
+            m = fit$summary.fitted.values[, inla_tokeep ]
+            names(m) = tokeep
+          } 
+
+        W = array( NA, 
+          dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
+          dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=names(m) ) 
+        )
+ 
+        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+        names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+
+        # matchfrom already created higher up
+        matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
+        for (k in 1:length(names(m))) {
+          W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto)
         }
+        O[["predictions"]] = W[,, tokeep, drop =FALSE]
+    
+        m = W = NULL
+ 
+        if ( "predictions" %in% posterior_simulations_to_retain ) {
+
+          W = array( NA, 
+            dim=c( O[["space_n"]], O[["time_n"]], O[["nposteriors"]] ),  
+            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], sim=1:O[["nposteriors"]] ) )
+          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+          names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+
+          for (k in 1:O[["nposteriors"]] ) {
+            W[,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+          }
+          Osamples[["predictions"]] = W[,,, drop =FALSE]
+          W = NULL
+      }
+
+
+      if ( O[["dimensionality"]] == "space-time-cyclic" ) {
+
+          matchto = list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]] )
+
+        if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
+
+        m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+        if (test_for_error(m) =="error") {  
+            message( "failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
+            m = fit$summary.fitted.values[, inla_tokeep ]
+            names(m) = tokeep
+          } 
+
+        W = array( NA, 
+          dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], length(names(m)) ),  
+          dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], stat=names(m) ) )
+        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+        names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+        names(dimnames(W))[3] = vU  # need to do this in a separate step ..
+
+        matchto = list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]] )
+
+        for (k in 1:length(names(m))) {
+          W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+        }
+        O[["predictions"]] = W[,,, tokeep, drop =FALSE]
+        m = W = NULL
+      
+        if ( "predictions" %in% posterior_simulations_to_retain ) {
+          
+          W = array( NA, 
+            dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], O[["nposteriors"]] ),  
+            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], sim=1:O[["nposteriors"]] ) )
+          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+          names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+          names(dimnames(W))[3] = vU  # need to do this in a separate step ..
+          for (k in 1:O[["nposteriors"]] ) {
+            W[,,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+          }
+          Osamples[["predictions"]] = W[,,, ,drop =FALSE]
+          W = NULL
+      }
+  
+      
+      if (!is.null(exceedance_threshold_predictions)) {
+        if (be_verbose)  message("Extracting de/exceedance of predictions"  )
         
         if (length(iST) == 2) {
           model_name1 = fmre$model[ iST[1] ] 
