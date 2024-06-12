@@ -445,23 +445,18 @@ carstm_model_inla = function(
      
 
     # check INLA options
-    if (!exists("inla.mode", inla_args)) inla_args[["inla.mode"]] = "compact" # changed inla options in 2023
+
     if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( strategy='adaptive', cmin=0 ) #int.strategy='eb'
     if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if (!exists("control.mode", inla_args ) ) inla_args[["control.mode"]] = list( restart=FALSE ) 
     if (!is.null(theta) ) inla_args[["control.mode"]]$theta= theta
     
     if (!exists("control.compute", inla_args)) inla_args[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
-      if ( inla_args[["inla.mode"]] == "classic") {
-        # if ( !exists("control.results", inla_args ) ) inla_args[["control.results"]] = list(return.marginals.random=TRUE, return.marginals.predictor=TRUE )
-        inla_args[["control.compute"]]$return.marginals.predictor  = TRUE  # location of this option has moved ... might move again
-      }
+
 
     # if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = list(mean.intercept=0.0, prec.intercept=0.001, mean=0, prec=0.001)
     if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = H$fixed
 
-    O[["inla.mode"]] = inla_args[["inla.mode"]]  # copy for later
-    
     setDF(inla_args[["data"]]) # in case .. INLA requires this ?
  
  
@@ -474,7 +469,6 @@ carstm_model_inla = function(
 
     if (inherits(fit, "try-error" )) {
       inla_args[["safe"]] = TRUE
-      inla_args[["inla.mode"]] = "classic"
       inla_args[["control.inla"]] = list( int.strategy='eb', cmin=0 )
       fit = try( do.call( inla, inla_args ) )      
     }
@@ -529,13 +523,7 @@ carstm_model_inla = function(
         cyclic=O[["cyclic_id"]][inla_args[["data"]][[vU]][O[["ipred"]]]]
       )
     }
-
-    # 2023 change in behaviour .. predictions do not require offsets in experimental and classical modes .. already incorporated
-    # if (!is.null(vO)) {
-    #   if ( O[["inla.mode"]] == "experimental" ) {
-    #     O[["Offset"]] = inla_args[["data"]][[vO]][ O[["ipred"]] ] 
-    #   }
-    # }
+ 
 
     O[["carstm_prediction_surface_parameters"]] = NULL
     
@@ -1441,17 +1429,7 @@ carstm_model_inla = function(
       if ( O[["dimensionality"]] == "space" ) {
 
         m = fit$marginals.fitted.values[O[["ipred"]]]  # already incorporates offsets
-
-        # 2023 change in behaviour .. predictions do not require offsets in experimental and classical modes .. already incorporated
-        # if (!is.null(vO)) {
-        #   if ( O[["inla.mode"]] == "experimental" ) {
-        #     for ( i in 1:length(O[["ipred"]]) ) m[[i]][,1] = m[[i]][,1] + O[["Offset"]][i]
-        #   } 
-        # }
-        
-        # 2023 change in behaviour .. no longer needs invlink as marginals.fitted.values is on response scale
-        # m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )
-
+ 
         if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
@@ -1495,16 +1473,6 @@ carstm_model_inla = function(
       if (O[["dimensionality"]] == "space-time"  ) {
 
         m = fit$marginals.fitted.values[O[["ipred"]]]   
-
-        # 2023 change in behaviour .. predictions do not require offsets in experimental and classical modes .. already incorporated
-        # if (!is.null(vO)) {
-        #   if ( O[["inla.mode"]] == "experimental" ) {
-        #     for ( i in 1:length(O[["ipred"]]) ) m[[i]][,1] = m[[i]][,1] + O[["Offset"]][i]
-        #   } 
-        # }
-
-        # 2023 change in behaviour .. no longer needs invlink as marginals.fitted.values is on response scale
-        # m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
  
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
@@ -1555,17 +1523,6 @@ carstm_model_inla = function(
       if ( O[["dimensionality"]] == "space-time-cyclic" ) {
 
         m = fit$marginals.fitted.values[O[["ipred"]]]   
-
-        # 2023 change in behaviour .. predictions do not require offsets in experimental and classical modes .. already incorporated
-        # if (!is.null(vO)) {
-        # if ( O[["inla.mode"]] == "experimental" ) {
-        #   # offsets required in experimental mode ... do not ask me why
-        #   for ( i in 1:length(O[["ipred"]]) ) m[[i]][,1] = m[[i]][,1] + O[["Offset"]][i] 
-        # } 
-        #}
- 
-        # 2023 change in behaviour .. no longer needs invlink as marginals.fitted.values is on response scale
-        # m = apply_generic( m, function(u) {inla.tmarginal( invlink, u) } )    
 
         if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 
