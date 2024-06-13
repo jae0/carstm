@@ -40,13 +40,11 @@ To begin analysis using [CARSTM](https://github.com/jae0/carstm), we bring in th
 
 # required R library list
 standard_libs = c( 
-    "colorspace", "lubridate",  "lattice",  "data.table", "parallel",
-    "sf",  "terra", "INLA", "ggplot2", "RColorBrewer", "qs"
+    "colorspace", "lubridate",  "lattice",  "data.table",
+    "sf",  "terra", "INLA", "ggplot2", "RColorBrewer" 
 )
 #  warning INLA has a lot of dependencies 
 
-# fast compression in R using zstd or lz4:
-# install.packages("qs", type="source" )
 
 # aegis.* libs (found on github.com/jae0)
 # at a minimum install aegis to bootstrap the others
@@ -293,33 +291,25 @@ p$cyclic_name = as.character(p$cyclic_levels)
 p$cyclic_id = 1:p$nw
 
 
-  
-# hyper parameters ("theta") from close to the final solution on INLA's internal scale:
-theta = c( -0.4837, 0.7395, 0.0023, 2.0392, 2.4817, 3.7261, 0.1356, 0.5362, 10.5067, 1.6043, 0.7973, 4.6358, 0.0863  )
-
-# takes upto 1 hr
+# takes upto 1 hr  
 res = carstm_model( 
     p=p, 
     data=M,
     sppoly=sppoly,
-    # redo_fit=FALSE,  # force re-fit of model ?
-    # debug = "posterior_samples_spatial",
-    toget = c("summary", "random_spatial", "predictions"), 
-    posterior_simulations_to_retain=c("predictions"), 
-    nposteriors=100,  # ~ 5000 would be sufficient to sample most distributions: trade-off between file size and information content .. 100 for speed 
+    posterior_simulations_to_retain=c("predictions", "random_spatial"), 
+    nposteriors=100,  # 1000 to 5000 would be sufficient to sample most distributions: trade-off between file size and information content .. 100 for speed 
     # remaining args below are INLA options, passed directly to INLA
     formula=formula,
     family="gaussian",  # inla family
-    theta=theta,  # start closer to solution to speed up estimation
+    theta=c(  -0.4832, 0.7385, 0.0045, 1.4569, 3.4135, 5.2140, 0.3522, 0.4643, 8.9914, 1.6981, 0.7991, 4.4214, 0.1020  ),  # start closer to solution to speed up  
     control.mode = list(restart=TRUE), # without this inla seems to assume theta are true hypers
-    # improve.hyperparam.estimates=TRUE,
-    # if problems, try other inla options: eg: 
+    # if problems, try any of: 
     # control.inla = list( strategy='adaptive', int.strategy="eb" , optimise.strategy="plain", strategy='laplace', fast=FALSE),
     # control.inla = list( strategy='adaptive', int.strategy="eb" ),
     # control.inla = list( strategy='laplace' ),  # faster
     # redo_fit=FALSE,
     # debug = "predictions", 
-    num.threads="4:2",  # adjust for your machine (on MSwindows, you might need "1:1") 
+    num.threads="5:2",  # adjust for your machine (on MSwindows, you might need "1:1") 
     verbose=TRUE 
 )    
 
@@ -361,85 +351,36 @@ Total: 56.61 mins
 This provides the following as a solution (with only a simple cyclic/seasonal component):
 
 ```r
-# useful if re-starting model fits ...
-# modelinfo = carstm_model(  p=p, sppoly=sppoly, DS="carstm_modelinfo" )  # slow only used inside of carstm fitting
 
-# to see results without reloading the fit as it is a large file
+Deviance Information Criterion (DIC) ...............: 67030.29
+Deviance Information Criterion (DIC, saturated) ....: 21918.56
+Effective number of parameters .....................: 2634.19
 
-# parameters back transformed onto user scale
-res = carstm_model(  p=p,  DS="carstm_summary" )  # parameters in p and direct summary
-res$direct
-Time used:
-    Pre = 19, Running = 2816, Post = 42.1, Total = 2877 
-Fixed effects:
-             mean    sd 0.025quant 0.5quant 0.975quant  mode kld
-(Intercept) 7.379 0.129      7.127    7.379      7.635 7.379   0
+Watanabe-Akaike information criterion (WAIC) ...: 69140.26
+Effective number of parameters .................: 3281.43
 
-Random effects:
-  Name	  Model
-    time AR1 model
-   cyclic RW2 model
-   space BYM2 model
-   inla.group(z, method = "quantile", n = 11) RW2 model
-   space_cyclic BYM2 model
-   space_time BYM2 model
+Marginal log-Likelihood:  -18016.32 
+ is computed 
 
-Model hyperparameters:
-                                                            mean       sd
-Precision for the Gaussian observations                    0.617    0.007
-Precision for time                                         2.109    0.557
-Rho for time                                               0.023    0.077
-Precision for cyclic                                       8.414    4.827
-Precision for space                                      256.905 1899.225
-Phi for space                                              0.780    0.285
-Precision for inla.group(z, method = "quantile", n = 11)   1.217    0.686
-Precision for space_cyclic                                 1.550    0.293
-Phi for space_cyclic                                       0.984    0.060
-GroupRho for space_cyclic                                  0.702    0.067
-Precision for space_time                                   2.232    0.133
-Phi for space_time                                         0.991    0.010
-GroupRho for space_time                                    0.047    0.050 
-
-Deviance Information Criterion (DIC) ...............: 67014.64
-Deviance Information Criterion (DIC, saturated) ....: 21899.96
-Effective number of parameters .....................: 2627.94
-
-Watanabe-Akaike information criterion (WAIC) ...: 69082.19
-Effective number of parameters .................: 3251.78
-
-Marginal log-Likelihood:  -18012.39 
-
-Deviance Information Criterion (DIC) ...............: 67022.21
-Deviance Information Criterion (DIC, saturated) ....: 21912.19
-Effective number of parameters .....................: 2631.73
-
-Watanabe-Akaike information criterion (WAIC) ...: 69111.04
-Effective number of parameters .................: 3267.47
-
-Marginal log-Likelihood:  -18018.17 
- 
-
-res$fixed_effects
+$fixed_effects
              mean     sd quant0.025 quant0.5 quant0.975          ID
-(Intercept) 7.379 0.1283      7.125    7.378      7.632 (Intercept)
+(Intercept) 7.379 0.1291      7.125    7.379      7.635 (Intercept)
 
-
-res$random_effects
-                                                 mean       sd quant0.025
-SD Gaussian observations                      1.27362 0.007547    1.25886
-SD time                                       0.70293 0.066150    0.58447
-SD cyclic                                     0.46503 0.065247    0.34474
-SD space                                      0.29297 0.073496    0.16444
-SD inla.group(z, method = "quantile", n = 11) 0.88412 0.107622    0.69891
-SD space_cyclic                               0.76489 0.028283    0.71282
-SD space_time                                 0.67056 0.019227    0.63355
-Rho for time                                  0.01482 0.041646   -0.05911
-GroupRho for space_cyclic                     0.66438 0.025900    0.61303
-GroupRho for space_time                       0.04736 0.049169   -0.04814
-Phi for space                                 0.98326 0.010477    0.95668
-Phi for space_cyclic                          0.99310 0.007979    0.97208
-Phi for space_time                            0.99141 0.008420    0.96908
-
+$random_effects
+                                                 mean        sd quant0.025
+SD Gaussian observations                      1.27369 7.619e-03    1.25889
+SD time                                       0.65066 7.701e-02    0.51446
+SD cyclic                                     0.43620 8.436e-02    0.28205
+SD space                                      0.10550 6.700e-02    0.02044
+SD inla.group(z, method = "quantile", n = 11) 1.05084 2.638e-01    0.62464
+SD space_cyclic                               0.80851 2.790e-02    0.75673
+SD space_time                                 0.67077 1.989e-02    0.63245
+Rho for time                                  0.02760 7.374e-02   -0.10623
+GroupRho for space_cyclic                     0.70578 2.154e-02    0.66369
+GroupRho for space_time                       0.05173 4.889e-02   -0.04464
+Phi for space                                 0.95138 5.275e-02    0.80308
+Phi for space_cyclic                          1.00000 4.321e-06    0.99999
+Phi for space_time                            0.99123 6.782e-03    0.97349
 
 ```
 
@@ -472,22 +413,14 @@ if (0) {
     # posterior predictive check
     carstm_posterior_predictive_check(p=p, M=M  )
 
-    
-    [1] "Precision for the Gaussian observations"                   
-    [2] "Precision for time"                                        
-    [3] "Rho for time"                                              
-    [4] "Precision for cyclic"                                      
-    [5] "Precision for space"                                       
-    [6] "Phi for space"                                             
-    [7] "Precision for inla.group(z, method = \"quantile\", n = 11)"
-    [8] "Precision for space_cyclic"                                
-    [9] "Phi for space_cyclic"                                      
-    [10] "GroupRho for space_cyclic"                                 
-    [11] "Precision for space_time"                                  
-    [12] "Phi for space_time"                                        
-    [13] "GroupRho for space_time"                                   
-
-}  
+# to reload saved results summary
+# res = carstm_model( p=p, sppoly=sppoly, DS="carstm_modelled_summary")
+ 
+# annual component
+ts =  res$random$time 
+plot( mean ~ ID, ts, type="b", ylim=c(-2,2), lwd=1.5, xlab="year")
+lines( quant0.025 ~ ID, ts, col="gray", lty="dashed")
+lines( quant0.975 ~ ID, ts, col="gray", lty="dashed")
 
 fit = NULL; gc()
 
@@ -531,7 +464,10 @@ print(plt)
 # maps of some of the results
  
 
-# persistent spatial effects "re"
+# persistent spatial effects "re" ( icar neighbourhood random effects + unstructured random effects )
+
+# you might require the "grid"  library:  install.packages("grid")
+require(grid)
 plt = carstm_map(  res=res, vn=c( "random", "space", "re" ), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title="Bottom temperature spatial effects (Celsius)"

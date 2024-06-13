@@ -39,7 +39,7 @@ carstm_model_inla = function(
         }
         if (is.null(fit)) message("Modelled fit was not found.")
       }
-      return( fit )
+      if (is.null(fit)) message("Modelled fit was not found.")
     }
     
     if (DS=="carstm_modelled_summary") {   
@@ -96,6 +96,35 @@ carstm_model_inla = function(
 
   }
 
+  if (DS=="modelled_summary") {  # model.*modelled
+    if (!is.null(fn_res)) {
+      O = NULL
+      if (file.exists(fn_res)) {
+        if (grepl("\\.RDS$", fn_fit)) {
+          res = readRDS(fn_res)
+        } else {
+          load( fn_res)
+        }
+      }
+      if (is.null(O)) message("Summary of fit was not found.")
+      return( O )
+    } else {
+      if (file.exists(fn_fit)){
+        if (grepl("\\.RDS$", fn_fit)) {
+          fit = readRDS(fn_fit)
+        } else {
+          load( fn_fit )
+        }
+      } 
+      if (!is.null(fit)) {
+        if (exists( "results", fit)) {
+          return( fit$results )
+        }
+      }
+      message("Modelled results not found.")
+    }
+  }
+  
   if (exists("debug")) if (is.logical(debug)) if (debug) browser()
 
   run_start  = Sys.time()
@@ -225,12 +254,7 @@ carstm_model_inla = function(
     
     if (any(class(inla_args[["data"]])=="character")) {
       if ( be_verbose) message( "Data is a function. Getting data ...")
-       Odata = try( eval(parse(text=inla_args[["data"]]) ) )
-       inla_args[["data"]] = Odata
-       Odata = NULL
-    }
-    if (inherits(inla_args[["data"]], "try-error")) {
-        inla_args[["data"]] = NULL
+      inla_args[["data"]] = try( eval(parse(text=inla_args[["data"]]) ) )
     }
     if (is.null(inla_args[["data"]])) stop("Data not found")
 
@@ -595,7 +619,9 @@ carstm_model_inla = function(
     read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
     if (be_verbose)  message( "\nModel fit saved as: \n", fn_fit )
 
-  } # END redo fit
+    if (be_verbose)  message( "\nModel fit complete. Saving ...\n", fn_fit )
+
+    carstm_saveRDS( fit, file=fn_fit, compress=compress, compression_level=compression_level )
 
   run_fit_end  = Sys.time()
     
@@ -609,7 +635,7 @@ carstm_model_inla = function(
 
   if (is.null(fit)) {
     if (be_verbose)  message( "\nLoading fit as: redo_fit=FALSE ...\n", fn_fit )
-    fit =aegis::read_write_fast( fn_fit )
+    fit =readRDS( fn_fit )
   }
   
   if (is.null(fit)) {
@@ -618,6 +644,15 @@ carstm_model_inla = function(
   }
  
   # do the computations here as fit can be massive ... best not to copy, etc ..
+
+  if (!exists("modelinfo", fit)) {
+    stop("Modelinfo not in fit, fit object needs to be re-run?")
+  }
+  
+  O = fit$modelinfo
+   
+  fit$modelinfo = NULL
+  gc()
 
   # --------------------------------------------
   # --------------------------------------------
@@ -757,7 +792,60 @@ carstm_model_inla = function(
   if (exists("debug")) if (is.character(debug)) if (debug=="summary") browser()
 
  
-  Osummary = list()
+    posterior_simulations_to_retain = unique( c( "summary", posterior_simulations_to_retain))
+ 
+    if (is.null(nposteriors)) {
+      if (exists("nposteriors", O)) {
+        nposteriors = O$nposteriors
+      } else {
+        message("nposteriors not found, defaulting to 1000")
+        nposteriors = 1000 
+      }
+    }
+    message( "Sampling from joint posteriors: n = ", nposteriors )
+  
+    S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, num.threads=mc.cores ), silent=TRUE)
+    if ( "try-error" %in%  class(S) ) {
+      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, use.improved.mean=FALSE ), silent=TRUE)
+    }
+    if ( "try-error" %in%  class(S) ) {
+      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, skew.corr =FALSE ), silent=TRUE)
+    }
+    if ( "try-error" %in%  class(S) ) {
+      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, use.improved.mean=FALSE, skew.corr =FALSE ), silent=TRUE)
+    }
+
+    if ( "try-error" %in%  class(S) ) stop("posterior sampling error")
+
+    message( "Formatting and extracting required components. This will take a while." )
+
+    for (z in c("tag", "start", "length") ) assign(z, attributes(S)[[".contents"]][[z]] )  # index info
+
+      if (0) {
+        # not used at the moment .. 
+        nlogdens = length(S[[1]]$logdens)
+        logdens = array(NA, dim=c( nlogdens, nposteriors  ) )
+        for (i in 1:nposteriors) {
+          logdens[,i] = unlist(S[[i]]$logdens)
+        }
+        logdens_names =  names(S[[1]]$logdens)
+        logdens = format_results( logdens, labels=logdens_names  ) # same seq as space_id ( == attributes(space)$row.names )
+      }
+  }
+
+  names.fixed = fit$names.fixed
+  summary.fixed  = fit$summary.fixed
+  summary.random = fit$summary.random
+  summary.hyperpar = fit$summary.hyperpar 
+  
+  dic = fit$dic[c("dic", "p.eff", "dic.sat", "mean.deviance")]
+  waic = fit$waic[c("waic", "p.eff")]
+  mlik = fit$mlik[2]
+
+
+  if (!exists("summary", O)) O[["summary"]] = list()
+  if (!exists("random", O)) O[["random"]] = list()
+
 
   if ( "summary" %in% toget) {
     
@@ -917,7 +1005,48 @@ carstm_model_inla = function(
         gc()
       }
     }
- 
+
+
+   if ( "summary" %in% posterior_simulations_to_retain ) {
+
+      other_random = setdiff( names(summary.random), c(vS, vS2 ) )
+
+      if (length(other_random) > 0 ) {
+        nrandom = sum(sapply(summary.random[other_random], nrow))  
+        random = array(NA, dim=c(nrandom, nposteriors  ) )
+        rkk = inla_get_indices(other_random, tag=tag, start=start, len=length, model="direct_match"  )  # if bym2, must be decomposed  
+        rkk = unlist( rkk )
+        for (i in 1:nposteriors) {
+          random[,i] = S[[i]]$latent[rkk,]  
+        }
+        rlabels = names(S[[1]]$latent[rkk,])
+
+        random = invlink(random)
+        row.names(random) = rlabels
+        O[["posterior_summary"]][["random_effects"]] = posterior_summary( format_results( random, labels=rlabels ) )
+      }
+      nhyperpar = nrow(summary.hyperpar)
+      if (nhyperpar == 0) stop("No hyperparameters in summary.hyperpar: theta was sent ... control.mode(restart=T) might help" )
+      hyperpar = array( NA,dim=c(nhyperpar, nposteriors  ) )
+      for (i in 1:nposteriors) {
+        hyperpar[,i] = S[[i]]$hyperpar
+      }
+      hyper_names = names(S[[1]]$hyperpar)
+      k = grep("Precision", hyper_names)
+      if (length(k) > 0) {
+          hyperpar[k,] = 1 / sqrt(hyperpar[k,]) 
+          hyper_names[k] = gsub("Precision for", "SD", hyper_names[k] )
+      }
+      hyper_names = gsub("for ", "", hyper_names )
+      hyper_names = gsub("the ", "", hyper_names )
+      
+      row.names( hyperpar ) = hyper_names
+      O[["sims"]][["hyperpars"]] =  hyperpar
+
+      O[["posterior_summary"]][["hyperpars_summary"]] = posterior_summary( format_results( hyperpar, labels=hyper_names) )
+
+    }
+
 
     if (be_verbose)  {
       # message( "")
@@ -1209,7 +1338,7 @@ carstm_model_inla = function(
             Z = expand.grid( space=O[["space_id"]], type ="ne", time=O[["time_id"]], stringsAsFactors =FALSE )
           }
 
-          #  spatiotemporal interaction effects  bym
+          #  spatiotemporal interaction effects 
           ine =  which(Z$type=="ne")
           matchfrom = list( space=Z[["space"]][ine], time=Z[["time"]][ine]  )
             
@@ -1395,6 +1524,29 @@ carstm_model_inla = function(
  
         if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
+        m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+        if (test_for_error(m) =="error") {  
+            message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
+            m = fit$summary.fitted.values[, inla_tokeep ]
+            names(m) = tokeep
+        } 
+
+        W = array( NA, 
+          dim=c( O[["space_n"]],  length(names(m)) ),  
+          dimnames=list( space=O[["space_name"]], stat=names(m) ) )
+        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+        
+        # matchfrom already created higher up
+        matchto = list( space=O[["space_id"]] )
+
+        for (k in 1:length(names(m))) {
+          W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+        }
+        O[["predictions"]] = W[, tokeep, drop =FALSE]
+        m = W = NULL
+
+        if ( "predictions" %in% posterior_simulations_to_retain ) {
           W = array( NA, 
             dim=c( O[["space_n"]],  length(names(m)) ),  
             dimnames=list( space=O[["space_name"]], stat=names(m) ) )
@@ -1908,7 +2060,7 @@ carstm_model_inla = function(
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
         if (test_for_error(m) =="error") {  
-            message( "failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
+            message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
             m = fit$summary.fitted.values[, inla_tokeep ]
             names(m) = tokeep
           } 
@@ -1955,7 +2107,7 @@ carstm_model_inla = function(
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
         if (test_for_error(m) =="error") {  
-            message( "failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
+            message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
             m = fit$summary.fitted.values[, inla_tokeep ]
             names(m) = tokeep
           } 
