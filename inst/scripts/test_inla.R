@@ -47,7 +47,7 @@ posterior_means = function( x, n=100 ) {
  
 
 # mC2 = "classic" mode for model with offsets
-# mE0 = "experimental" mode for model with NO offsets
+# mE0 = "experimental" mode for model with NO offsets  # experiemental no longer ... compact?
 # mE2 = "experimental" mode for model with offsets
 
 # eta* = A ( eta + offset )
@@ -92,10 +92,16 @@ mE2 = inla(formula2, family="poisson", data=Germany,
 pE2 = posterior_means(mE2)
 pE2marg  = unlist( sapply( mE2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
 
-# NOTE the varying offset and sacle issues:
+# NOTE the experimental mode (defunct) was varying offset and sacle issues:
   plot( obsrate ~ mE2$summary.fitted.values$mean ) # fitted.values on user scale and ignores offsets for prediction .. prediction is rate even when offsets given
   plot( Germany$Y ~ pE2 )  # posterior means incorporates given offsets and predicts a count 
   plot( obsrate ~ pE2marg ) #   posterior marginals also on user scale and ignores offsets for prediction  .. prediction is rate
+   
+
+# NOTE compact mode output is same as classic mode
+  plot( Germany$Y ~ mE2$summary.fitted.values$mean ) # fitted.values on user scale and ignores offsets for prediction .. prediction is rate even when offsets given
+  plot( Germany$Y ~ pE2 )  # posterior means incorporates given offsets and predicts a count 
+  plot( Germany$Y ~ pE2marg ) #   posterior marginals also on user scale and ignores offsets for prediction  .. prediction is rate
    
 
   
@@ -135,9 +141,36 @@ m2 = inla(formula1, family="poisson", data=Germany,
     control.predictor = list(compute=TRUE, link=1)
 )
 
-plot(mC2$summary.fitted.values$mean, m2$summary.fitted.values$mean)
+plot(mm$summary.fitted.values$mean, m2$summary.fitted.values$mean)   # not same 
 
-plot(mC2$summary.fitted.values$mean, m2$summary.fitted.values$mean*Germany$E)
+plot(mm$summary.fitted.values$mean, m2$summary.fitted.values$mean*Germany$E) # same
+
+
+
+
+  # eta* = A ( eta + offset )
+mm2 = inla(formula1, family="poisson", data=Germany, 
+    inla.mode="compact",
+    offset=Germany$logE,
+    control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+    control.fixed=list(prec.intercept=1),
+    control.predictor = list(compute=TRUE, link=1)
+)
+
+m22 = inla(formula1, family="poisson", data=Germany, 
+    inla.mode="compact",
+    E=Germany$E, 
+    control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+    control.fixed=list(prec.intercept=1),
+    control.predictor = list(compute=TRUE, link=1)
+)
+
+plot(mm2$summary.fitted.values$mean, m22$summary.fitted.values$mean)   # not same 
+
+plot(mm2$summary.fitted.values$mean, m22$summary.fitted.values$mean*Germany$E) # same
+
+
+
 
 
 

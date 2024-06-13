@@ -36,9 +36,15 @@ To begin analysis using [CARSTM](https://github.com/jae0/carstm), we bring in th
 ```r
 
 # required R library list
-standard_libs = c( "colorspace", "lubridate",  "lattice",  "parallel", "sf",  "INLA" , "data.table", "ggplot2", "RColorBrewer" )
+standard_libs = c( 
+    "colorspace", "lubridate",  "lattice",  "data.table",
+    "sf",  "terra", "INLA", "ggplot2", "RColorBrewer" 
+)
+#  warning INLA has a lot of dependencies 
+
 
 # aegis.* libs (found on github.com/jae0)
+# at a minimum install aegis to bootstrap the others
 local_libs = c(
     "aegis",   # basic data manipulations
     "aegis.coastline",  # handling coastline  
@@ -50,11 +56,11 @@ local_libs = c(
 # required parameter settings:
 p = list()
 
-p$libs = RLibrary ( c(standard_libs, local_libs) )
+p$libs = aegis::RLibrary ( c(standard_libs, local_libs) )
 
 ```
 
-To the parameter list *p*, we add additional options related to areal unit configuration and modelling.
+To the parameter list *p*, we add additional options related to areal unit configuration and modelling.  (A lot of settings ... )
 
 ```r
 p$yrs = min(year(bottemp$date)):max(year(bottemp$date)) # 1980:2010
@@ -171,8 +177,13 @@ sppoly = areal_units( p=p, xydata=xydata,
 
 plot( sppoly[ "AUID" ] ) 
 
-# map surface areas 
-carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="tmap", tmapmode="view", legend.position=c("LEFT", "top" ) )  # interactive map 
+if (0) {
+    # map surface areas (interactive map in a web browser) using tmap 
+    # tmap has a lot of dependencies, so you might not want to install it unless you already use it
+    # install.packages("tmap") 
+    require(tmap)
+    carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="tmap", tmapmode="view", legend.position=c("LEFT", "top" ) )  # interactive map 
+}
 
 carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="ggplot", legend.position=c(0.1, 0.9)  )  # default fast plot 
  
@@ -180,7 +191,7 @@ carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="ggplot", legend.position=
 
 Which gives the following representation, based upon data density:
 
-![](sppoly_temperature.png)
+![../../docs/media/sppoly_temperature.html](../../docs/media/sppoly_temperature.html)
 
 ---
 
@@ -274,24 +285,25 @@ p$cyclic_name = as.character(p$cyclic_levels)
 p$cyclic_id = 1:p$nw
 
 
-# takes about 15 minutes
+# takes upto 1 hr  
 res = carstm_model( 
     p=p, 
     data=M,
     sppoly=sppoly,
     posterior_simulations_to_retain=c("predictions", "random_spatial"), 
-    nposteriors=100,  # 1000 to 5000 would be sufficient to sample most distributions: trade-off between file size and information content
+    nposteriors=100,  # 1000 to 5000 would be sufficient to sample most distributions: trade-off between file size and information content .. 100 for speed 
     # remaining args below are INLA options, passed directly to INLA
     formula=formula,
     family="gaussian",  # inla family
-    theta=c( -0.670, 0.749, 0.004, 0.981, 0.432, 3.445, 1.702, 2.507, -1.454, 0.454, 3.474, 0.064, -8.755 ),  # start closer to solution to speed up  
-    num.threads="5:2",  # adjust for your machine
+    theta=c(  -0.4832, 0.7385, 0.0045, 1.4569, 3.4135, 5.2140, 0.3522, 0.4643, 8.9914, 1.6981, 0.7991, 4.4214, 0.1020  ),  # start closer to solution to speed up  
+    control.mode = list(restart=TRUE), # without this inla seems to assume theta are true hypers
     # if problems, try any of: 
     # control.inla = list( strategy='adaptive', int.strategy="eb" , optimise.strategy="plain", strategy='laplace', fast=FALSE),
-    control.inla = list( strategy='adaptive', int.strategy="eb" ),
+    # control.inla = list( strategy='adaptive', int.strategy="eb" ),
     # control.inla = list( strategy='laplace' ),  # faster
     # redo_fit=FALSE,
     # debug = "predictions", 
+    num.threads="5:2",  # adjust for your machine (on MSwindows, you might need "1:1") 
     verbose=TRUE 
 )    
 
@@ -320,40 +332,40 @@ res = carstm_model(
 This provides the following as a solution (with only a simple cyclic/seasonal component):
 
 ```r
-Deviance Information Criterion (DIC) ...............: 67154.20
-Deviance Information Criterion (DIC, saturated) ....: 20337.48
-Effective number of parameters .....................: 1488.02
 
-Watanabe-Akaike information criterion (WAIC) ...: 67242.15
-Effective number of parameters .................: 1456.93
+Deviance Information Criterion (DIC) ...............: 67030.29
+Deviance Information Criterion (DIC, saturated) ....: 21918.56
+Effective number of parameters .....................: 2634.19
 
-  
-Marginal log-Likelihood:  -18623.16 
+Watanabe-Akaike information criterion (WAIC) ...: 69140.26
+Effective number of parameters .................: 3281.43
+
+Marginal log-Likelihood:  -18016.32 
  is computed 
 
 $fixed_effects
-             mean    sd quant0.025 quant0.5 quant0.975          ID
-(Intercept) 7.276 0.125      7.031    7.276      7.521 (Intercept)
+             mean     sd quant0.025 quant0.5 quant0.975          ID
+(Intercept) 7.379 0.1291      7.125    7.379      7.635 (Intercept)
 
 $random_effects
                                                  mean        sd quant0.025
-SD Gaussian observations                       1.3979 4.655e-03   1.388821
-SD time                                        0.6876 2.842e-03   0.682071
-SD cyclic                                      0.6123 2.531e-03   0.607366
-SD space_cyclic                                0.8347 3.430e-03   0.828019
-SD space                                       0.2855 1.185e-03   0.283185
-SD inla.group(z, method = "quantile", n = 11)  0.7969 3.294e-03   0.790473
-SD space_time                                  0.1760 7.276e-04   0.174624
-Rho for time                                   0.0020 4.152e-03  -0.006148
-GroupRho for space_cyclic                      0.6916 2.162e-03   0.687324
-GroupRho for space_time                       -0.9997 2.622e-06  -0.999690
-Phi for space_cyclic                           0.9691 2.494e-04   0.968589
-Phi for space                                  0.1894 1.276e-03   0.186895
-Phi for space_time                             0.5160 2.077e-03   0.511918
+SD Gaussian observations                      1.27369 7.619e-03    1.25889
+SD time                                       0.65066 7.701e-02    0.51446
+SD cyclic                                     0.43620 8.436e-02    0.28205
+SD space                                      0.10550 6.700e-02    0.02044
+SD inla.group(z, method = "quantile", n = 11) 1.05084 2.638e-01    0.62464
+SD space_cyclic                               0.80851 2.790e-02    0.75673
+SD space_time                                 0.67077 1.989e-02    0.63245
+Rho for time                                  0.02760 7.374e-02   -0.10623
+GroupRho for space_cyclic                     0.70578 2.154e-02    0.66369
+GroupRho for space_time                       0.05173 4.889e-02   -0.04464
+Phi for space                                 0.95138 5.275e-02    0.80308
+Phi for space_cyclic                          1.00000 4.321e-06    0.99999
+Phi for space_time                            0.99123 6.782e-03    0.97349
 
 ```
 
-The variance components are dominated by overall background residual errors. Space, time and depth are relatively important as well (SD ~ 1/2 of residual error). Autocorrelation in space (Phi for space) is relatively high with about 80% of the spatial variability associated with neighbourhood effects. Temporal autocorrelation is very poor both overall (Rho for time) and in fact for space-time, actually -1! Suggesting extremely high temporal variability that the 10 units of seasonal increments absorbs the autocorrelation reasonably well, leaving variations that are operating on other temporal scales (periodicities).  
+The variance components are dominated by overall background residual errors. Space, time and depth are relatively important as well (SD ~ 1/2 of residual error). Autocorrelation in space (Phi for space) is relatively high with about 80% of the spatial variability associated with neighbourhood effects. Temporal autocorrelation is very poor both overall (Rho for time) and but high for (local, seasonal) space-cyclic!  
 
 And finally a few plots and maps.
 
@@ -373,7 +385,7 @@ fit$summary$dic$p.eff
 
 # to reload saved results summary
 # res = carstm_model( p=p, sppoly=sppoly, DS="carstm_modelled_summary")
-
+ 
 # annual component
 ts =  res$random$time 
 plot( mean ~ ID, ts, type="b", ylim=c(-2,2), lwd=1.5, xlab="year")
@@ -390,7 +402,10 @@ lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
 # maps of some of the results
  
 
-# persistent spatial effects "re"
+# persistent spatial effects "re" ( icar neighbourhood random effects + unstructured random effects )
+
+# you might require the "grid"  library:  install.packages("grid")
+require(grid)
 plt = carstm_map(  res=res, vn=c( "random", "space", "re" ), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title="Bottom temperature spatial effects (Celsius)"
@@ -402,7 +417,7 @@ plt
 
 The latter spatial effect looks like this:
 
-![](temperature_spatialeffect.png)
+![../../docs/media/temperature_spatialeffect.png](../../docs/media/temperature_spatialeffect.png)
 
 Note that the light blue inshore is known as the Nova Scotia current, which runs south-west along the coastline.
 
@@ -421,7 +436,7 @@ plt = carstm_map( res=res, vn="predictions", tmatch=tmatch, umatch=umatch,
 plt
 
 ```
-![](temperature_prediction.png)
+![../../docs/media/temperature_prediction.png](../../docs/media/temperature_prediction.png)
 
 To remove random effects and leave the "latent signals" will require some more work but relatively straightforward to do as you have posterior samples to work with...
 
