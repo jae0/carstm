@@ -48,6 +48,7 @@ carstm_filenames = function( p=list(), returnvalue="full_filename", fn=NULL, ...
       outfn = paste( gsub("\\.rdata$|\\.RDS$", "", aufns), fn, "RDS", sep="." )
     return( outfn )   
   }  
+  # so if returntype is not amongst the above, it just gets added to the fnroot and returned
 
   return(p)
 }

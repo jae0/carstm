@@ -7,11 +7,13 @@ carstm_model_inla = function(
   space_id=NULL, time_id=NULL, cyclic_id=NULL, 
   fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
   fn_res=NULL, 
+  fn_psims=NULL,
   redo_fit = TRUE,
+  redo_posterior_simulations = TRUE,
   theta=NULL,
   compress="gzip",
   compression_level=1,
-  toget = c("summary", "random_spatial", "random_spatiotemporal", "predictions"), 
+  toget = c("summary", "random_spatial", "predictions"), 
   nposteriors=NULL, 
   posterior_simulations_to_retain=NULL,
   exceedance_threshold=NULL, 
@@ -96,78 +98,81 @@ carstm_model_inla = function(
     mc.cores = 1
   }
 
-    # Formula parsing
-    if ( !exists("formula", inla_args ) ) {
-      if (exists("formula", O ) ) {
-        inla_args[["formula"]] = O[["formula"]]
-        if ( be_verbose ) message( "Formula found in options, O" )
-      } else {
-        stop( "Model formula was not provided")
-      }
+  # Formula parsing
+  if ( !exists("formula", inla_args ) ) {
+    if (exists("formula", O ) ) {
+      inla_args[["formula"]] = O[["formula"]]
+      if ( be_verbose ) message( "Formula found in options, O" )
+    } else {
+      stop( "Model formula was not provided")
     }
+  }
 
-    O[["fm"]] = parse_formula( inla_args[["formula"]] )
-    
-    if ( be_verbose ) {
-      message( "Formula parsed as follows. Check in case of errors:" )
-      print(O[["fm"]])
+  O[["fm"]] = parse_formula( inla_args[["formula"]] )
+  
+  if ( be_verbose ) {
+    message( "Formula parsed as follows. Check in case of errors:" )
+    print(O[["fm"]])
+  }
+
+
+  # labels .. not all used but defining the here makes things simpler below
+  # shorten var names
+  re = O[["fm"]]$random_effects
+
+  vO = O[["fm"]]$offset_variable
+  vY = O[["fm"]]$dependent_variable 
+
+  vS = O[["fm"]]$vn$S
+  vT = O[["fm"]]$vn$T
+  vU = O[["fm"]]$vn$U
+  vS2 = O[["fm"]]$vn$S2 
+  vT2 = O[["fm"]]$vn$T2
+  vU2 = O[["fm"]]$vn$U2
+  vS3 = O[["fm"]]$vn$S3 
+
+  # family related  
+  if ( !exists("family", inla_args ) ) {
+    if ( exists("family", O) ) {
+      if ( be_verbose ) message( "Family found in options, O" )
+      inla_args[["family"]] = O[["family"]]   
+    } else {
+      inla_args[["family"]] = "gaussian"
     }
+  }
+
+  if (!exists("family", inla_args))  stop( "Model family was not provided")
+  O[["family"]] = inla_args[["family"]]  # copy to O in case it was provided as inla_args
+
+  if ( inla_args[["family"]] == "gaussian" ) {
+    lnk_function = inla.link.identity
+  } else if ( inla_args[["family"]] == "lognormal" ) {
+    lnk_function = inla.link.log
+  } else if ( grepl( ".*poisson", inla_args[["family"]])) {
+    lnk_function = inla.link.log
+  } else if ( grepl( ".*nbinomial", inla_args[["family"]])) {
+    lnk_function = inla.link.log
+    invlink_id  =  "exp"
+  } else if ( grepl( ".*binomial", inla_args[["family"]])) {
+    lnk_function = inla.link.logit
+  } 
+
+  O[["invlink"]] = invlink = function(x) lnk_function( x,  inverse=TRUE )
 
 
-    # labels .. not all used but defining the here makes things simpler below
-    # shorten var names
-    re = O[["fm"]]$random_effects
-
-    vO = O[["fm"]]$offset_variable
-    vY = O[["fm"]]$dependent_variable 
-
-    vS = O[["fm"]]$vn$S
-    vT = O[["fm"]]$vn$T
-    vU = O[["fm"]]$vn$U
-    vS2 = O[["fm"]]$vn$S2 
-    vT2 = O[["fm"]]$vn$T2
-    vU2 = O[["fm"]]$vn$U2
-    vS3 = O[["fm"]]$vn$S3 
-
-    # family related  
-    if ( !exists("family", inla_args ) ) {
-      if ( exists("family", O) ) {
-        if ( be_verbose ) message( "Family found in options, O" )
-        inla_args[["family"]] = O[["family"]]   
-      } else {
-        inla_args[["family"]] = "gaussian"
-      }
-    }
-
-    if (!exists("family", inla_args))  stop( "Model family was not provided")
-    O[["family"]] = inla_args[["family"]]  # copy to O in case it was provided as inla_args
- 
-    if ( inla_args[["family"]] == "gaussian" ) {
-      lnk_function = inla.link.identity
-    } else if ( inla_args[["family"]] == "lognormal" ) {
-      lnk_function = inla.link.log
-    } else if ( grepl( ".*poisson", inla_args[["family"]])) {
-      lnk_function = inla.link.log
-    } else if ( grepl( ".*nbinomial", inla_args[["family"]])) {
-      lnk_function = inla.link.log
-      invlink_id  =  "exp"
-    } else if ( grepl( ".*binomial", inla_args[["family"]])) {
-      lnk_function = inla.link.logit
-    } 
-
-    O[["invlink"]] = invlink = function(x) lnk_function( x,  inverse=TRUE )
+  # changes in INLA data structures noted in 2023:
+  # posterior sims is on link scale ((for both experimental and classical))
+  # marginals.fitted.values are on response scale (for both experimental and classical)
+  # summary.fitted.values on response scale ((for both experimental and classical))
 
 
-    # changes in INLA data structures noted in 2023:
-    # posterior sims is on link scale ((for both experimental and classical))
-    # marginals.fitted.values are on response scale (for both experimental and classical)
-    # summary.fitted.values on response scale ((for both experimental and classical))
-
+  # --------------------------------------------
+  # --------------------------------------------
+  # --------------------------------------------
 
   ### START Modelling
  
   if (redo_fit) {
-
     # permit passing a function rather than data directly .. less RAM usage in parent call
     if (!exists("data", inla_args)) {
       if (exists("data", O)) {
@@ -537,13 +542,15 @@ carstm_model_inla = function(
 
     carstm_saveRDS( fit, file=fn_fit, compress=compress, compression_level=compression_level )
 
-  }
-
-
-  
-  ### END Modelling
+  } # END redo fit
 
   if (!exists("run_fit_end")) run_fit_end  = run_start  # in case modelling is skipped
+
+  ### END Modelling
+
+  # --------------------------------------------
+  # --------------------------------------------
+  # --------------------------------------------
 
   run_extract_start  = Sys.time()
 
@@ -562,12 +569,21 @@ carstm_model_inla = function(
   if (!exists("modelinfo", fit)) {
     stop("Modelinfo not in fit, fit object needs to be re-run?")
   }
-  
+
+
+  # --------------------------------------------
+  # --------------------------------------------
+  # --------------------------------------------
+
   O = fit$modelinfo
    
+
   fit$modelinfo = NULL
   gc()
 
+  # some info required for posterior simulations
+  O[["names.fixed"]] = fit$names.fixed
+  O[["nposteriors"]] = nposteriors
 
   if (exists("debug")) if (is.character(debug)) if (debug=="extract") browser()
 
@@ -687,75 +703,30 @@ carstm_model_inla = function(
   }
 
 
+
+
+
   inla_tokeep = c("mean", "sd", "0.025quant", "0.5quant", "0.975quant")
   tokeep =      c("mean", "sd", "quant0.025", "quant0.5", "quant0.975")
  
-  if (is.null(deceedance_threshold)) if (exists("deceedance_threshold", O)) deceedance_threshold = O[["deceedance_threshold"]]
-  if (is.null(exceedance_threshold)) if (exists("exceedance_threshold", O)) exceedance_threshold = O[["exceedance_threshold"]]
-
-  if (is.null(deceedance_threshold_predictions)) if (exists("deceedance_threshold_predictions", O)) deceedance_threshold_predictions = O[["deceedance_threshold_predictions"]]
-  if (is.null(exceedance_threshold_predictions)) if (exists("exceedance_threshold_predictions", O)) exceedance_threshold_predictions = O[["exceedance_threshold_predictions"]]
-
   if (exists("debug")) if (is.character(debug)) if (debug=="summary") browser()
 
-  if (!is.null(posterior_simulations_to_retain)) {
- 
-    posterior_simulations_to_retain = unique( c( "summary", posterior_simulations_to_retain))
- 
-    if (is.null(nposteriors)) {
-      if (exists("nposteriors", O)) {
-        nposteriors = O$nposteriors
-      } else {
-        message("nposteriors not found, defaulting to 1000")
-        nposteriors = 1000 
-      }
-    }
-    message( "Sampling from joint posteriors: n = ", nposteriors )
-  
-    S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, num.threads=mc.cores ), silent=TRUE)
-    if ( "try-error" %in%  class(S) ) {
-      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, use.improved.mean=FALSE ), silent=TRUE)
-    }
-    if ( "try-error" %in%  class(S) ) {
-      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, skew.corr =FALSE ), silent=TRUE)
-    }
-    if ( "try-error" %in%  class(S) ) {
-      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, use.improved.mean=FALSE, skew.corr =FALSE ), silent=TRUE)
-    }
 
-    if ( "try-error" %in%  class(S) ) stop("posterior sampling error")
-
-    message( "Formatting and extracting required components. This will take a while." )
-
-    for (z in c("tag", "start", "length") ) assign(z, attributes(S)[[".contents"]][[z]] )  # index info
-
-      if (0) {
-        # not used at the moment .. 
-        nlogdens = length(S[[1]]$logdens)
-        logdens = array(NA, dim=c( nlogdens, nposteriors  ) )
-        for (i in 1:nposteriors) {
-          logdens[,i] = unlist(S[[i]]$logdens)
-        }
-        logdens_names =  names(S[[1]]$logdens)
-        logdens = format_results( logdens, labels=logdens_names  ) # same seq as space_id ( == attributes(space)$row.names )
-      }
-  }
-
-  names.fixed = fit$names.fixed
-  summary.fixed  = fit$summary.fixed
-  summary.random = fit$summary.random
-  summary.hyperpar = fit$summary.hyperpar 
-  
-  dic = fit$dic[c("dic", "p.eff", "dic.sat", "mean.deviance")]
-  waic = fit$waic[c("waic", "p.eff")]
-  mlik = fit$mlik[2]
-
-
-  if (!exists("summary", O)) O[["summary"]] = list()
   if (!exists("random", O)) O[["random"]] = list()
 
 
   if ( "summary" %in% toget) {
+
+    if (!exists("summary", O)) O[["summary"]] = list()
+  
+    names.fixed = fit$names.fixed
+    summary.fixed  = fit$summary.fixed
+    summary.random = fit$summary.random
+    summary.hyperpar = fit$summary.hyperpar 
+    
+    dic = fit$dic[c("dic", "p.eff", "dic.sat", "mean.deviance")]
+    waic = fit$waic[c("waic", "p.eff")]
+    mlik = fit$mlik[2]
 
     O[["summary"]][["direct"]] = summary(fit)
     # print(O[["summary"]][["direct"]])
@@ -797,27 +768,11 @@ carstm_model_inla = function(
       O[["summary"]][["fixed_effects"]] = W
       m = NULL
       
-      if ( "summary" %in% posterior_simulations_to_retain ) {
-       # posteriors
-        ftx = names.fixed 
-        flabels= ftx
-        nfixed = length(names.fixed)
-        fixed = array(NA, dim=c( nfixed, nposteriors  ) )
-        fkk = inla_get_indices(ftx, tag=tag, start=start, len=length, model="direct_match")
-        fkk = unlist(fkk)
-        for (i in 1:nposteriors) {
-          fixed[,i] = S[[i]]$latent[fkk,]  
-        }
-        fixed = invlink(fixed)
-        row.names(fixed) = flabels
-        O[["sims"]][["fixed_effects"]] = fixed
-        O[["posterior_summary"]][["fixed_effects"]] = posterior_summary(format_results( fixed, labels=flabels))
-        fkk = fixed = NULL
-      }      
     }
     W = NULL
     gc()
-   
+
+ 
  
     if (exists( "marginals.hyperpar", fit)) {
       
@@ -925,48 +880,7 @@ carstm_model_inla = function(
         m = raneff = NULL
       }
     }
-
-
-   if ( "summary" %in% posterior_simulations_to_retain ) {
-
-      other_random = setdiff( names(summary.random), c(vS, vS2 ) )
-
-      if (length(other_random) > 0 ) {
-        nrandom = sum(sapply(summary.random[other_random], nrow))  
-        random = array(NA, dim=c(nrandom, nposteriors  ) )
-        rkk = inla_get_indices(other_random, tag=tag, start=start, len=length, model="direct_match"  )  # if bym2, must be decomposed  
-        rkk = unlist( rkk )
-        for (i in 1:nposteriors) {
-          random[,i] = S[[i]]$latent[rkk,]  
-        }
-        rlabels = names(S[[1]]$latent[rkk,])
-
-        random = invlink(random)
-        row.names(random) = rlabels
-        O[["posterior_summary"]][["random_effects"]] = posterior_summary( format_results( random, labels=rlabels ) )
-      }
-      nhyperpar = nrow(summary.hyperpar)
-      if (nhyperpar == 0) stop("No hyperparameters in summary.hyperpar: theta was sent ... control.mode(restart=T) might help" )
-      hyperpar = array( NA,dim=c(nhyperpar, nposteriors  ) )
-      for (i in 1:nposteriors) {
-        hyperpar[,i] = S[[i]]$hyperpar
-      }
-      hyper_names = names(S[[1]]$hyperpar)
-      k = grep("Precision", hyper_names)
-      if (length(k) > 0) {
-          hyperpar[k,] = 1 / sqrt(hyperpar[k,]) 
-          hyper_names[k] = gsub("Precision for", "SD", hyper_names[k] )
-      }
-      hyper_names = gsub("for ", "", hyper_names )
-      hyper_names = gsub("the ", "", hyper_names )
-      
-      row.names( hyperpar ) = hyper_names
-      O[["sims"]][["hyperpars"]] =  hyperpar
-
-      O[["posterior_summary"]][["hyperpars_summary"]] = posterior_summary( format_results( hyperpar, labels=hyper_names) )
-
-    }
-
+ 
 
     if (be_verbose)  {
       # message( "")
@@ -977,14 +891,16 @@ carstm_model_inla = function(
       # message( "")
     }
 
-  }  # end random_effects
- 
+  }  # end summary
+  
+  
   random = hyperpar = rkk=  NULL
   k = phis = rhos = known = unknown = m  = NULL
 
   gc()
 
- 
+  end_marginals = Sys.time()
+
   # separate out random spatial and randomm spatiotemporal (as they can be large arrays)
   if ("random_spatial" %in% toget) {
     # space only
@@ -1083,109 +999,6 @@ carstm_model_inla = function(
       Z = m = matchfrom = NULL
       gc()
 
-
-      if ( "random_spatial" %in% posterior_simulations_to_retain ) {
-
-        # POSTERIOR SIMS
-        slabels = O[["space_name"]]
-
-        space = array(NA, dim=c( O$space_n, nposteriors  ) )
-        row.names(space) = slabels
-
-        space1 = space2 = NULL
-
-        if (length(iSP) == 1) {
-
-          stx1 = paste("^", re$vn[iSP], "$", sep="")
-          if (re$model[iSP] %in% c("bym2", "bym") ) {
-            # special case bym2 has two factors rolled together
-            space1 = array(NA, dim=c( O$space_n, nposteriors  ) )
-            space2 = array(NA, dim=c( O$space_n, nposteriors  ) )
-            row.names(space1) = slabels
-            row.names(space2) = slabels
-
-            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
-            for (i in 1:nposteriors) {
-              space[,i]  = S[[i]]$latent[skk1[["re"]],] 
-              space2[,i] = S[[i]]$latent[skk1[["ne"]],]
-            }      
-            space1 = space - space2  # ue (iid)
-
-          } else {
-            # single spatial effect of some kind
-            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  
-            skk1 = unlist(skk1)
-            for (i in 1:nposteriors) {
-              space[,i] = S[[i]]$latent[skk1,] 
-            }      
-          }
-        }
- 
-        if (length(iSP) == 2) {
-          # Assume additive 
-          space1 = array(NA, dim=c( O$space_n, nposteriors  ) )
-          space2 = array(NA, dim=c( O$space_n, nposteriors  ) )
-          row.names(space1) = slabels
-          row.names(space2) = slabels
-          model_name1 = re$model[ iSP[1] ] 
-          model_name2 = re$model[ iSP[2] ] 
-          stx1 = paste("^", re$vn[iSP[1]], "$", sep="")
-          stx2 = paste("^", re$vn[iSP[i]], "$", sep="")
-          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-          skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-          for (i in 1:nposteriors) {
-            space1[,i] = S[[i]]$latent[skk1[[1]],]  
-            space2[,i] = S[[i]]$latent[skk2[[1]],]
-          }      
-          space = space1 + space2
-        }
-
-        space = invlink(space) 
-        row.names(space) = slabels
-        matchfrom = list( space=O[["space_id"]] )
-
-        if (!is.null(exceedance_threshold)) {
-          if (be_verbose)  message("Extracting random spatial errors exceedence"  )
-
-          for ( b in 1:length(exceedance_threshold)) {
-            m = apply ( space, 1, FUN=function(x) length( which(x > exceedance_threshold[b]) ) ) / nposteriors
-            m = reformat_to_array( input = m, matchfrom=matchfrom, matchto = matchto )
-            names(dimnames(m))[1] = vS
-            dimnames( m )[[vS]] = O[["space_name"]]
-            O[["random"]] [[vS]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) )
-            m = NULL
-          }
-        }
-
-        if (!is.null(deceedance_threshold)) {
-          if (be_verbose)  message("Extracting random spatial errors deceedance"  )
-          # redundant but generalizable to higher dims
-          for ( b in 1:length(deceedance_threshold)) {
-            m = apply ( space, 1, FUN=function(x) length( which(x < deceedance_threshold[b]) ) ) / nposteriors
-            m = reformat_to_array( input = m, matchfrom=matchfrom, matchto=matchto  )
-            names(dimnames(m))[1] = vS
-            dimnames( m )[[vS]] = O[["space_name"]]
-            O[["random"]] [[vS]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) ) 
-            m = NULL
-          }
-        }
-
-        m = posterior_summary( format_results( space, labels=slabels  ) )
-        W[] = NA
-        for (k in 1:length(tokeep)) {
-          W[,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
-        }
-        O[["random"]] [[vS]] [["re"]] = W[, tokeep, drop =FALSE] 
-
-        if ( "random_spatial" %in% posterior_simulations_to_retain ) {
-          O[["sims"]] [[vS]] [["re"]] = space  # already inverse link scale
-        }
-
-        if ( "random_spatial12" %in% posterior_simulations_to_retain ) {
-          if (!is.null(space1)) O[["sims"]] [[vS]] [[model_name1]] =  invlink(space1) 
-          if (!is.null(space2)) O[["sims"]] [[vS]] [[model_name2]] =  invlink(space2) 
-        }
-      }
     }
   }  # end random spatial effects
 
@@ -1289,107 +1102,6 @@ carstm_model_inla = function(
           m = NULL
         }
       }
-
-      if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
-        # posterior simulations
-
-        space_time1 = space_time2  = space_time = array( NA, 
-          dim=c( O[["space_n"]] * O[["time_n"]] , nposteriors  ) )
-        L = CJ( time=O[["time_id"]], space=O[["space_id"]] )  # note:: CJ has reverse order vs expand.grid
-        stlabels = paste(L[["space"]], L[["time"]], sep="_")
-
-        if (length(iST) == 1) {
-          stx1 = paste("^", re$vn[iST], "$", sep="")
-          if (re$model[iST] %in% c("bym", "bym2") ) {
-            # special case bym2 has two factors rolled together
-            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
-            for (i in 1:nposteriors) {
-              space_time[,i]  = S[[i]]$latent[skk1[["re"]],]  
-              space_time2[,i] = S[[i]]$latent[skk1[["ne"]],]
-            }    
-            space_time1 = space_time - space_time2   # ue
-            row.names(space_time1) = stlabels
-            row.names(space_time2) = stlabels
-            row.names(space_time) = stlabels
-
-          } else {
-            # single spatial effect of some kind
-            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-            skk1 = unlist(skk1)
-            for (i in 1:nposteriors) {
-              space_time[,i] = S[[i]]$latent[skk1,] 
-            }      
-          }
-        }
-        
-        if (length(iST) == 2) {
-          model_name1 = re$model[ iST[1] ] 
-          model_name2 = re$model[ iST[2] ] 
-          stx1 = paste("^", re$vn[iST[1]], "$", sep="")
-          stx2 = paste("^", re$vn[iST[2]], "$", sep="")
-          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-          skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-          for (i in 1:nposteriors) {
-            space_time1[,i] = S[[i]]$latent[skk1[[1]],] 
-            space_time2[,i] = S[[i]]$latent[skk2[[1]],]
-          }      
-          space_time  = space_time1 + space_time2  # assume additive
-          row.names(space_time1) = stlabels
-          row.names(space_time2) = stlabels 
-        }
-      
-        space_time = invlink(space_time)
-        row.names(space_time) = stlabels
-
-        Z = expand.grid( space=O[["space_id"]], type ="re", time=O[["time_id"]], stringsAsFactors =FALSE )
-        jst =  which(Z$type=="re")
-        matchfrom = list( space=Z[["space"]][jst], time=Z[["time"]][jst]  )
-
-        if (!is.null(exceedance_threshold)) {
-          if (be_verbose)  message("Extracting random spatiotemporal errors exceedence"  )
-
-          for ( b in 1:length(exceedance_threshold)) {
-            m = apply ( space_time, 1, FUN=function(x) length( which(x > exceedance_threshold[b] ) ) ) / nposteriors
-            m = reformat_to_array( input=m, matchfrom=matchfrom,  matchto=matchto )
-            names(dimnames(m))[1] = vS
-            names(dimnames(m))[2] = vT
-            dimnames( m )[[vS]] = O[["space_name"]]
-            dimnames( m )[[vT]] = O[["time_name"]]
-            O[["random"]] [[vnST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = m
-          }
-          m = NULL
-        }
-
-        if (!is.null(deceedance_threshold)) {
-          if (be_verbose)  message("Extracting random spatiotemporal errors deceedance"  )
-
-          for ( b in 1:length(deceedance_threshold)) {
-            m = apply ( space_time, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / nposteriors
-            m = reformat_to_array( input = m, matchfrom=matchfrom,  matchto=matchto )
-            names(dimnames(m))[1] = vS
-            names(dimnames(m))[2] = O[["time_name"]]
-            dimnames( m )[[vS]] = O[["space_name"]]
-            dimnames( m )[[vT]] = vT
-            O[["random"]] [[vnST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = m
-          }
-          m = NULL
-        }
-  
-        W[] = NA
-        m = posterior_summary(format_results( space_time, labels=stlabels ))
-        for (k in 1:length(tokeep)) {
-          W[,,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
-        }
-        O[["random"]] [[vnST]] [["re"]] = W[,, tokeep, drop =FALSE] 
-
-        if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
-          O[["sims"]] [[vnST]] [["re"]] = space_time
-        }
-        if ( "random_spatiotemporal12" %in% posterior_simulations_to_retain ) {
-          if (!is.null(space_time1)) O[["sims"]] [[vnST]] [[model_name1]] = invlink(space_time1)
-          if (!is.null(space_time2)) O[["sims"]] [[vnST]] [[model_name2]] = invlink(space_time2)
-        }
-      } 
       Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL
       gc()
 
@@ -1397,7 +1109,6 @@ carstm_model_inla = function(
   }  # end random spatio-temporal effects
 
   run_predict_start  = Sys.time()
-
 
   if ("predictions" %in% toget ) {
 
@@ -1408,253 +1119,583 @@ carstm_model_inla = function(
     if (be_verbose) message("Extracting posterior predictions" )
 
     if (exists("debug")) if (is.character(debug)) if ( debug =="predictions") browser()
-
-    # prepapre prediction simulations (from joint posteriors)
-    ptx = "^Predictor"
- 
-    preds = O[["predictions_range"]][1]:O[["predictions_range"]][2]  
-    npredictions = length(preds)
-     
-    pkk = inla_get_indices(ptx, tag=tag, start=start, len=length)
-    pkk = unlist(pkk)[preds]
-    predictions = array(NA, dim=c( npredictions, nposteriors  ) )
-    for (i in 1:nposteriors)  predictions[,i] = S[[i]]$latent[pkk, ]
-    predictions = invlink(predictions)  #  required for both classical and experimental
-
-    pkk = preds = S = NULL
-
-    gc()
-
-    if ( exists("data_transformation", O))  predictions = O$data_transformation$backward( predictions  )
  
     if (!exists("predictions", O)) O[["predictions"]] = list()
   
     if (exists("marginals.fitted.values", fit)) {
 
-    if (length(fit[["marginals.fitted.values"]]) > 0 ) {
+      if (length(fit[["marginals.fitted.values"]]) > 0 ) {
 
-      if ( O[["dimensionality"]] == "space" ) {
+        if ( O[["dimensionality"]] == "space" ) {
 
-        m = fit$marginals.fitted.values[O[["ipred"]]]  # already incorporates offsets
- 
-        if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
+          m = fit$marginals.fitted.values[O[["ipred"]]]  # already incorporates offsets
+  
+          if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
-        m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-        m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-        if (test_for_error(m) =="error") {  
-            message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
-            m = fit$summary.fitted.values[, inla_tokeep ]
-            names(m) = tokeep
-        } 
+          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+          if (test_for_error(m) =="error") {  
+              message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
+              m = fit$summary.fitted.values[, inla_tokeep ]
+              names(m) = tokeep
+          } 
 
-        W = array( NA, 
-          dim=c( O[["space_n"]],  length(names(m)) ),  
-          dimnames=list( space=O[["space_name"]], stat=names(m) ) )
-        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-        
-        # matchfrom already created higher up
-        matchto = list( space=O[["space_id"]] )
-
-        for (k in 1:length(names(m))) {
-          W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
-        }
-        O[["predictions"]] = W[, tokeep, drop =FALSE]
-        m = W = NULL
-
-        if ( "predictions" %in% posterior_simulations_to_retain ) {
           W = array( NA, 
-            dim=c( O[["space_n"]], nposteriors ),  
-            dimnames=list( space=O[["space_name"]], sim=1:nposteriors ) )
+            dim=c( O[["space_n"]],  length(names(m)) ),  
+            dimnames=list( space=O[["space_name"]], stat=names(m) ) )
+          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+          
+          # matchfrom already created higher up
+          matchto = list( space=O[["space_id"]] )
+
+          for (k in 1:length(names(m))) {
+            W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+          }
+          O[["predictions"]] = W[, tokeep, drop =FALSE]
+          m = W = NULL
+        }
+
+
+        if (O[["dimensionality"]] == "space-time"  ) {
+
+          m = fit$marginals.fitted.values[O[["ipred"]]]   
+  
+          if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
+          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+          if (test_for_error(m) =="error") {  
+              message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
+              m = fit$summary.fitted.values[, inla_tokeep ]
+              names(m) = tokeep
+            } 
+
+          W = array( NA, 
+            dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
+            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=names(m) ) 
+          )
   
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-          for (k in 1:nposteriors ) {
+          names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+
+          # matchfrom already created higher up
+          matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
+          for (k in 1:length(names(m))) {
+            W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto)
+          }
+          O[["predictions"]] = W[,, tokeep, drop =FALSE]
+      
+          m = W = NULL
+        }
+
+
+        if ( O[["dimensionality"]] == "space-time-cyclic" ) {
+
+          m = fit$marginals.fitted.values[O[["ipred"]]]   
+
+          if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
+
+          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+          if (test_for_error(m) =="error") {  
+              message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
+              m = fit$summary.fitted.values[, inla_tokeep ]
+              names(m) = tokeep
+          } 
+
+          W = array( NA, 
+            dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], length(names(m)) ),  
+            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], stat=names(m) ) )
+          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+          names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+          names(dimnames(W))[3] = vU  # need to do this in a separate step ..
+
+          matchto = list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]] )
+
+          for (k in 1:length(names(m))) {
+            W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+          }
+          O[["predictions"]] = W[,,, tokeep, drop =FALSE]
+          m = W = NULL
+        }
+      }
+    }
+  }
+  
+  O[["ipred"]] = NULL
+
+  run_predict_end  = Sys.time()
+
+
+  # --------------------------------------------
+  # --------------------------------------------
+  # --------------------------------------------
+
+
+  if (redo_posterior_simulations) {
+
+    run_post_sims  = Sys.time()
+
+    if (is.null(nposteriors)) {
+      if (exists("nposteriors", O)) {
+        nposteriors = O$nposteriors
+      } else {
+        message("nposteriors not found, defaulting to 1000")
+        nposteriors = 1000 
+      }
+    }
+
+    message( "Sampling from joint posteriors: n = ", nposteriors )
+  
+    S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, num.threads=mc.cores ), silent=TRUE)
+    if ( "try-error" %in%  class(S) ) {
+      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, use.improved.mean=FALSE ), silent=TRUE)
+    }
+    if ( "try-error" %in%  class(S) ) {
+      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, skew.corr =FALSE ), silent=TRUE)
+    }
+    if ( "try-error" %in%  class(S) ) {
+      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, use.improved.mean=FALSE, skew.corr =FALSE ), silent=TRUE)
+    }
+    
+    if ( "try-error" %in%  class(S) ) stop("posterior sampling error")
+
+      if (0) {
+        # not used at the moment .. 
+        nlogdens = length(S[[1]]$logdens)
+        logdens = array(NA, dim=c( nlogdens, nposteriors  ) )
+        for (i in 1:nposteriors) {
+          logdens[,i] = unlist(S[[i]]$logdens)
+        }
+        logdens_names =  names(S[[1]]$logdens)
+        logdens = format_results( logdens, labels=logdens_names  ) # same seq as space_id ( == attributes(space)$row.names )
+      }
+    
+    if (be_verbose)  message( "\nPosterior simulations complete. Saving ...\n", fn_fit )
+
+    end_post_sims  = Sys.time()
+
+
+    fit = NULL; gc()  # no longer needed .. remove from memory
+
+
+    # extraction here as no need for fit object anymore (reduces RAM requirements)
+    if (is.null(exceedance_threshold)) if (exists("exceedance_threshold", O)) exceedance_threshold = O[["exceedance_threshold"]]
+    if (is.null(deceedance_threshold)) if (exists("deceedance_threshold", O)) deceedance_threshold = O[["deceedance_threshold"]]
+
+    if (is.null(deceedance_threshold_predictions)) if (exists("deceedance_threshold_predictions", O)) deceedance_threshold_predictions = O[["deceedance_threshold_predictions"]]
+    if (is.null(exceedance_threshold_predictions)) if (exists("exceedance_threshold_predictions", O)) exceedance_threshold_predictions = O[["exceedance_threshold_predictions"]]
+
+    for (z in c("tag", "start", "length") ) assign(z, attributes(S)[[".contents"]][[z]] )  # index info
+
+    if ( "summary" %in% posterior_simulations_to_retain ) {
+      # -- check variable names here
+      # posteriors
+      flabels= O[["names.fixed"]]
+      nfixed = length(O[["names.fixed"]])
+      fixed = array(NA, dim=c( nfixed, O[["nposteriors"]]  ) )
+      fkk = inla_get_indices(O[["names.fixed"]], tag=tag, start=start, len=length, model="direct_match")
+      fkk = unlist(fkk)
+      for (i in 1:O[["nposteriors"]]) fixed[,i] = S[[i]]$latent[fkk,]  
+      fixed = invlink(fixed)
+      row.names(fixed) = flabels
+      O[["sims"]][["fixed_effects"]] = fixed
+      O[["posterior_summary"]][["fixed_effects"]] = posterior_summary(format_results( fixed, labels=flabels))
+      fkk = fixed = NULL
+
+      other_random = setdiff( names(summary.random), c(vS, vS2 ) )
+
+      if (length(other_random) > 0 ) {
+        nrandom = sum(sapply(summary.random[other_random], nrow))  
+        random = array(NA, dim=c(nrandom, O[["nposteriors"]]  ) )
+        rkk = inla_get_indices(other_random, tag=tag, start=start, len=length, model="direct_match"  )  # if bym2, must be decomposed  
+        rkk = unlist( rkk )
+        for (i in 1:O[["nposteriors"]]) random[,i] = S[[i]]$latent[rkk,]  
+        rlabels = names(S[[1]]$latent[rkk,])
+        random = invlink(random)
+        row.names(random) = rlabels
+        O[["posterior_summary"]][["random_effects"]] = posterior_summary( format_results( random, labels=rlabels ) )
+      }
+
+      hyper_names = names(S[[1]]$hyperpar)
+      nhyperpar = length(hyper_names)
+      if (nhyperpar == 0) stop("No hyperparameters? ... control.mode(restart=TRUE) might help" )
+      hyperpar = array( NA,dim=c(nhyperpar, O[["nposteriors"]]  ) )
+      for (i in 1:O[["nposteriors"]]) hyperpar[,i] = S[[i]]$hyperpar
+      k = grep("Precision", hyper_names)
+      if (length(k) > 0) {
+          hyperpar[k,] = 1 / sqrt(hyperpar[k,]) 
+          hyper_names[k] = gsub("Precision for", "SD", hyper_names[k] )
+      }
+      hyper_names = gsub("for ", "", hyper_names )
+      hyper_names = gsub("the ", "", hyper_names )
+      row.names( hyperpar ) = hyper_names
+      O[["sims"]][["hyperpars"]] =  hyperpar
+      O[["posterior_summary"]][["hyperpars_summary"]] = posterior_summary( format_results( hyperpar, labels=hyper_names) )
+    }  # end summary
+    
+    random = hyperpar = rkk=  NULL
+    k = phis = rhos = known = unknown = m  = NULL
+
+    gc()
+  
+    if ( "random_spatial" %in% posterior_simulations_to_retain ) {
+
+      # POSTERIOR SIMS
+      space = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
+      row.names(space) = O[["space_name"]]
+      space1 = space2 = NULL
+
+      if (length(iSP) == 1) {
+        stx1 = paste("^", re$vn[iSP], "$", sep="")
+        if (re$model[iSP] %in% c("bym2", "bym") ) {
+          # special case bym2 has two factors rolled together
+          space1 = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
+          space2 = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
+          row.names(space1) = O[["space_name"]]
+          row.names(space2) = O[["space_name"]]
+          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
+          for (i in 1:O[["nposteriors"]]) {
+            space[,i]  = S[[i]]$latent[skk1[["re"]],]   # ICAR + IID 
+            space2[,i] = S[[i]]$latent[skk1[["ne"]],]   # ICAR
+          }      
+          space1 = space - space2  # ue (IID) 
+        } else {
+          # single spatial effect of some kind
+          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  
+          skk1 = unlist(skk1)
+          for (i in 1:O[["nposteriors"]]) {
+            space[,i] = S[[i]]$latent[skk1,]   # ICAR or IID 
+          }
+        }
+      }
+
+      if (length(iSP) == 2) {
+        # Assume additive 
+        space1 = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
+        space2 = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
+        row.names(space1) = O[["space_name"]]
+        row.names(space2) = O[["space_name"]]
+        model_name1 = re$model[ iSP[1] ] 
+        model_name2 = re$model[ iSP[2] ] 
+        stx1 = paste("^", re$vn[iSP[1]], "$", sep="")
+        stx2 = paste("^", re$vn[iSP[i]], "$", sep="")
+        skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+        skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+        for (i in 1:O[["nposteriors"]]) {
+          space1[,i] = S[[i]]$latent[skk1[[1]],]  
+          space2[,i] = S[[i]]$latent[skk2[[1]],]
+        }      
+        space = space1 + space2  
+        message("Two spatial effects .. assuming they are are additive")
+      }
+
+      space = invlink(space)   # the overall spatial random effect 
+      row.names(space) = O[["space_name"]]
+      matchfrom = list( space=O[["space_id"]] )
+
+      if (!is.null(exceedance_threshold)) {
+        if (be_verbose)  message("Extracting random spatial errors exceedence"  )
+        for ( b in 1:length(exceedance_threshold)) {
+          m = apply ( space, 1, FUN=function(x) length( which(x > exceedance_threshold[b]) ) ) / O[["nposteriors"]]
+          m = reformat_to_array( input = m, matchfrom=matchfrom, matchto = matchto )
+          names(dimnames(m))[1] = vS
+          dimnames( m )[[vS]] = O[["space_name"]]
+          O[["random"]] [[vS]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) )
+          m = NULL
+        }
+      }
+
+      if (!is.null(deceedance_threshold)) {
+        if (be_verbose)  message("Extracting random spatial errors deceedance"  )
+        # redundant but generalizable to higher dims
+        for ( b in 1:length(deceedance_threshold)) {
+          m = apply ( space, 1, FUN=function(x) length( which(x < deceedance_threshold[b]) ) ) / O[["nposteriors"]]
+          m = reformat_to_array( input = m, matchfrom=matchfrom, matchto=matchto  )
+          names(dimnames(m))[1] = vS
+          dimnames( m )[[vS]] = O[["space_name"]]
+          O[["random"]] [[vS]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) ) 
+          m = NULL
+        }
+      }
+
+      m = posterior_summary( format_results( space, labels=O[["space_name"]]  ) )
+      W[] = NA
+      for (k in 1:length(tokeep)) {
+        W[,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
+      }
+      O[["random"]] [[vS]] [["re"]] = W[, tokeep, drop =FALSE] 
+
+      if ( "random_spatial" %in% posterior_simulations_to_retain ) {
+        O[["sims"]] [[vS]] [["re"]] = space  # already inverse link scale
+      }
+
+      if ( "random_spatial12" %in% posterior_simulations_to_retain ) {
+        if (!is.null(space1)) O[["sims"]] [[vS]] [[model_name1]] =  invlink(space1) 
+        if (!is.null(space2)) O[["sims"]] [[vS]] [[model_name2]] =  invlink(space2) 
+      }
+    } # END random spatial post sims
+
+    matchfrom = i1 = i2= NULL
+    Z = W = m = space = space1 = space2 = skk1 = skk2 = iSP = NULL
+    gc()
+
+
+    if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
+      # posterior simulations
+
+      space_time1 = space_time2  = space_time = array( NA, 
+        dim=c( O[["space_n"]] * O[["time_n"]] , O[["nposteriors"]]  ) )
+      L = CJ( time=O[["time_id"]], space=O[["space_id"]] )  # note:: CJ has reverse order vs expand.grid
+      stlabels = paste(L[["space"]], L[["time"]], sep="_")
+
+      if (length(iST) == 1) {
+        stx1 = paste("^", re$vn[iST], "$", sep="")
+        if (re$model[iST] %in% c("bym", "bym2") ) {
+          # special case bym2 has two factors rolled together
+          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
+          for (i in 1:O[["nposteriors"]]) {
+            space_time[,i]  = S[[i]]$latent[skk1[["re"]],]  
+            space_time2[,i] = S[[i]]$latent[skk1[["ne"]],]
+          }    
+          space_time1 = space_time - space_time2   # ue
+          row.names(space_time1) = stlabels
+          row.names(space_time2) = stlabels
+          row.names(space_time) = stlabels
+
+        } else {
+          # single spatial effect of some kind
+          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+          skk1 = unlist(skk1)
+          for (i in 1:O[["nposteriors"]]) {
+            space_time[,i] = S[[i]]$latent[skk1,] 
+          }      
+        }
+      }
+      
+      if (length(iST) == 2) {
+        model_name1 = re$model[ iST[1] ] 
+        model_name2 = re$model[ iST[2] ] 
+        stx1 = paste("^", re$vn[iST[1]], "$", sep="")
+        stx2 = paste("^", re$vn[iST[2]], "$", sep="")
+        skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+        skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+        for (i in 1:O[["nposteriors"]]) {
+          space_time1[,i] = S[[i]]$latent[skk1[[1]],] 
+          space_time2[,i] = S[[i]]$latent[skk2[[1]],]
+        }      
+        space_time  = space_time1 + space_time2  # assume additive
+        row.names(space_time1) = stlabels
+        row.names(space_time2) = stlabels 
+      }
+    
+      space_time = invlink(space_time)
+      row.names(space_time) = stlabels
+
+      Z = expand.grid( space=O[["space_id"]], type ="re", time=O[["time_id"]], stringsAsFactors =FALSE )
+      jst =  which(Z$type=="re")
+      matchfrom = list( space=Z[["space"]][jst], time=Z[["time"]][jst]  )
+
+      if (!is.null(exceedance_threshold)) {
+        if (be_verbose)  message("Extracting random spatiotemporal errors exceedence"  )
+
+        for ( b in 1:length(exceedance_threshold)) {
+          m = apply ( space_time, 1, FUN=function(x) length( which(x > exceedance_threshold[b] ) ) ) / O[["nposteriors"]]
+          m = reformat_to_array( input=m, matchfrom=matchfrom,  matchto=matchto )
+          names(dimnames(m))[1] = vS
+          names(dimnames(m))[2] = vT
+          dimnames( m )[[vS]] = O[["space_name"]]
+          dimnames( m )[[vT]] = O[["time_name"]]
+          O[["random"]] [[vnST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = m
+        }
+        m = NULL
+      }
+
+      if (!is.null(deceedance_threshold)) {
+        if (be_verbose)  message("Extracting random spatiotemporal errors deceedance"  )
+
+        for ( b in 1:length(deceedance_threshold)) {
+          m = apply ( space_time, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / O[["nposteriors"]]
+          m = reformat_to_array( input = m, matchfrom=matchfrom,  matchto=matchto )
+          names(dimnames(m))[1] = vS
+          names(dimnames(m))[2] = O[["time_name"]]
+          dimnames( m )[[vS]] = O[["space_name"]]
+          dimnames( m )[[vT]] = vT
+          O[["random"]] [[vnST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = m
+        }
+        m = NULL
+      }
+
+      W[] = NA
+      m = posterior_summary(format_results( space_time, labels=stlabels ))
+      for (k in 1:length(tokeep)) {
+        W[,,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
+      }
+      O[["random"]] [[vnST]] [["re"]] = W[,, tokeep, drop =FALSE] 
+
+      if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
+        O[["sims"]] [[vnST]] [["re"]] = space_time
+      }
+      if ( "random_spatiotemporal12" %in% posterior_simulations_to_retain ) {
+        if (!is.null(space_time1)) O[["sims"]] [[vnST]] [[model_name1]] = invlink(space_time1)
+        if (!is.null(space_time2)) O[["sims"]] [[vnST]] [[model_name2]] = invlink(space_time2)
+      }
+    
+    }  # END sp-temp post sims
+    Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL
+    gc()
+
+
+    if ( "predictions" %in% posterior_simulations_to_retain ) {
+  
+      # marginals.fitted.values are on response scale (for both experimental and classical) and  already incorporates offsets
+      # summary.fitted.values on response scale ((for both experimental and classical)) 
+      # posteriors are on link scale and already incorporates offsets
+      if (exists("debug")) if (is.character(debug)) if ( debug =="predictions") browser()
+      if (be_verbose) message("Extracting posterior predictions" )
+
+      # prepapre prediction simulations (from joint posteriors)
+      ptx = "^Predictor"
+      preds = O[["predictions_range"]][1]:O[["predictions_range"]][2]  
+      npredictions = length(preds)
+      
+      pkk = inla_get_indices(ptx, tag=tag, start=start, len=length)
+      pkk = unlist(pkk)[preds]
+      predictions = array(NA, dim=c( npredictions, O[["nposteriors"]]  ) )
+      for (i in 1:O[["nposteriors"]])  predictions[,i] = S[[i]]$latent[pkk, ]
+      predictions = invlink(predictions)  #  required for both classical and experimental
+
+      pkk = preds = S = NULL
+      gc()
+
+      if ( exists("data_transformation", O))  predictions = O$data_transformation$backward( predictions  )
+  
+      if (!exists("predictions", O)) O[["predictions"]] = list()
+
+      if ( O[["dimensionality"]] == "space" ) {
+          W = array( NA, 
+            dim=c( O[["space_n"]], O[["nposteriors"]] ),  
+            dimnames=list( space=O[["space_name"]], sim=1:O[["nposteriors"]] ) )
+          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+          for (k in 1:O[["nposteriors"]] ) {
             W[,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
           O[["sims"]][["predictions"]] = W[, drop =FALSE]
           W = NULL 
-        }
-      
       }
 
 
       if (O[["dimensionality"]] == "space-time"  ) {
-
-        m = fit$marginals.fitted.values[O[["ipred"]]]   
- 
-        if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
-        m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-        m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-        if (test_for_error(m) =="error") {  
-            message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
-            m = fit$summary.fitted.values[, inla_tokeep ]
-            names(m) = tokeep
-          } 
-
-        W = array( NA, 
-          dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
-          dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=names(m) ) 
-        )
- 
-        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-        names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-
-        # matchfrom already created higher up
-        matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
-        for (k in 1:length(names(m))) {
-          W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto)
-        }
-        O[["predictions"]] = W[,, tokeep, drop =FALSE]
-    
-        m = W = NULL
- 
-        if ( "predictions" %in% posterior_simulations_to_retain ) {
-
           W = array( NA, 
-            dim=c( O[["space_n"]], O[["time_n"]], nposteriors ),  
-            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], sim=1:nposteriors ) )
-
+            dim=c( O[["space_n"]], O[["time_n"]], O[["nposteriors"]] ),  
+            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], sim=1:O[["nposteriors"]] ) )
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
           names(dimnames(W))[2] = vT  # need to do this in a separate step ..
 
-          for (k in 1:nposteriors ) {
+          for (k in 1:O[["nposteriors"]] ) {
             W[,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
-          
           O[["sims"]][["predictions"]] = W[,,, drop =FALSE]
           W = NULL
-        }
-
       }
 
 
       if ( O[["dimensionality"]] == "space-time-cyclic" ) {
-
-        m = fit$marginals.fitted.values[O[["ipred"]]]   
-
-        if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
-
-        m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-        m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-        if (test_for_error(m) =="error") {  
-            message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
-            m = fit$summary.fitted.values[, inla_tokeep ]
-            names(m) = tokeep
-          } 
-
-        W = array( NA, 
-          dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], length(names(m)) ),  
-          dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], stat=names(m) ) )
-        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-        names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-        names(dimnames(W))[3] = vU  # need to do this in a separate step ..
-
-        matchto = list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]] )
-
-        for (k in 1:length(names(m))) {
-          W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
-        }
-        O[["predictions"]] = W[,,, tokeep, drop =FALSE]
-        m = W = NULL
-      
-        if ( "predictions" %in% posterior_simulations_to_retain ) {
-          
           W = array( NA, 
-            dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], nposteriors ),  
-            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], sim=1:nposteriors ) )
-
+            dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], O[["nposteriors"]] ),  
+            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], sim=1:O[["nposteriors"]] ) )
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
           names(dimnames(W))[2] = vT  # need to do this in a separate step ..
           names(dimnames(W))[3] = vU  # need to do this in a separate step ..
-          for (k in 1:nposteriors ) {
+          for (k in 1:O[["nposteriors"]] ) {
             W[,,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
           O[["sims"]][["predictions"]] = W[,,, ,drop =FALSE]
           W = NULL
-        
-        }
-
       }
-
- 
-      if ( "predictions" %in% posterior_simulations_to_retain ) {
-    
-        if (!is.null(exceedance_threshold_predictions)) {
-          if (be_verbose)  message("Extracting de/exceedance of predictions"  )
-
-          for ( b in 1:length(exceedance_threshold_predictions)) {
-              m = apply ( predictions, 1, FUN=function(x) length( which(x > exceedance_threshold_predictions[b] ) ) ) / nposteriors
-              W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
-              names(dimnames(W))[1] = vS
-              dimnames( W )[[vS]] = O[["space_name"]]
-              m = NULL
-              if ( length(O[["matchfrom"]]) > 1 ) {
-                names(dimnames(W))[2] = vT
-                dimnames( W )[[vT]] = O[["time_name"]]
-              }
-              if (length(O[["matchfrom"]]) > 2  ) {
-                names(dimnames(W))[3] = vU
-                dimnames( W )[[vU]] = O[["cyclic_name"]]
-              }
-              O[["predictions_exceedance"]] [["exceedance"]] [[ as.character(exceedance_threshold_predictions[b]) ]]= W
-              W = NULL
-            }
-        }
-
-        if (!is.null(deceedance_threshold_predictions)) {
+  
       
-            for ( b in 1:length(deceedance_threshold_predictions)) {
-              m = apply ( predictions, 1, FUN=function(x) length( which(x < deceedance_threshold_predictions[b] ) ) ) / nposteriors
-              W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
-              names(dimnames(W))[1] = vS
-              dimnames( W )[[vS]] = O[["space_name"]]
-              m = NULL
-              if ( length(O[["matchfrom"]]) > 1 ) {
-                names(dimnames(W))[2] = vT
-                dimnames( W )[[vT]] = O[["time_name"]]
-              }
-              if ( length(O[["matchfrom"]]) > 2 ) {
-                names(dimnames(W))[3] = vU
-                dimnames( W )[[vU]] = O[["cyclic_name"]]
-              }
-              O[["predictions_deceedance"]] [["deceedance"]] [[ as.character(deceedance_threshold_predictions[b]) ]]= W
-              W = NULL
+      if (!is.null(exceedance_threshold_predictions)) {
+        if (be_verbose)  message("Extracting de/exceedance of predictions"  )
+        for ( b in 1:length(exceedance_threshold_predictions)) {
+            m = apply ( predictions, 1, FUN=function(x) length( which(x > exceedance_threshold_predictions[b] ) ) ) / O[["nposteriors"]]
+            W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
+            names(dimnames(W))[1] = vS
+            dimnames( W )[[vS]] = O[["space_name"]]
+            m = NULL
+            if ( length(O[["matchfrom"]]) > 1 ) {
+              names(dimnames(W))[2] = vT
+              dimnames( W )[[vT]] = O[["time_name"]]
             }
-        }
-        
-        predictions = NULL
+            if (length(O[["matchfrom"]]) > 2  ) {
+              names(dimnames(W))[3] = vU
+              dimnames( W )[[vU]] = O[["cyclic_name"]]
+            }
+            O[["predictions_exceedance"]] [["exceedance"]] [[ as.character(exceedance_threshold_predictions[b]) ]]= W
+            W = NULL
+          }
       }
 
-    }
-    }
-  }
+      if (!is.null(deceedance_threshold_predictions)) {
+          for ( b in 1:length(deceedance_threshold_predictions)) {
+            m = apply ( predictions, 1, FUN=function(x) length( which(x < deceedance_threshold_predictions[b] ) ) ) / O[["nposteriors"]]
+            W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
+            names(dimnames(W))[1] = vS
+            dimnames( W )[[vS]] = O[["space_name"]]
+            m = NULL
+            if ( length(O[["matchfrom"]]) > 1 ) {
+              names(dimnames(W))[2] = vT
+              dimnames( W )[[vT]] = O[["time_name"]]
+            }
+            if ( length(O[["matchfrom"]]) > 2 ) {
+              names(dimnames(W))[3] = vU
+              dimnames( W )[[vU]] = O[["cyclic_name"]]
+            }
+            O[["predictions_deceedance"]] [["deceedance"]] [[ as.character(deceedance_threshold_predictions[b]) ]]= W
+            W = NULL
+          }
+      }
+          
+      predictions = NULL
 
-  run_predict_end  = Sys.time()
+    } # END predictions post sim
+  } # END redo posterior simulations
 
-  O[["ipred"]] = NULL
-  O[["matchfrom"]] = NULL
 
+
+  # --------------------------------------------
+  # --------------------------------------------
+  # --------------------------------------------
   
-  if (is.null(fn_res)) {
-    message( "Saving results summary as a sublist in fit: fit$results : \n", fn_fit)
-    message( "Return object is 'fit$results' (and not 'fit')")
-    fit$results = O
-    carstm_saveRDS( fit, file=fn_res, compress=compress, compression_level=compression_level  )
-  } else {
-    message( "Saving results summary as: \n", fn_res )
-    carstm_saveRDS( O, file=fn_res, compress=compress , compression_level=compression_level  )
-  }
- 
   run_end  = Sys.time()
+ 
+  message( "Saving results summary as a sublist in fit: fit$results : \n", fn_fit)
+    
+  if (is.null(fn_res)) {
+      message( "Return object is 'fit$results' (and not 'fit')")
+      fit$results = O
+      carstm_saveRDS( fit, file=fn_res, compress=compress, compression_level=compression_level  )
+  } else {
+      message( "Saving results summary as: \n", fn_res )
+      carstm_saveRDS( O, file=fn_res, compress=compress , compression_level=compression_level  )
+  }
   
+  message("Total: ", format(difftime(run_end, run_start)))
+
+  run_end  = Sys.time()
+    
+  # --------------------------------------------
+  # --------------------------------------------
+  # --------------------------------------------
+
   if (be_verbose) {
     message("---------------------------------------")
     message("Run times:")
-    message("Total: ", format(difftime(run_end, run_start)))
     message("Fit: ", format(difftime(run_end, run_fit_end)))
-    message("Extract total: ", format(difftime(run_predict_end, run_extract_start)))
+    message("Posterior simulations: ", format(difftime(run_post_sims, end_post_sims)))
+    message("Extract marginals: ", format(difftime(end_marginals, end_post_sims)))
     message("Extract effects: ", format(difftime(run_predict_start, run_extract_start)))
     message("Extract predictions: ", format(difftime(run_predict_end, run_predict_start)))
-    message("Remainder of time on file compression, save, etc: ", format(difftime(run_end, run_predict_end ) + difftime(run_fit_end, run_start) ))
+    message("Extract total: ", format(difftime(run_end, end_post_sims))) 
     message("---------------------------------------")
   } 
 

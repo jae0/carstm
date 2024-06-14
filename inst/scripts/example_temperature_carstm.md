@@ -10,7 +10,8 @@ The example data is bounded by longitudes (-65, -62) and latitudes (45, 43). It 
 ```r
 
 set.seed(12345)
- 
+
+require(lubridate)
 bottemp = readRDS( system.file("extdata", "aegis_spacetime_test.RDS", package="carstm" ) )   
 bottemp$yr = year(bottemp$date )
 
@@ -164,6 +165,10 @@ Next we create the areal units. If desired, these can be made manually using an 
 # create polygon  :: requires aegis, aegis.coastline, aegis.polygons
 xydata = as.data.frame(bottemp[,.(lon, lat, yr) ]) 
 
+
+# reduce number of areal units if you want this to go faster 
+# e.g. sa_threshold_km2= 25, areal_units_constraint_nmin=20 (default above was 5)
+
 sppoly = areal_units( p=p, xydata=xydata, 
     areal_units_directory=p$datadir,  # save loaction
     spbuffer=p$areal_units_resolution_km*2,  # length scale of hull and surrounding buffer
@@ -172,9 +177,7 @@ sppoly = areal_units( p=p, xydata=xydata,
     lenprob = 0.95, # quantile of length scales to use for boundary determination (non convex hull)
     verbose=TRUE, redo=TRUE 
 ) 
-    
-# sppoly = try( areal_units( p=p, areal_units_directory=p$datadir, redo=FALSE ) )
-
+   
 plot( sppoly[ "AUID" ] ) 
 
 if (0) {
@@ -199,6 +202,7 @@ Now we can assemble the data required for modelling and identify the position of
 
 ```r
 crs_lonlat = st_crs(projection_proj4string("lonlat_wgs84"))
+sppoly = areal_units( p=p, areal_units_directory=p$datadir, redo=FALSE ) 
 sppoly = st_transform(sppoly, st_crs(crs_lonlat))
 
 bottemppts = st_as_sf( bottemp[,c("lon","lat")], coords=c("lon","lat"), crs=crs_lonlat )
@@ -297,7 +301,7 @@ res = carstm_model(
     family="gaussian",  # inla family
     theta=c(  -0.4832, 0.7385, 0.0045, 1.4569, 3.4135, 5.2140, 0.3522, 0.4643, 8.9914, 1.6981, 0.7991, 4.4214, 0.1020  ),  # start closer to solution to speed up  
     control.mode = list(restart=TRUE), # without this inla seems to assume theta are true hypers
-    # if problems, try any of: 
+    # if problems, try other inla options: eg: 
     # control.inla = list( strategy='adaptive', int.strategy="eb" , optimise.strategy="plain", strategy='laplace', fast=FALSE),
     # control.inla = list( strategy='adaptive', int.strategy="eb" ),
     # control.inla = list( strategy='laplace' ),  # faster
