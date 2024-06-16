@@ -6,8 +6,7 @@ carstm_model_inla = function(
   fit = NULL,
   space_id=NULL, time_id=NULL, cyclic_id=NULL, 
   fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
-  fn_res=NULL, 
-  fn_psims=NULL,
+  fn_res=NULL,  
   redo_fit = TRUE,
   redo_posterior_simulations = TRUE,
   theta=NULL,
@@ -886,6 +885,11 @@ carstm_model_inla = function(
       # message( "")
     }
 
+    # save summary
+    fn_summ = gsub( fn_res, "_summary_", "_summary_basic_", fixed=TRUE )
+    saveRDS( O[["summary"]], file=fn_summ, compress=FALSE )
+    O[["summary"]] = NULL 
+    gc()
   }  # end parameters
    
 
@@ -1094,8 +1098,12 @@ carstm_model_inla = function(
         }
       }
       Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL
-      gc()
 
+      fn_random = gsub( fn_res, "_summary_", "_summary_randomeffects_", fixed=TRUE )
+      saveRDS( O[["random"]], file=fn_random, compress=FALSE )
+      O[["random"]] = NULL 
+      gc()
+  
     }
   }  # end random spatio-temporal effects
 
@@ -1210,6 +1218,13 @@ carstm_model_inla = function(
         }
       }
     }
+
+    # save summary
+    fn_preds = gsub( fn_res, "_summary_", "_summary_predictions_", fixed=TRUE )
+    saveRDS( O[["predictions"]], file=fn_preds, compress=FALSE )
+    O[["predictions"]] = NULL 
+    gc()
+     
   }
   
   O[["ipred"]] = NULL
@@ -1423,7 +1438,9 @@ carstm_model_inla = function(
       }
       
       m = posterior_summary( format_results( space, labels=O[["space_name"]]  ) )
-      W[] = NA
+
+      W = array( NA, dim=c( O[["space_n"]], length(tokeep) ), dimnames=list( space=O[["space_name"]], stat=tokeep ) )
+      names(dimnames(W))[1] = vS  # need to do this in a separate step ..
       for (k in 1:length(tokeep)) {
         W[,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
       }
@@ -1535,7 +1552,12 @@ carstm_model_inla = function(
         m = NULL
       }
 
-      W[] = NA
+      W = array( NA, 
+        dim=c( O[["space_n"]], O[["time_n"]], length(tokeep) ), 
+        dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=tokeep ) )
+      names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+      names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+
       m = posterior_summary(format_results( space_time, labels=stlabels ))
       for (k in 1:length(tokeep)) {
         W[,,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
@@ -1579,8 +1601,6 @@ carstm_model_inla = function(
 
       if ( exists("data_transformation", O))  predictions = O$data_transformation$backward( predictions  )
   
-      if (!exists("predictions", O)) O[["predictions"]] = list()
-
       if ( O[["dimensionality"]] == "space" ) {
 
           matchto = list( space=O[["space_id"]] )
@@ -1675,6 +1695,14 @@ carstm_model_inla = function(
       }
           
       predictions = NULL
+
+      # save summary
+      fn_sims = gsub( fn_res, "_summary_", "_summary_simulations_", fixed=TRUE )
+      saveRDS( O[["sims"]], file=fn_sims, compress=FALSE )
+      O[["sims"]] = NULL 
+      gc()
+      
+
 
     } # END predictions post sim
   } # END redo posterior simulations
