@@ -26,6 +26,7 @@ if (0) {
     hist( bottemp$tiyr )  # decimal date
     summary(bottemp)
 }
+
 ```
 
 ---
@@ -38,7 +39,7 @@ To begin analysis using [CARSTM](https://github.com/jae0/carstm), we bring in th
 
 # required R library list
 standard_libs = c( 
-    "colorspace", "lubridate",  "lattice",  "data.table",
+    "colorspace", "lubridate",  "lattice",  "data.table", "parallel",
     "sf",  "terra", "INLA", "ggplot2", "RColorBrewer" 
 )
 #  warning INLA has a lot of dependencies 
@@ -289,17 +290,24 @@ p$cyclic_name = as.character(p$cyclic_levels)
 p$cyclic_id = 1:p$nw
 
 
-# takes upto 1 hr  
+  
+# hyper parameters ("theta") from close to the final solution on INLA's internal scale:
+theta = c( -0.4839, 0.7349, 0.0019, 1.4039, 3.3618, 5.0576, 0.2428, 0.4751, 10.5606, 1.6967, 0.7987, 4.7034, 0.0868 )
+
+# takes upto 1 hr
 res = carstm_model( 
     p=p, 
     data=M,
     sppoly=sppoly,
-    posterior_simulations_to_retain=c("predictions", "random_spatial"), 
+    redo_fit=FALSE,
+    # debug = "summary",
+    toget = c("summary", "random_spatial", "predictions"), 
+    posterior_simulations_to_retain=c("summary", "random_spatial", "predictions"), 
     nposteriors=100,  # 1000 to 5000 would be sufficient to sample most distributions: trade-off between file size and information content .. 100 for speed 
     # remaining args below are INLA options, passed directly to INLA
     formula=formula,
     family="gaussian",  # inla family
-    theta=c(  -0.4832, 0.7385, 0.0045, 1.4569, 3.4135, 5.2140, 0.3522, 0.4643, 8.9914, 1.6981, 0.7991, 4.4214, 0.1020  ),  # start closer to solution to speed up  
+    theta=theta,  # start closer to solution to speed up estimation
     control.mode = list(restart=TRUE), # without this inla seems to assume theta are true hypers
     # if problems, try other inla options: eg: 
     # control.inla = list( strategy='adaptive', int.strategy="eb" , optimise.strategy="plain", strategy='laplace', fast=FALSE),
@@ -307,7 +315,7 @@ res = carstm_model(
     # control.inla = list( strategy='laplace' ),  # faster
     # redo_fit=FALSE,
     # debug = "predictions", 
-    num.threads="5:2",  # adjust for your machine (on MSwindows, you might need "1:1") 
+    num.threads="4:2",  # adjust for your machine (on MSwindows, you might need "1:1") 
     verbose=TRUE 
 )    
 
@@ -406,11 +414,11 @@ lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
 # maps of some of the results
  
 
-# persistent spatial effects "re" ( icar neighbourhood random effects + unstructured random effects )
+# persistent spatial effects "re_total" ( icar neighbourhood random effects + unstructured random effects )
 
 # you might require the "grid"  library:  install.packages("grid")
 require(grid)
-plt = carstm_map(  res=res, vn=c( "random", "space", "re" ), 
+plt = carstm_map(  res=res, vn=c( "random", "space", "re_total" ), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title="Bottom temperature spatial effects (Celsius)"
 )
