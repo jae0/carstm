@@ -12,7 +12,7 @@ The example data is bounded by longitudes (-65, -62) and latitudes (45, 43). It 
 set.seed(12345)
 
 require(lubridate)
-bottemp = readRDS( system.file("extdata", "aegis_spacetime_test.RDS", package="carstm" ) )   
+bottemp = aegis::read_write_fast( system.file("extdata", "aegis_spacetime_test.RDS", package="carstm" ) )   
 bottemp$yr = year(bottemp$date )
 
 # bottemp = bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
@@ -40,9 +40,13 @@ To begin analysis using [CARSTM](https://github.com/jae0/carstm), we bring in th
 # required R library list
 standard_libs = c( 
     "colorspace", "lubridate",  "lattice",  "data.table", "parallel",
-    "sf",  "terra", "INLA", "ggplot2", "RColorBrewer" 
+    "sf",  "terra", "INLA", "ggplot2", "RColorBrewer", "fst"
 )
 #  warning INLA has a lot of dependencies 
+
+# fast compression in R using zstd or lz4
+# install.packages("devtools") 
+# devtools::install_github("fstPackage/fst", ref = "develop")
 
 
 # aegis.* libs (found on github.com/jae0)
@@ -292,17 +296,19 @@ p$cyclic_id = 1:p$nw
 
   
 # hyper parameters ("theta") from close to the final solution on INLA's internal scale:
-theta = c( -0.4839, 0.7349, 0.0019, 1.4039, 3.3618, 5.0576, 0.2428, 0.4751, 10.5606, 1.6967, 0.7987, 4.7034, 0.0868 )
+theta = c( -0.4837, 0.7395, 0.0023, 2.0392, 2.4817, 3.7261, 0.1356, 0.5362, 10.5067, 1.6043, 0.7973, 4.6358, 0.0863  )
 
 # takes upto 1 hr
 res = carstm_model( 
     p=p, 
     data=M,
     sppoly=sppoly,
-    redo_fit=FALSE,
+    redo_fit=TRUE,  # force re-fit of model ?
+    compress="zstd",
+    compression_level=1, # zstd and lz4 ranges from 0-100, gzip, xz, bzip2 from 0-9
     # debug = "posterior_samples_spatial",
     toget = c("summary", "random_spatial", "predictions"), 
-    posterior_simulations_to_retain=c("summary", "random_spatial", "predictions"), 
+    posterior_simulations_to_retain=c("predictions"), 
     nposteriors=100,  # 1000 to 5000 would be sufficient to sample most distributions: trade-off between file size and information content .. 100 for speed 
     # remaining args below are INLA options, passed directly to INLA
     formula=formula,

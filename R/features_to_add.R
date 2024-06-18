@@ -5,7 +5,7 @@ features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("Ca
     fn = file.path( p$data_root, "additional_mapping_features.RDS" )
     if (!redo){
       O = NULL
-      if (file.exists(fn)) O = readRDS(fn)
+      if (file.exists(fn)) O = aegis::read_write_fast(fn)
       if (!is.null(O)) return(O)
     }
 
@@ -47,7 +47,7 @@ features_to_add = function( p, area_lines=NULL, isobaths=c(100), coastline=c("Ca
 
 
     dir.create( p$data_root, showWarnings = FALSE, recursive = TRUE )
-    saveRDS( O, file=fn, compress=TRUE )
+    read_write_fast( data=O, file=fn )
     return(O)
   
 

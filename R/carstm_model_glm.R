@@ -22,11 +22,11 @@
 
       message( "Saving carstm fit: ", fn_fit )
 
-      carstm_saveRDS( fit, file=fn_fit, compress=compress, compression_level=compression_level  )
+      read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level )
 
     }
 
-    if (is.null(fit)) fit = readRDS( fn_fit )
+    if (is.null(fit)) fit = aegis::read_write_fast( fn_fit )
 
     # do the computations here as fit can be massive ... best not to copy, etc ..
     message( "Computing summaries ..." )
@@ -113,7 +113,7 @@
     if ( grepl( ".*lognormal", O$family)) O[[vn]] = exp(O[[vn]])
     if (exists("data_transformation", O) ) O[[vn]] = data_transformation$backward( O[[vn]] ) # make all positive
 
-    carstm_saveRDS( O, file=fn_res, compress=compress, compression_level=compression_level  )
+    read_write_fast( data=O, file=fn_res, compress=compress, compression_level=compression_level )
 
     message( "carstm summary saved as: ", fn_res )
 

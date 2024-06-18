@@ -21,7 +21,8 @@
 
       message( "Saving carstm fit: ", fn_fit )
 
-      carstm_saveRDS( fit, file=fn_fit, compress=compress, compression_level=compression_level )
+      read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level )
+
     }
 
     if (is.null(fit)) load( fn_fit )
@@ -107,7 +108,7 @@
     if ( grepl( ".*lognormal", O$family)) O[[vn]] = exp(O[[vn]])
     if (exists("data_transformation", O) ) O[[vn]] = O$data_transformation$backward( O[[vn]] ) # make all positive
 
-    carstm_saveRDS( O, file=fn_res, compress=compress, compression_level=compression_level )
+    read_write_fast( data=O, file=fn_res, compress=compress, compression_level=compression_level )
 
     message( "carstm summary saved as: ", fn_res )
 

@@ -5,16 +5,17 @@ carstm_model_inla = function(
   sppoly =NULL,
   fit = NULL,
   space_id=NULL, time_id=NULL, cyclic_id=NULL, 
-  fn_fit=tempfile(pattern="fit_", fileext=".rdata"), 
+  fn_fit=tempfile(pattern="fit_", fileext=".RDS"), 
   fn_res=NULL,  
   redo_fit = TRUE,
   redo_posterior_simulations = TRUE,
+  summarize_simulations=FALSE,
   theta=NULL,
   compress="gzip",
   compression_level=1,
   toget = c("summary", "random_spatial", "predictions"), 
   nposteriors=NULL, 
-  posterior_simulations_to_retain=c("summary", "random_spatial", "predictions"),
+  posterior_simulations_to_retain=c( "predictions" ),
   exceedance_threshold=NULL, 
   deceedance_threshold=NULL, 
   exceedance_threshold_predictions=NULL,
@@ -28,7 +29,7 @@ carstm_model_inla = function(
     if (!is.null(fn_fit)) {
       if (file.exists(fn_fit)) {
         if (grepl("\\.RDS$", fn_fit)) {
-          fit = readRDS(fn_fit)
+          fit = aegis::read_write_fast(fn_fit)
         } else {
           load( fn_fit )
         }
@@ -43,7 +44,7 @@ carstm_model_inla = function(
       O = NULL
       if (file.exists(fn_res)) {
         if (grepl("\\.RDS$", fn_fit)) {
-          res = readRDS(fn_res)
+          res = aegis::read_write_fast(fn_res)
         } else {
           load( fn_res)
         }
@@ -53,7 +54,7 @@ carstm_model_inla = function(
     } else {
       if (file.exists(fn_fit)){
         if (grepl("\\.RDS$", fn_fit)) {
-          fit = readRDS(fn_fit)
+          fit = aegis::read_write_fast(fn_fit)
         } else {
           load( fn_fit )
         }
@@ -161,7 +162,7 @@ carstm_model_inla = function(
 
 
   # changes in INLA data structures noted in 2023:
-  # posterior sims is on link scale ((for both experimental and classical))
+  # posterior samples is on link scale ((for both experimental and classical))
   # marginals.fitted.values are on response scale (for both experimental and classical)
   # summary.fitted.values on response scale ((for both experimental and classical))
 
@@ -491,8 +492,6 @@ carstm_model_inla = function(
     if ("try-error" %in% class(fit) ) warning("model fit error")
 
 
-    run_fit_end  = Sys.time()
-
     message( "Fitted model saved as: ", fn_fit )
 
     outputdir = dirname(fn_fit)
@@ -532,7 +531,15 @@ carstm_model_inla = function(
 
     O[["carstm_prediction_surface_parameters"]] = NULL
     
-    fit$modelinfo = O  # store in case a restart is needed
+    # fit$modelinfo = O  # store in case a restart is needed
+
+
+    fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
+    read_write_fast( data=O, file=fn_modelinfo, compress=compress, compression_level=compression_level )
+      
+    gc()
+
+
 
     fit$.args = NULL
 
@@ -540,23 +547,23 @@ carstm_model_inla = function(
 
     if (be_verbose)  message( "\nModel fit complete. Saving ...\n", fn_fit )
 
-    carstm_saveRDS( fit, file=fn_fit, compress=compress, compression_level=compression_level )
+    read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level )
 
   } # END redo fit
 
-  if (!exists("run_fit_end")) run_fit_end  = run_start  # in case modelling is skipped
-
+  run_fit_end  = Sys.time()
+    
+    
   ### END Modelling
 
   # --------------------------------------------
   # --------------------------------------------
   # --------------------------------------------
 
-  run_extract_start  = Sys.time()
 
   if (is.null(fit)) {
     if (be_verbose)  message( "\nLoading fit as: redo_fit=FALSE ...\n", fn_fit )
-    fit =readRDS( fn_fit )
+    fit =aegis::read_write_fast( fn_fit )
   }
   
   if (is.null(fit)) {
@@ -566,22 +573,18 @@ carstm_model_inla = function(
  
   # do the computations here as fit can be massive ... best not to copy, etc ..
 
-  if (!exists("modelinfo", fit)) {
-    stop("Modelinfo not in fit, fit object needs to be re-run?")
-  }
-
 
   # --------------------------------------------
   # --------------------------------------------
   # --------------------------------------------
-
-  O = fit$modelinfo
-   
-
-  fit$modelinfo = NULL
-  gc()
-
+  fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
+  if (exists("modelinfo", fit)) {
+      O = fit$modelinfo  # priority to the fit$modelinfo
+  } else {
+    if (file.exists(fn_modelinfo)) O = aegis::read_write_fast( fn_modelinfo )
+  } 
   
+
   if (exists("debug")) if (is.character(debug)) if (debug=="extract") browser()
 
 
@@ -711,30 +714,29 @@ carstm_model_inla = function(
   if (exists("debug")) if (is.character(debug)) if (debug=="summary") browser()
 
 
-  if (!exists("random", O)) O[["random"]] = list()
+
+  Osummary = list()
 
 
   if ( "summary" %in% toget) {
     
     if (be_verbose)  message("Extracting parameter summary" )
-
-    if (!exists("summary", O)) O[["summary"]] = list()
-   
+ 
     dic = fit$dic[c("dic", "p.eff", "dic.sat", "mean.deviance")]
     waic = fit$waic[c("waic", "p.eff")]
     mlik = fit$mlik[2]
 
-    O[["summary"]][["direct"]] = summary(fit)
-    # print(O[["summary"]][["direct"]])
+    Osummary[["direct"]] = summary(fit)
+    # print(Osummary[["direct"]])
 
     # remove a few unused but dense data objects
-    O[["summary"]][["direct"]]$linear.predictor = NULL
-    O[["summary"]][["direct"]]$waic$local.waic = NULL
-    O[["summary"]][["direct"]]$waic$local.p.eff = NULL
-    O[["summary"]][["direct"]]$dic$local.dic = NULL
-    O[["summary"]][["direct"]]$dic$local.p.eff = NULL
-    O[["summary"]][["direct"]]$dic$local.dic.sat = NULL
-    O[["summary"]][["direct"]]$dic$family = NULL
+    Osummary[["direct"]]$linear.predictor = NULL
+    Osummary[["direct"]]$waic$local.waic = NULL
+    Osummary[["direct"]]$waic$local.p.eff = NULL
+    Osummary[["direct"]]$dic$local.dic = NULL
+    Osummary[["direct"]]$dic$local.p.eff = NULL
+    Osummary[["direct"]]$dic$local.dic.sat = NULL
+    Osummary[["direct"]]$dic$family = NULL
     
     # extract and back transform where possible
     if (exists( "marginals.fixed", fit)) {
@@ -758,7 +760,7 @@ carstm_model_inla = function(
       }
 
       W$ID = row.names(W)
-      O[["summary"]][["fixed_effects"]] = W
+      Osummary[["fixed_effects"]] = W
       m = NULL
       W = NULL
       gc()
@@ -793,7 +795,7 @@ carstm_model_inla = function(
         rownames(m) = gsub(" for", "", rownames(m) )
         rownames(m) = gsub(" the", "", rownames(m) )
         
-        O[["summary"]][["random_effects"]] = m[, tokeep, drop =FALSE] 
+        Osummary[["random_effects"]] = m[, tokeep, drop =FALSE] 
         m = NULL
         gc()
         
@@ -816,7 +818,7 @@ carstm_model_inla = function(
           m = fit$summary.hyperpar[rhos, 1:5]
           colnames(m) = tokeep
         }
-        O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]],  m[, tokeep, drop =FALSE] )
+        Osummary[["random_effects"]] = rbind( Osummary[["random_effects"]],  m[, tokeep, drop =FALSE] )
         m = NULL
       }
       rhos = NULL
@@ -827,7 +829,7 @@ carstm_model_inla = function(
           m = fit$summary.hyperpar[phis, 1:5]
           colnames(m) = tokeep
         }
-        O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], m[, tokeep, drop =FALSE] )
+        Osummary[["random_effects"]] = rbind( Osummary[["random_effects"]], m[, tokeep, drop =FALSE] )
         m = NULL
       }
       phis = NULL
@@ -839,14 +841,14 @@ carstm_model_inla = function(
           m = fit$summary.hyperpar[unknown, 1:5]
           colnames(m) = tokeep
         }
-        O[["summary"]][["random_effects"]] = rbind( O[["summary"]][["random_effects"]], m[, tokeep, drop =FALSE])
+        Osummary[["random_effects"]] = rbind( Osummary[["random_effects"]], m[, tokeep, drop =FALSE])
         m = NULL
       }
       unknown = NULL
 
 
-      O[["summary"]][["random_effects"]] = list_to_dataframe(  O[["summary"]][["random_effects"]] )
-      O[["summary"]][["random_effects"]]$ID = row.names( O[["summary"]][["random_effects"]] )
+      Osummary[["random_effects"]] = list_to_dataframe(  Osummary[["random_effects"]] )
+      Osummary[["random_effects"]]$ID = row.names( Osummary[["random_effects"]] )
       
       gc()
 
@@ -861,13 +863,13 @@ carstm_model_inla = function(
              message( "failed to transform marginals .. copying directly from INLA summary instead: ", rnef)
             m = fit$summary.random[[rnef]][, inla_tokeep, drop =FALSE ]
             names(m) =  tokeep
-            O[["random"]] [[rnef]] = m
-            O[["random"]] [[rnef]]$ID = fit$summary.random[[rnef]]$ID
-            O[["random"]] [[rnef]] = list_to_dataframe( O[["random"]] [[rnef]] )
+            Osummary[[rnef]] = m
+            Osummary[[rnef]]$ID = fit$summary.random[[rnef]]$ID
+            Osummary[[rnef]] = list_to_dataframe( Osummary[[rnef]] )
           } else {
-            O[["random"]] [[rnef]] = m[, tokeep, drop =FALSE]
-            O[["random"]] [[rnef]]$ID = fit$summary.random[[rnef]]$ID
-            O[["random"]] [[rnef]] = list_to_dataframe( O[["random"]] [[rnef]] )
+            Osummary[[rnef]] = m[, tokeep, drop =FALSE]
+            Osummary[[rnef]]$ID = fit$summary.random[[rnef]]$ID
+            Osummary[[rnef]] = list_to_dataframe( Osummary[[rnef]] )
           }
         }
         m = raneff = NULL
@@ -879,21 +881,22 @@ carstm_model_inla = function(
     if (be_verbose)  {
       # message( "")
       # message( "Random effects:")
-      # print(  O[["summary"]][["random_effects"]]  )   
+      # print(  Osummary[["random_effects"]]  )   
       # message( "\n--- NOTE --- 'SD *' from marginal summaries are on link scale")
       # message( "--- NOTE --- SD * from posteriors simulations are on user scale")
       # message( "")
     }
 
     # save summary
-    fn_summ = gsub( fn_res, "_summary_", "_summary_basic_", fixed=TRUE )
-    saveRDS( O[["summary"]], file=fn_summ, compress=FALSE )
-    O[["summary"]] = NULL 
+    fn_summ = gsub( "_fit~", "_summary_marginals~", fn_fit, fixed=TRUE )
+    read_write_fast( data=Osummary, file=fn_summ, compress=compress, compression_level=compression_level )
+    Osummary = NULL 
     gc()
   }  # end parameters
    
-
-  end_marginals = Sys.time()
+  
+  
+  Orandom = list()  # random effects (random spatial and random spatiotemporal) from INLA's marginals
 
   # separate out random spatial and randomm spatiotemporal (as they can be large arrays)
   if ("random_spatial" %in% toget) {
@@ -911,7 +914,7 @@ carstm_model_inla = function(
       W = array( NA, dim=c( O[["space_n"]], length(tokeep) ), dimnames=list( space=O[["space_name"]], stat=tokeep ) )
       names(dimnames(W))[1] = vS  # need to do this in a separate step ..
 
-      O[["random"]] [[vS]] = list()  # space as a main effect  vS==vS
+      Orandom[[vS]] = list()  # space as a main effect  vS==vS
 
       if (length(iSP) == 1) {
 
@@ -944,7 +947,7 @@ carstm_model_inla = function(
             W[,k] = reformat_to_array( input = unlist(m[ire, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
  
-          O[["random"]] [[vS]] [["re_total"]] = W [, tokeep, drop =FALSE]
+          Orandom[[vS]] [["re_total"]] = W [, tokeep, drop =FALSE]
 
         } else {
           # single spatial effect that is not bym2
@@ -958,7 +961,7 @@ carstm_model_inla = function(
         for (k in 1:length(tokeep)) {
           W[,k] = reformat_to_array( input = unlist(m[ine, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
         }
-        O[["random"]] [[vS]] [["re_neighbourhood"]] = W [, tokeep, drop =FALSE]
+        Orandom[[vS]] [["re_neighbourhood"]] = W [, tokeep, drop =FALSE]
 
       }
 
@@ -987,7 +990,7 @@ carstm_model_inla = function(
           for (k in 1:length(tokeep)) {
             W[,k] = reformat_to_array( input = unlist(m[, tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["random"]] [[vnS]] [[model_name]] = data.frame( W [, tokeep, drop =FALSE], ID=row.names(W) )
+          Orandom[[vnS]] [[model_name]] = data.frame( W [, tokeep, drop =FALSE], ID=row.names(W) )
 
         }
       }
@@ -1051,7 +1054,7 @@ carstm_model_inla = function(
             for (k in 1:length(tokeep)) {
               W[,,k] = reformat_to_array(  input = unlist(m[ire, tokeep[k]]), matchfrom = matchfrom, matchto = matchto )
             }
-            O[["random"]] [[vnST]] [["re_total"]] =  W [,, tokeep, drop =FALSE] 
+            Orandom[[vnST]] [["re_total"]] =  W [,, tokeep, drop =FALSE] 
 
           } else {
             # besag effect: with annual results
@@ -1065,7 +1068,7 @@ carstm_model_inla = function(
           for (k in 1:length(tokeep)) {
             W[,,k] = reformat_to_array( input = unlist(m[ine,tokeep[k]]), matchfrom=matchfrom, matchto=matchto )
           }
-          O[["random"]] [[vnST]] [["re_neighbourhood"]] =   W [,, tokeep, drop =FALSE] 
+          Orandom[[vnST]] [["re_neighbourhood"]] =   W [,, tokeep, drop =FALSE] 
 
         }
       }
@@ -1093,22 +1096,26 @@ carstm_model_inla = function(
           for (k in 1:length(tokeep)) {
             W[,,k] = reformat_to_array( input = unlist(m[jst, tokeep[k] ]), matchfrom = matchfrom, matchto = matchto  )
           }
-          O[["random"]] [[vnST]] [[model_name]] = W [,, tokeep, drop =FALSE]
+          Orandom[[vnST]] [[model_name]] = W [,, tokeep, drop =FALSE]
           m = NULL
         }
       }
       Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL
-
-      fn_random = gsub( fn_res, "_summary_", "_summary_randomeffects_", fixed=TRUE )
-      saveRDS( O[["random"]], file=fn_random, compress=FALSE )
-      O[["random"]] = NULL 
-      gc()
   
     }
+
+    # save random effects to file
+    fn_summary_randomeffects = gsub( "_fit~", "_summary_randomeffects~", fn_fit, fixed=TRUE )
+    read_write_fast( data=Orandom, file=fn_summary_randomeffects, compress=compress, compression_level=compression_level ) 
+    Orandom = NULL 
+    gc()
+  
+
   }  # end random spatio-temporal effects
+ 
 
-  run_predict_start  = Sys.time()
-
+  Opredictions = list()
+  
   if ("predictions" %in% toget ) {
 
     # marginals.fitted.values are on response scale (for both experimental and classical) and  already incorporates offsets
@@ -1119,7 +1126,6 @@ carstm_model_inla = function(
 
     if (exists("debug")) if (is.character(debug)) if ( debug =="predictions") browser()
  
-    if (!exists("predictions", O)) O[["predictions"]] = list()
   
     if (exists("marginals.fitted.values", fit)) {
 
@@ -1150,7 +1156,7 @@ carstm_model_inla = function(
           for (k in 1:length(names(m))) {
             W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
-          O[["predictions"]] = W[, tokeep, drop =FALSE]
+          Opredictions = W[, tokeep, drop =FALSE]
           m = W = NULL
         }
 
@@ -1181,7 +1187,7 @@ carstm_model_inla = function(
           for (k in 1:length(names(m))) {
             W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto)
           }
-          O[["predictions"]] = W[,, tokeep, drop =FALSE]
+          Opredictions = W[,, tokeep, drop =FALSE]
       
           m = W = NULL
         }
@@ -1213,33 +1219,32 @@ carstm_model_inla = function(
           for (k in 1:length(names(m))) {
             W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
-          O[["predictions"]] = W[,,, tokeep, drop =FALSE]
+          Opredictions = W[,,, tokeep, drop =FALSE]
           m = W = NULL
         }
       }
     }
 
     # save summary
-    fn_preds = gsub( fn_res, "_summary_", "_summary_predictions_", fixed=TRUE )
-    saveRDS( O[["predictions"]], file=fn_preds, compress=FALSE )
-    O[["predictions"]] = NULL 
+    fn_preds = gsub( "_fit~", "_summary_predictions~",  fn_fit, fixed=TRUE )
+    read_write_fast( data=Opredictions, file=fn_preds, compress=compress, compression_level=compression_level ) 
+    Opredictions = NULL 
     gc()
      
   }
   
   O[["ipred"]] = NULL
-
-  run_predict_end  = Sys.time()
-
+ 
 
   # --------------------------------------------
   # --------------------------------------------
   # --------------------------------------------
 
+
+  run_post_samples  = Sys.time()
 
   if (redo_posterior_simulations) {
 
-    run_post_sims  = Sys.time()
     if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples") browser()
 
     if (is.null(nposteriors)) {
@@ -1279,13 +1284,12 @@ carstm_model_inla = function(
     
     if (be_verbose)  message( "\nPosterior simulations complete. Extracting required components ... "  )
 
-    end_post_sims  = Sys.time()
-
 
     fit = NULL; gc()  # no longer needed .. remove from memory
 
-    O[["sims"]] = list()
-    O[["posterior_summary"]] = list()
+    Osamples = list()
+    
+    if (summarize_simulations) Osamples[["summary"]] = list()
 
     # extraction here as no need for fit object anymore (reduces RAM requirements)
     if (is.null(exceedance_threshold)) if (exists("exceedance_threshold", O)) exceedance_threshold = O[["exceedance_threshold"]]
@@ -1297,19 +1301,22 @@ carstm_model_inla = function(
     for (z in c("tag", "start", "length") ) assign(z, attributes(S)[[".contents"]][[z]] )  # index info
 
     if ( "summary" %in% posterior_simulations_to_retain ) {
+      
       if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_summary") browser()
       # -- check variable names here
       # posteriors
       flabels= O[["names.fixed"]]
       nfixed = length(O[["names.fixed"]])
-      fixed = array(NA, dim=c( nfixed, O[["nposteriors"]]  ) )
+      Osamples[["fixed_effects"]] = array(NA, dim=c( nfixed, O[["nposteriors"]]  ) )
       fkk = inla_get_indices(O[["names.fixed"]], tag=tag, start=start, len=length, model="direct_match")
       fkk = unlist(fkk)
-      for (i in 1:O[["nposteriors"]]) fixed[,i] = S[[i]]$latent[fkk,]  
-      fixed = invlink(fixed)
-      row.names(fixed) = flabels
-      O[["sims"]][["fixed_effects"]] = fixed
-      O[["posterior_summary"]][["fixed_effects"]] = posterior_summary(format_results( fixed, labels=flabels))
+      for (i in 1:O[["nposteriors"]]) Osamples[["fixed_effects"]][,i] = S[[i]]$latent[fkk,]  
+      Osamples[["fixed_effects"]] = invlink(Osamples[["fixed_effects"]])
+      row.names(Osamples[["fixed_effects"]]) = flabels
+
+      if (summarize_simulations) {
+        Osamples[["summary"]][["fixed_effects"]] = posterior_summary(format_results( fixed, labels=flabels))
+      }
       fkk = fixed = NULL
  
 
@@ -1317,33 +1324,38 @@ carstm_model_inla = function(
 
       if (length(other_random) > 0 ) {
         nrandom = sum(sapply(O$random[other_random], nrow))  
-        random = array(NA, dim=c(nrandom, O[["nposteriors"]]  ) )
+        Osamples[["random_effects"]] = array(NA, dim=c(nrandom, O[["nposteriors"]]  ) )
         rkk = inla_get_indices(other_random, tag=tag, start=start, len=length, model="direct_match"  )  # if bym2, must be decomposed  
         rkk = unlist( rkk )
         for (i in 1:O[["nposteriors"]]) random[,i] = S[[i]]$latent[rkk,]  
         rlabels = names(S[[1]]$latent[rkk,])
-        random = invlink(random)
-        row.names(random) = rlabels
-        O[["posterior_summary"]][["random_effects"]] = posterior_summary( format_results( random, labels=rlabels ) )
-        random = rkk = nrandom= rlabels= NULL
+        Osamples[["random_effects"]] = invlink(Osamples[["random_effects"]])
+        row.names(Osamples[["random_effects"]]) = rlabels
+
+        if (summarize_simulations) {
+          Osamples[["summary"]][["random_effects"]] = posterior_summary( format_results( Osamples[["random_effects"]], labels=rlabels ) )
+        }
+        rkk = nrandom= rlabels= NULL
       }
 
       hyper_names = names(S[[1]]$hyperpar)
       nhyperpar = length(hyper_names)
       if (nhyperpar == 0) stop("No hyperparameters? ... control.mode(restart=TRUE) might help" )
-      hyperpar = array( NA,dim=c(nhyperpar, O[["nposteriors"]]  ) )
-      for (i in 1:O[["nposteriors"]]) hyperpar[,i] = S[[i]]$hyperpar
+      Osamples[["hyperpars"]] = array( NA,dim=c(nhyperpar, O[["nposteriors"]]  ) )
+      for (i in 1:O[["nposteriors"]]) Osamples[["hyperpars"]][,i] = S[[i]]$hyperpar
       k = grep("Precision", hyper_names)
       if (length(k) > 0) {
-          hyperpar[k,] = 1 / sqrt(hyperpar[k,]) 
+          Osamples[["hyperpars"]][k,] = 1 / sqrt(Osamples[["hyperpars"]][k,]) 
           hyper_names[k] = gsub("Precision for", "SD", hyper_names[k] )
       }
       hyper_names = gsub("for ", "", hyper_names )
       hyper_names = gsub("the ", "", hyper_names )
-      row.names( hyperpar ) = hyper_names
-      O[["sims"]][["hyperpars"]] =  hyperpar
-      O[["posterior_summary"]][["hyperpars_summary"]] = posterior_summary( format_results( hyperpar, labels=hyper_names) )
-      hyperpar = hyper_names = nhyperpar = k = NULL
+      row.names( Osamples[["hyperpars"]] ) = hyper_names
+ 
+      if (summarize_simulations) {
+        Osamples[["summary"]][["hyperpars"]] = posterior_summary( format_results( Osamples[["hyperpars"]], labels=hyper_names) )
+      }
+      hyper_names = nhyperpar = k = NULL
     }  # end summary
     
     k = known = unknown = m  = NULL
@@ -1354,7 +1366,7 @@ carstm_model_inla = function(
       if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_spatial") browser()
       # -- check variable names here
 
-      # POSTERIOR SIMS
+      # POSTERIOR samples
       space = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
       row.names(space) = O[["space_name"]]
       space1 = space2 = NULL
@@ -1411,6 +1423,8 @@ carstm_model_inla = function(
       space = invlink(space)   # the overall spatial random effect 
       row.names(space) = O[["space_name"]]
       matchfrom = list( space=O[["space_id"]] )
+      
+      Osamples[[vS]] = list()
 
       if (!is.null(exceedance_threshold)) {
         if (be_verbose)  message("Extracting random spatial effects exceedence"  )
@@ -1419,7 +1433,7 @@ carstm_model_inla = function(
           m = reformat_to_array( input = m, matchfrom=matchfrom, matchto = matchto )
           names(dimnames(m))[1] = vS
           dimnames( m )[[vS]] = O[["space_name"]]
-          O[["random"]] [[vS]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) )
+          Osamples[[vS]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) )
           m = NULL
         }
       }
@@ -1432,29 +1446,29 @@ carstm_model_inla = function(
           m = reformat_to_array( input = m, matchfrom=matchfrom, matchto=matchto  )
           names(dimnames(m))[1] = vS
           dimnames( m )[[vS]] = O[["space_name"]]
-          O[["random"]] [[vS]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) ) 
+          Osamples[[vS]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) ) 
           m = NULL
         }
       }
+
+      if (summarize_simulations) {
+        Osamples[["summary"]] [[vS]] = list()
+        m = posterior_summary( format_results( space, labels=O[["space_name"]]  ) )
+        W = array( NA, dim=c( O[["space_n"]], length(tokeep) ), dimnames=list( space=O[["space_name"]], stat=tokeep ) )
+        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+        for (k in 1:length(tokeep)) {
+          W[,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
+        }
+        Osamples[["summary"]] [[vS]] [["re_total"]] = W[, tokeep, drop =FALSE] 
+      }
+
+      Osamples[[vS]][["re_total"]] = space  # already inverse link scale
       
-      m = posterior_summary( format_results( space, labels=O[["space_name"]]  ) )
-
-      W = array( NA, dim=c( O[["space_n"]], length(tokeep) ), dimnames=list( space=O[["space_name"]], stat=tokeep ) )
-      names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-      for (k in 1:length(tokeep)) {
-        W[,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
-      }
-      O[["random"]] [[vS]] [["re_total"]] = W[, tokeep, drop =FALSE] 
-
-      if ( "random_spatial" %in% posterior_simulations_to_retain ) {
-        O[["sims"]] [[vS]] [["re_total"]] = space  # already inverse link scale
-      }
-
       if ( "random_spatial12" %in% posterior_simulations_to_retain ) {
-        if (!is.null(space1)) O[["sims"]] [[vS]] [[model_name1]] =  invlink(space1) 
-        if (!is.null(space2)) O[["sims"]] [[vS]] [[model_name2]] =  invlink(space2) 
+        if (!is.null(space1)) Osamples [[vS]] [[model_name1]] =  invlink(space1) 
+        if (!is.null(space2)) Osamples [[vS]] [[model_name2]] =  invlink(space2) 
       }
-    } # END random spatial post sims
+    } # END random spatial post samples
 
     matchfrom = i1 = i2= NULL
     Z = W = m = space = space1 = space2 = skk1 = skk2 = iSP = NULL
@@ -1522,8 +1536,12 @@ carstm_model_inla = function(
       jst =  which(Z$type=="re_total")
       matchfrom = list( space=Z[["space"]][jst], time=Z[["time"]][jst]  )
 
+      Osamples[[vnST]] = list()
+
       if (!is.null(exceedance_threshold)) {
         if (be_verbose)  message("Extracting random spatiotemporal errors exceedence"  )
+
+        Osamples[[vnST]] [["exceedance"]] = list()
 
         for ( b in 1:length(exceedance_threshold)) {
           m = apply ( space_time, 1, FUN=function(x) length( which(x > exceedance_threshold[b] ) ) ) / O[["nposteriors"]]
@@ -1532,13 +1550,15 @@ carstm_model_inla = function(
           names(dimnames(m))[2] = vT
           dimnames( m )[[vS]] = O[["space_name"]]
           dimnames( m )[[vT]] = O[["time_name"]]
-          O[["random"]] [[vnST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = m
+          Osamples[[vnST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = m
         }
         m = NULL
       }
 
       if (!is.null(deceedance_threshold)) {
         if (be_verbose)  message("Extracting random spatiotemporal errors deceedance"  )
+
+        Osamples[[vnST]] [["deceedance"]] = list()
 
         for ( b in 1:length(deceedance_threshold)) {
           m = apply ( space_time, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / O[["nposteriors"]]
@@ -1547,32 +1567,35 @@ carstm_model_inla = function(
           names(dimnames(m))[2] = O[["time_name"]]
           dimnames( m )[[vS]] = O[["space_name"]]
           dimnames( m )[[vT]] = vT
-          O[["random"]] [[vnST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = m
+          Osamples[[vnST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = m
         }
         m = NULL
       }
 
-      W = array( NA, 
-        dim=c( O[["space_n"]], O[["time_n"]], length(tokeep) ), 
-        dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=tokeep ) )
-      names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-      names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+      if (summarize_simulations) {
+        W = array( NA, 
+          dim=c( O[["space_n"]], O[["time_n"]], length(tokeep) ), 
+          dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=tokeep ) )
+        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+        names(dimnames(W))[2] = vT  # need to do this in a separate step ..
 
-      m = posterior_summary(format_results( space_time, labels=stlabels ))
-      for (k in 1:length(tokeep)) {
-        W[,,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
+        m = posterior_summary(format_results( space_time, labels=stlabels ))
+        for (k in 1:length(tokeep)) {
+          W[,,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
+        }
+        Osamples[["summary"]][[vnST]] = list()
+        Osamples[["summary"]][[vnST]] [["re_total"]] = W[,, tokeep, drop =FALSE] 
       }
-      O[["random"]] [[vnST]] [["re_total"]] = W[,, tokeep, drop =FALSE] 
 
       if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
-        O[["sims"]] [[vnST]] [["re_total"]] = space_time
+        Osamples [[vnST]] [["re_total"]] = space_time
       }
       if ( "random_spatiotemporal12" %in% posterior_simulations_to_retain ) {
-        if (!is.null(space_time1)) O[["sims"]] [[vnST]] [[model_name1]] = invlink(space_time1)
-        if (!is.null(space_time2)) O[["sims"]] [[vnST]] [[model_name2]] = invlink(space_time2)
+        if (!is.null(space_time1)) Osamples [[vnST]] [[model_name1]] = invlink(space_time1)
+        if (!is.null(space_time2)) Osamples [[vnST]] [[model_name2]] = invlink(space_time2)
       }
-    
-    }  # END sp-temp post sims
+
+    }  # END sp-temp post samples
     Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL
     gc()
 
@@ -1612,7 +1635,7 @@ carstm_model_inla = function(
           for (k in 1:O[["nposteriors"]] ) {
             W[,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
-          O[["sims"]][["predictions"]] = W[, drop =FALSE]
+          Osamples[["predictions"]] = W[, drop =FALSE]
           W = NULL 
       }
 
@@ -1630,7 +1653,7 @@ carstm_model_inla = function(
           for (k in 1:O[["nposteriors"]] ) {
             W[,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
-          O[["sims"]][["predictions"]] = W[,,, drop =FALSE]
+          Osamples[["predictions"]] = W[,,, drop =FALSE]
           W = NULL
       }
 
@@ -1648,13 +1671,17 @@ carstm_model_inla = function(
           for (k in 1:O[["nposteriors"]] ) {
             W[,,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
-          O[["sims"]][["predictions"]] = W[,,, ,drop =FALSE]
+          Osamples[["predictions"]] = W[,,, ,drop =FALSE]
           W = NULL
       }
   
       
       if (!is.null(exceedance_threshold_predictions)) {
         if (be_verbose)  message("Extracting de/exceedance of predictions"  )
+        
+        Osamples[["predictions_exceedance"]] = list()
+        Osamples[["predictions_exceedance"]] [["exceedance"]]  = list()
+
         for ( b in 1:length(exceedance_threshold_predictions)) {
             m = apply ( predictions, 1, FUN=function(x) length( which(x > exceedance_threshold_predictions[b] ) ) ) / O[["nposteriors"]]
             W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
@@ -1669,12 +1696,16 @@ carstm_model_inla = function(
               names(dimnames(W))[3] = vU
               dimnames( W )[[vU]] = O[["cyclic_name"]]
             }
-            O[["predictions_exceedance"]] [["exceedance"]] [[ as.character(exceedance_threshold_predictions[b]) ]]= W
+            Osamples[["predictions_exceedance"]] [["exceedance"]] [[ as.character(exceedance_threshold_predictions[b]) ]]= W
             W = NULL
           }
       }
 
       if (!is.null(deceedance_threshold_predictions)) {
+          
+          Osamples[["predictions_deceedance"]]  = list()
+          Osamples[["predictions_deceedance"]] [["deceedance"]] = list()
+
           for ( b in 1:length(deceedance_threshold_predictions)) {
             m = apply ( predictions, 1, FUN=function(x) length( which(x < deceedance_threshold_predictions[b] ) ) ) / O[["nposteriors"]]
             W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
@@ -1689,7 +1720,7 @@ carstm_model_inla = function(
               names(dimnames(W))[3] = vU
               dimnames( W )[[vU]] = O[["cyclic_name"]]
             }
-            O[["predictions_deceedance"]] [["deceedance"]] [[ as.character(deceedance_threshold_predictions[b]) ]]= W
+            Osamples[["predictions_deceedance"]] [["deceedance"]] [[ as.character(deceedance_threshold_predictions[b]) ]]= W
             W = NULL
           }
       }
@@ -1697,39 +1728,38 @@ carstm_model_inla = function(
       predictions = NULL
 
       # save summary
-      fn_sims = gsub( fn_res, "_summary_", "_summary_simulations_", fixed=TRUE )
-      saveRDS( O[["sims"]], file=fn_sims, compress=FALSE )
-      O[["sims"]] = NULL 
+      fn_samples = gsub( "_fit~", "_samples~", fn_fit, fixed=TRUE )
+      read_write_fast( data=Osamples, file=fn_samples, compress=compress, compression_level=compression_level ) 
+      Osamples = NULL 
       gc()
       
 
 
-    } # END predictions post sim
-  } # END redo posterior simulations
+    } # END predictions posteriors loop
+  } # END redo posterior samples
 
+
+  end_post_samples  = Sys.time()
 
 
   # --------------------------------------------
   # --------------------------------------------
   # --------------------------------------------
-  
-  run_end  = Sys.time()
+   
  
-  message( "Saving results summary as a sublist in fit: fit$results : \n", fn_fit)
-    
+  
   if (is.null(fn_res)) {
       message( "Return object is 'fit$results' (and not 'fit')")
       fit$results = O
-      carstm_saveRDS( fit, file=fn_res, compress=compress, compression_level=compression_level  )
+      read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level )
   } else {
       message( "Saving results summary as: \n", fn_res )
-      carstm_saveRDS( O, file=fn_res, compress=compress , compression_level=compression_level  )
+      read_write_fast( data=O, file=fn_res, compress=compress, compression_level=compression_level )
   }
   
-  message("Total: ", format(difftime(run_end, run_start)))
 
   run_end  = Sys.time()
-    
+ 
   # --------------------------------------------
   # --------------------------------------------
   # --------------------------------------------
@@ -1737,12 +1767,10 @@ carstm_model_inla = function(
   if (be_verbose) {
     message("---------------------------------------")
     message("Run times:")
-    message("Fit: ", format(difftime(run_end, run_fit_end)))
-    message("Posterior simulations: ", format(difftime(run_post_sims, end_post_sims)))
-    message("Extract marginals: ", format(difftime(end_marginals, end_post_sims)))
-    message("Extract effects: ", format(difftime(run_predict_start, run_extract_start)))
-    message("Extract predictions: ", format(difftime(run_predict_end, run_predict_start)))
-    message("Extract total: ", format(difftime(run_end, end_post_sims))) 
+    message("Fit: ", format(difftime(run_fit_end, run_start)))
+    message("Extract results from marginals: ", format(difftime(run_post_samples, run_fit_end)))
+    message("Posterior simulations: ", format(difftime(end_post_samples, run_post_samples)))
+    message("Total: ", format(difftime(run_end, run_start)))
     message("---------------------------------------")
   } 
 

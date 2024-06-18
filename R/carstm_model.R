@@ -2,7 +2,7 @@
 carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL, DS="redo", 
     space_id=NULL, time_id=NULL, cyclic_id=NULL, theta=NULL, carstm_directory=NULL, 
     toget=NULL, nposteriors=NULL, posterior_simulations_to_retain=NULL,
-    compress="gzip", compression_level=1, fn_fit=NULL, fn_res=NULL, debug=FALSE, 
+    compress="zstd", compression_level=1, fn_fit=NULL, fn_res=NULL, debug=FALSE, 
     ... ) {
 
      if (0) {
@@ -57,7 +57,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
       message("Loading carstm fit: ", fn_fit )
       if (file.exists(fn_fit)) {
         if (grepl("\\.RDS$", fn_fit)) {
-          fit = readRDS(fn_fit)
+          fit = aegis::read_write_fast(fn_fit)
         } else {
           load( fn_fit )
         }
@@ -75,7 +75,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
       O = NULL
       if (file.exists(fn_res)) {
         if (grepl("\\.RDS$", fn_res)) {
-          O = readRDS(fn_res)
+          O = aegis::read_write_fast(fn_res)
         } else {
           load( fn_res )
         }
@@ -87,7 +87,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
       # message("Loading results from fit: ", fn_fit )
       if (file.exists(fn_fit)) {
         if (grepl("\\.RDS$", fn_fit)) {
-          fit = readRDS(fn_fit)
+          fit = aegis::read_write_fast(fn_fit)
         } else {
           load( fn_fit )
         }
