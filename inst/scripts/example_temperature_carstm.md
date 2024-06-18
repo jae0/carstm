@@ -40,14 +40,15 @@ To begin analysis using [CARSTM](https://github.com/jae0/carstm), we bring in th
 # required R library list
 standard_libs = c( 
     "colorspace", "lubridate",  "lattice",  "data.table", "parallel",
-    "sf",  "terra", "INLA", "ggplot2", "RColorBrewer", "fst"
+    "sf",  "terra", "INLA", "ggplot2", "RColorBrewer", "qs"
 )
 #  warning INLA has a lot of dependencies 
 
 # fast compression in R using zstd or lz4
 # install.packages("devtools") 
 # devtools::install_github("fstPackage/fst", ref = "develop")
-
+install.packages("stringfish", type="source", configure.args="--with-simd=AVX2")
+install.packages("qs", type="source" )
 
 # aegis.* libs (found on github.com/jae0)
 # at a minimum install aegis to bootstrap the others
