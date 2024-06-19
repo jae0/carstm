@@ -13,7 +13,7 @@ carstm_model_inla = function(
   theta=NULL,
   compress="gzip",
   compression_level=1,
-  toget = c("summary", "random_spatial", "predictions"), 
+  toget = c("modelinfo", "marginals", "random_spatial", "predictions"), 
   nposteriors=NULL, 
   posterior_simulations_to_retain=c( "predictions" ),
   exceedance_threshold=NULL, 
@@ -68,6 +68,39 @@ carstm_model_inla = function(
     }
   }
   
+
+  if (DS=="carstm_modelinfo") {   
+    fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
+    O = read_write_fast( file=fn_modelinfo )
+    return( O )
+  }
+
+  if (DS=="carstm_marginals") {   
+    fn_marginals = gsub( "_fit~", "_marginals~", fn_fit, fixed=TRUE )
+    Omarginals = read_write_fast( file=fn_marginals )
+    return( Omarginals )
+  }
+
+  if (DS=="carstm_randomeffects") {   
+    fn_randomeffects = gsub( "_fit~", "_randomeffects~", fn_fit, fixed=TRUE )
+    Orandom = read_write_fast( file=fn_randomeffects ) 
+    return( Orandom )  
+  }
+
+  if (DS=="carstm_predictions") {   
+    fn_preds = gsub( "_fit~", "_predictions~",  fn_fit, fixed=TRUE )
+    Opredictions = read_write_fast( file=fn_preds ) 
+    return( Opredictions)  
+  }
+
+  if (DS=="carstm_samples") {   
+      fn_samples = gsub( "_fit~", "_samples~", fn_fit, fixed=TRUE )
+      Osamples = read_write_fast(  file=fn_samples ) 
+      return( Osamples )
+  }
+
+
+
   if (exists("debug")) if (is.logical(debug)) if (debug) browser()
 
   run_start  = Sys.time()
@@ -713,10 +746,7 @@ carstm_model_inla = function(
   
   if (exists("debug")) if (is.character(debug)) if (debug=="summary") browser()
 
-
-
-  Osummary = list()
-
+ 
 
   if ( "summary" %in% toget) {
     
@@ -726,19 +756,25 @@ carstm_model_inla = function(
     waic = fit$waic[c("waic", "p.eff")]
     mlik = fit$mlik[2]
 
-    Osummary[["direct"]] = summary(fit)
-    # print(Osummary[["direct"]])
+    O[["direct"]] = summary(fit)
+    # print(O[["direct"]])
 
     # remove a few unused but dense data objects
-    Osummary[["direct"]]$linear.predictor = NULL
-    Osummary[["direct"]]$waic$local.waic = NULL
-    Osummary[["direct"]]$waic$local.p.eff = NULL
-    Osummary[["direct"]]$dic$local.dic = NULL
-    Osummary[["direct"]]$dic$local.p.eff = NULL
-    Osummary[["direct"]]$dic$local.dic.sat = NULL
-    Osummary[["direct"]]$dic$family = NULL
-    
-    # extract and back transform where possible
+    O[["direct"]]$linear.predictor = NULL
+    O[["direct"]]$waic$local.waic = NULL
+    O[["direct"]]$waic$local.p.eff = NULL
+    O[["direct"]]$dic$local.dic = NULL
+    O[["direct"]]$dic$local.p.eff = NULL
+    O[["direct"]]$dic$local.dic.sat = NULL
+    O[["direct"]]$dic$family = NULL
+     
+  }
+
+  Omarginals = list()
+
+  if ( "marginals" %in% toget) {
+
+     # extract and back transform where possible
     if (exists( "marginals.fixed", fit)) {
       m = fit$marginals.fixed  # make a copy to do transformations upon
       fi = grep("Intercept", names(m) )
@@ -760,14 +796,13 @@ carstm_model_inla = function(
       }
 
       W$ID = row.names(W)
-      Osummary[["fixed_effects"]] = W
+      Omarginals[["fixed_effects"]] = W
       m = NULL
       W = NULL
       gc()
     }
 
- 
- 
+
     if (exists( "marginals.hyperpar", fit)) {
       
       # hyperpar (variance components)
@@ -795,7 +830,7 @@ carstm_model_inla = function(
         rownames(m) = gsub(" for", "", rownames(m) )
         rownames(m) = gsub(" the", "", rownames(m) )
         
-        Osummary[["random_effects"]] = m[, tokeep, drop =FALSE] 
+        Omarginals[["random_effects"]] = m[, tokeep, drop =FALSE] 
         m = NULL
         gc()
         
@@ -818,7 +853,7 @@ carstm_model_inla = function(
           m = fit$summary.hyperpar[rhos, 1:5]
           colnames(m) = tokeep
         }
-        Osummary[["random_effects"]] = rbind( Osummary[["random_effects"]],  m[, tokeep, drop =FALSE] )
+        Omarginals[["random_effects"]] = rbind( Omarginals[["random_effects"]],  m[, tokeep, drop =FALSE] )
         m = NULL
       }
       rhos = NULL
@@ -829,7 +864,7 @@ carstm_model_inla = function(
           m = fit$summary.hyperpar[phis, 1:5]
           colnames(m) = tokeep
         }
-        Osummary[["random_effects"]] = rbind( Osummary[["random_effects"]], m[, tokeep, drop =FALSE] )
+        Omarginals[["random_effects"]] = rbind( Omarginals[["random_effects"]], m[, tokeep, drop =FALSE] )
         m = NULL
       }
       phis = NULL
@@ -841,14 +876,14 @@ carstm_model_inla = function(
           m = fit$summary.hyperpar[unknown, 1:5]
           colnames(m) = tokeep
         }
-        Osummary[["random_effects"]] = rbind( Osummary[["random_effects"]], m[, tokeep, drop =FALSE])
+        Omarginals[["random_effects"]] = rbind( Omarginals[["random_effects"]], m[, tokeep, drop =FALSE])
         m = NULL
       }
       unknown = NULL
 
 
-      Osummary[["random_effects"]] = list_to_dataframe(  Osummary[["random_effects"]] )
-      Osummary[["random_effects"]]$ID = row.names( Osummary[["random_effects"]] )
+      Omarginals[["random_effects"]] = list_to_dataframe(  Omarginals[["random_effects"]] )
+      Omarginals[["random_effects"]]$ID = row.names( Omarginals[["random_effects"]] )
       
       gc()
 
@@ -863,13 +898,13 @@ carstm_model_inla = function(
              message( "failed to transform marginals .. copying directly from INLA summary instead: ", rnef)
             m = fit$summary.random[[rnef]][, inla_tokeep, drop =FALSE ]
             names(m) =  tokeep
-            Osummary[[rnef]] = m
-            Osummary[[rnef]]$ID = fit$summary.random[[rnef]]$ID
-            Osummary[[rnef]] = list_to_dataframe( Osummary[[rnef]] )
+            Omarginals[[rnef]] = m
+            Omarginals[[rnef]]$ID = fit$summary.random[[rnef]]$ID
+            Omarginals[[rnef]] = list_to_dataframe( Omarginals[[rnef]] )
           } else {
-            Osummary[[rnef]] = m[, tokeep, drop =FALSE]
-            Osummary[[rnef]]$ID = fit$summary.random[[rnef]]$ID
-            Osummary[[rnef]] = list_to_dataframe( Osummary[[rnef]] )
+            Omarginals[[rnef]] = m[, tokeep, drop =FALSE]
+            Omarginals[[rnef]]$ID = fit$summary.random[[rnef]]$ID
+            Omarginals[[rnef]] = list_to_dataframe( Omarginals[[rnef]] )
           }
         }
         m = raneff = NULL
@@ -881,16 +916,16 @@ carstm_model_inla = function(
     if (be_verbose)  {
       # message( "")
       # message( "Random effects:")
-      # print(  Osummary[["random_effects"]]  )   
+      # print(  Omarginals[["random_effects"]]  )   
       # message( "\n--- NOTE --- 'SD *' from marginal summaries are on link scale")
       # message( "--- NOTE --- SD * from posteriors simulations are on user scale")
       # message( "")
     }
 
     # save summary
-    fn_summ = gsub( "_fit~", "_summary_marginals~", fn_fit, fixed=TRUE )
-    read_write_fast( data=Osummary, file=fn_summ, compress=compress, compression_level=compression_level )
-    Osummary = NULL 
+    fn_marginals = gsub( "_fit~", "_marginals~", fn_fit, fixed=TRUE )
+    read_write_fast( data=Omarginals, file=fn_marginals, compress=compress, compression_level=compression_level )
+    Omarginals = NULL 
     gc()
   }  # end parameters
    
@@ -1104,15 +1139,17 @@ carstm_model_inla = function(
   
     }
 
-    # save random effects to file
-    fn_summary_randomeffects = gsub( "_fit~", "_summary_randomeffects~", fn_fit, fixed=TRUE )
-    read_write_fast( data=Orandom, file=fn_summary_randomeffects, compress=compress, compression_level=compression_level ) 
-    Orandom = NULL 
-    gc()
-  
 
   }  # end random spatio-temporal effects
- 
+   
+  # save random effects to file
+  if (length(Orandom) > 0) {
+    fn_randomeffects = gsub( "_fit~", "_randomeffects~", fn_fit, fixed=TRUE )
+    read_write_fast( data=Orandom, file=fn_randomeffects, compress=compress, compression_level=compression_level ) 
+    Orandom = NULL 
+    gc()
+  }
+
 
   Opredictions = list()
   
@@ -1226,7 +1263,7 @@ carstm_model_inla = function(
     }
 
     # save summary
-    fn_preds = gsub( "_fit~", "_summary_predictions~",  fn_fit, fixed=TRUE )
+    fn_preds = gsub( "_fit~", "_predictions~",  fn_fit, fixed=TRUE )
     read_write_fast( data=Opredictions, file=fn_preds, compress=compress, compression_level=compression_level ) 
     Opredictions = NULL 
     gc()

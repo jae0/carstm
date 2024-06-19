@@ -2,7 +2,7 @@
 carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL, DS="redo", 
     space_id=NULL, time_id=NULL, cyclic_id=NULL, theta=NULL, carstm_directory=NULL, 
     toget=NULL, nposteriors=NULL, posterior_simulations_to_retain=NULL,
-    compress="zstd", compression_level=1, fn_fit=NULL, fn_res=NULL, debug=FALSE, 
+    compress="qs-preset", qs_preset="high", compression_level=1, fn_fit=NULL, fn_res=NULL, debug=FALSE, 
     ... ) {
 
      if (0) {
@@ -49,7 +49,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
     fn_res = file.path( carstm_directory, basename( fn_res) )
   }
 
-  print(fn_res)
+  # print(fn_res)
   
   fit = NULL
   if (DS=="carstm_modelled_fit") {
@@ -68,7 +68,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
   }
 
   O = NULL
-  if (DS=="carstm_modelled_summary") {  # carstm_model.*carstm_modelled
+  if (DS=="carstm_modelled_summary") {   
 
     if (!is.null(fn_res)) {
       # message("Loading  data summary:  ", fn_res )
@@ -101,6 +101,37 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
       out = carstm_model_inla( O=p, data=data, sppoly=sppoly, fn_fit=fn_fit, fn_res=fn_res, compress=compress, redo_fit=FALSE, ... )
       return(out)
     }
+  }
+
+
+  if (DS=="carstm_modelinfo") {   
+    fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
+    O = read_write_fast( file=fn_modelinfo )
+    return( O )
+  }
+
+  if (DS=="carstm_marginals") {   
+    fn_marginals = gsub( "_fit~", "_marginals~", fn_fit, fixed=TRUE )
+    Omarginals = read_write_fast( file=fn_marginals )
+    return( Omarginals )
+  }
+
+  if (DS=="carstm_randomeffects") {   
+    fn_randomeffects = gsub( "_fit~", "_randomeffects~", fn_fit, fixed=TRUE )
+    Orandom = read_write_fast( file=fn_randomeffects ) 
+    return( Orandom )  
+  }
+
+  if (DS=="carstm_predictions") {   
+    fn_preds = gsub( "_fit~", "_predictions~",  fn_fit, fixed=TRUE )
+    Opredictions = read_write_fast( file=fn_preds ) 
+    return( Opredictions)  
+  }
+
+  if (DS=="carstm_samples") {   
+      fn_samples = gsub( "_fit~", "_samples~", fn_fit, fixed=TRUE )
+      Osamples = read_write_fast(  file=fn_samples ) 
+      return( Osamples )
   }
 
 

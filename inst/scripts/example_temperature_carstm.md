@@ -47,8 +47,8 @@ standard_libs = c(
 # fast compression in R using zstd or lz4
 # install.packages("devtools") 
 # devtools::install_github("fstPackage/fst", ref = "develop")
-install.packages("stringfish", type="source", configure.args="--with-simd=AVX2")
-install.packages("qs", type="source" )
+# install.packages("stringfish", type="source", configure.args="--with-simd=AVX2")
+# install.packages("qs", type="source" )
 
 # aegis.* libs (found on github.com/jae0)
 # at a minimum install aegis to bootstrap the others
@@ -305,8 +305,6 @@ res = carstm_model(
     data=M,
     sppoly=sppoly,
     redo_fit=TRUE,  # force re-fit of model ?
-    compress="zstd",
-    compression_level=1, # zstd and lz4 ranges from 0-100, gzip, xz, bzip2 from 0-9
     # debug = "posterior_samples_spatial",
     toget = c("summary", "random_spatial", "predictions"), 
     posterior_simulations_to_retain=c("predictions"), 
@@ -326,6 +324,19 @@ res = carstm_model(
     verbose=TRUE 
 )    
 
+
+# NOTE: the above creates a number of files in the specified directory (here: ~/test/test_ocean_bottom_temperatures_halifax/modelled/test_basic_form/ )
+# NOTE: these files have an extentsion of *.RDS. This is due to historical reasons. Currently they are saved as **qs** files, but still retain the RDS extension. The RDS format can still be created by choosing compress="gzip" (or bzip2, or xz -- standard RDS compression formats
+
+# your timings will vary with OS, number of cores/threads and RAM/CPU ...
+---------------------------------------
+Run times:
+Fit: 48.04 mins
+Extract results from marginals: 6.536 mins
+Posterior simulations: 1.16 mins
+Total: 56.32 mins
+---------------------------------------
+
 # params close to the final
 # maxld= -11080.768 fn= 70 theta= -0.670 0.749 0.004 0.981 0.432 3.445 1.702 2.507 -1.454 0.454 3.474 0.064 -8.755 [7.45, 16.293]
  
@@ -343,14 +354,20 @@ res = carstm_model(
 		# theta[11] = [Logit phi for space_time]
 		# theta[12] = [Group rho_intern for space_time]
 
-
-(res$summary)
+ 
 
 ```
 
 This provides the following as a solution (with only a simple cyclic/seasonal component):
 
 ```r
+# useful if re-starting model fits ...
+# modelinfo = carstm_model(  p=p, sppoly=sppoly, DS="carstm_modelinfo" )  # slow only used inside of carstm fitting
+
+# to see results without reloading the fit as it is a large file
+smmy = carstm_model(  p=p, sppoly=sppoly, DS="carstm_modelled_summary" )  # parameters in p and direct summary
+smmy$direct
+
 
 Deviance Information Criterion (DIC) ...............: 67030.29
 Deviance Information Criterion (DIC, saturated) ....: 21918.56
@@ -401,18 +418,23 @@ fit$summary$dic$p.eff
 
 # plot(fit)
 # plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
+fit = NULL; gc()
 
 # to reload saved results summary
 # res = carstm_model( p=p, sppoly=sppoly, DS="carstm_modelled_summary")
- 
+res = NULL; gc()
+
+
 # annual component
-ts =  res$random$time 
+marginals = carstm_model(  p=p, sppoly=sppoly, DS="carstm_marginals" ) 
+
+ts =  marginals$time 
 plot( mean ~ ID, ts, type="b", ylim=c(-2,2), lwd=1.5, xlab="year")
 lines( quant0.025 ~ ID, ts, col="gray", lty="dashed")
 lines( quant0.975 ~ ID, ts, col="gray", lty="dashed")
 
 # seasonal component
-ts =  res$random$cyclic
+ts =  marginals$cyclic
 plot( mean ~ID, ts, type="b", ylim=c(-1, 1), lwd=1.5, xlab="fractional year")
 lines( quant0.025 ~ID, ts, col="gray", lty="dashed")
 lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
@@ -424,8 +446,12 @@ lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
 # persistent spatial effects "re_total" ( icar neighbourhood random effects + unstructured random effects )
 
 # you might require the "grid"  library:  install.packages("grid")
+randomeffects = carstm_model(  p=p, sppoly=sppoly, DS="carstm_randomeffects" ) 
+
 require(grid)
-plt = carstm_map(  res=res, vn=c( "random", "space", "re_total" ), 
+require(js)
+
+plt = carstm_map(  res=randomeffects, vn=c(  "space", "re_total" ), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title="Bottom temperature spatial effects (Celsius)"
 )
@@ -444,20 +470,27 @@ Predictions can be accessed as well:
 ```r
  
 # maps of some of the results .. this brings a webbrowser interface
+predictions = carstm_model(  p=p, sppoly=sppoly, DS="carstm_predictions" ) 
+
 tmatch="2010"
 umatch="0.75"  # == 0.75*12 = 9 (ie. Sept)  
 
-plt = carstm_map( res=res, vn="predictions", tmatch=tmatch, umatch=umatch, 
+plt = carstm_map( res=predictions, tmatch=tmatch, umatch=umatch, 
     breaks=seq(-1, 9, by=2), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title=paste( "Bottom temperature predictions", tmatch, umatch)  
 )
 plt
 
+# and the posterior samples:
+psamples =  carstm_model(  p=p, sppoly=sppoly, DS="carstm_samples" )
+
 ```
 ![../../docs/media/temperature_prediction.png](../../docs/media/temperature_prediction.png)
 
 To remove random effects and leave the "latent signals" will require some more work but relatively straightforward to do as you have posterior samples to work with...
+
+
 
 # finished
 
