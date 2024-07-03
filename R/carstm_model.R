@@ -164,7 +164,8 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
 
   if ( grepl("inla", carstm_modelengine) ) {
     out = carstm_model_inla( O=p, data=data, sppoly=sppoly, fn_fit=fn_fit, fn_res=fn_res, 
-      compress=compress, compression_level=compression_level, toget=toget,
+      compress=compress, compression_level=compression_level, qs_preset=qs_preset,
+      toget=toget,
       nposteriors=nposteriors, posterior_simulations_to_retain=posterior_simulations_to_retain,
       space_id=space_id, time_id=time_id, cyclic_id=cyclic_id, theta=theta, debug=debug, ... )
   }

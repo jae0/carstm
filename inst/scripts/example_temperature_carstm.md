@@ -47,7 +47,7 @@ standard_libs = c(
 # fast compression in R using zstd or lz4
 # install.packages("devtools") 
 # devtools::install_github("fstPackage/fst", ref = "develop")
-# install.packages("stringfish", type="source", configure.args="--with-simd=AVX2")
+
 # install.packages("qs", type="source" )
 
 # aegis.* libs (found on github.com/jae0)

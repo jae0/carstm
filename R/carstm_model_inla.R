@@ -11,8 +11,9 @@ carstm_model_inla = function(
   redo_posterior_simulations = TRUE,
   summarize_simulations=FALSE,
   theta=NULL,
-  compress="gzip",
-  compression_level=1,
+  compress="qs-preset", 
+  compression_level=1
+  qs_preset="high", 
   toget = c("modelinfo", "marginals", "random_spatial", "predictions"), 
   nposteriors=NULL, 
   posterior_simulations_to_retain=c( "predictions" ),
@@ -568,7 +569,7 @@ carstm_model_inla = function(
 
 
     fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
-    read_write_fast( data=O, file=fn_modelinfo, compress=compress, compression_level=compression_level )
+    read_write_fast( data=O, file=fn_modelinfo, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
       
     gc()
 
@@ -580,7 +581,7 @@ carstm_model_inla = function(
 
     if (be_verbose)  message( "\nModel fit complete. Saving ...\n", fn_fit )
 
-    read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level )
+    read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
 
   } # END redo fit
 
@@ -924,7 +925,7 @@ carstm_model_inla = function(
 
     # save summary
     fn_marginals = gsub( "_fit~", "_marginals~", fn_fit, fixed=TRUE )
-    read_write_fast( data=Omarginals, file=fn_marginals, compress=compress, compression_level=compression_level )
+    read_write_fast( data=Omarginals, file=fn_marginals, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
     Omarginals = NULL 
     gc()
   }  # end parameters
@@ -1145,7 +1146,7 @@ carstm_model_inla = function(
   # save random effects to file
   if (length(Orandom) > 0) {
     fn_randomeffects = gsub( "_fit~", "_randomeffects~", fn_fit, fixed=TRUE )
-    read_write_fast( data=Orandom, file=fn_randomeffects, compress=compress, compression_level=compression_level ) 
+    read_write_fast( data=Orandom, file=fn_randomeffects, compress=compress, compression_level=compression_level, qs_preset=qs_preset ) 
     Orandom = NULL 
     gc()
   }
@@ -1264,7 +1265,7 @@ carstm_model_inla = function(
 
     # save summary
     fn_preds = gsub( "_fit~", "_predictions~",  fn_fit, fixed=TRUE )
-    read_write_fast( data=Opredictions, file=fn_preds, compress=compress, compression_level=compression_level ) 
+    read_write_fast( data=Opredictions, file=fn_preds, compress=compress, compression_level=compression_level, qs_preset=qs_preset ) 
     Opredictions = NULL 
     gc()
      
@@ -1766,7 +1767,7 @@ carstm_model_inla = function(
 
       # save summary
       fn_samples = gsub( "_fit~", "_samples~", fn_fit, fixed=TRUE )
-      read_write_fast( data=Osamples, file=fn_samples, compress=compress, compression_level=compression_level ) 
+      read_write_fast( data=Osamples, file=fn_samples, compress=compress, compression_level=compression_level, qs_preset=qs_preset ) 
       Osamples = NULL 
       gc()
       
@@ -1788,10 +1789,10 @@ carstm_model_inla = function(
   if (is.null(fn_res)) {
       message( "Return object is 'fit$results' (and not 'fit')")
       fit$results = O
-      read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level )
+      read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
   } else {
       message( "Saving results summary as: \n", fn_res )
-      read_write_fast( data=O, file=fn_res, compress=compress, compression_level=compression_level )
+      read_write_fast( data=O, file=fn_res, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
   }
   
 
