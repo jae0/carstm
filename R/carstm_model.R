@@ -2,7 +2,7 @@
 carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL, DS="redo", 
     space_id=NULL, time_id=NULL, cyclic_id=NULL, theta=NULL, carstm_directory=NULL, 
     toget=NULL, nposteriors=NULL, posterior_simulations_to_retain=NULL,
-    compress="qs-preset", qs_preset="high", compression_level=1, fn_fit=NULL, fn_res=NULL, debug=FALSE, 
+    compress="qs-preset", qs_preset="high", compression_level=3, fn_fit=NULL, fn_res=NULL, debug=FALSE, 
     ... ) {
 
      if (0) {
