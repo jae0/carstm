@@ -1785,14 +1785,14 @@ carstm_model_inla = function(
    
  
   
-  if (is.null(fn_res)) {
-      message( "Return object is 'fit$results' (and not 'fit')")
-      fit$results = O
-      read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
-  } else {
-      message( "Saving results summary as: \n", fn_res )
-      read_write_fast( data=O, file=fn_res, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
-  }
+  # if (is.null(fn_res)) {
+  #     message( "Return object is 'fit$results' (and not 'fit')")
+  #     fit$results = O
+  #     read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
+  # } else {
+  #     message( "Saving results summary as: \n", fn_res )
+  #     read_write_fast( data=O, file=fn_res, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
+  # }
   
 
   run_end  = Sys.time()

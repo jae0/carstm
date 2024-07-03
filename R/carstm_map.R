@@ -9,6 +9,7 @@
     cyclic="cyclic_name",
     stat_var="mean",
     alpha=0.95,
+    modelinfo=NULL,
     sppoly=NULL,
     smatch=NULL, 
     tmatch=NULL, 
@@ -40,23 +41,23 @@
         toplot = carstm_results_unpack( res, vn )
 
         vv = which(dimnames(toplot)$stat == stat_var)
-        if ( exists("sppoly", res)) {
-          if (is.null(sppoly)) sppoly = res[["sppoly"]]
+        if ( exists("sppoly", modelinfo)) {
+          if (is.null(sppoly)) sppoly = modelinfo[["sppoly"]]
         }
-        if (exists(space, res)) {
-          suid = res[[space]]
+        if (exists(space, modelinfo)) {
+          suid = modelinfo[[space]]
           if (is.null(smatch)) smatch = suid
           js = match( as.character( sppoly[["AUID"]] ), smatch )  # should match exactly but in case sppoly is a subset
         }
-        if (exists(time, res)) {
-          tuid = res[[time]]
+        if (exists(time, modelinfo)) {
+          tuid = modelinfo[[time]]
           if (is.null(tmatch)) tmatch = tuid
-          jt = match( tmatch, res[[time]] )
+          jt = match( tmatch, modelinfo[[time]] )
         }
-        if (exists(cyclic, res)) {
-          uuid = res[[cyclic]]
+        if (exists(cyclic, modelinfo)) {
+          uuid = modelinfo[[cyclic]]
           if (is.null(umatch)) umatch = uuid
-          ju = match( umatch, res[[cyclic]] )
+          ju = match( umatch, modelinfo[[cyclic]] )
         }
 
         data_dimensionality = ifelse (is.vector(toplot), 1, length(dim(toplot) ) )

@@ -4,8 +4,11 @@ carstm_results_unpack = function( res, vn ) {
   vn_len = length(vn)
 
   if (vn_len == 0) return( res)
+  if (vn_len == 1) {
+    if (is.null(names(res))) return( res)
+  }
 
-  switch( len_vn,
+  switch( vn_len,
     res[[ vn[1] ]],
     res[[ vn[1] ]] [[vn[2] ]],
     res[[ vn[1] ]] [[vn[2] ]] [[ vn[3] ]],
