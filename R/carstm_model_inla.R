@@ -526,8 +526,6 @@ carstm_model_inla = function(
     if ("try-error" %in% class(fit) ) warning("model fit error")
 
 
-    message( "Fitted model saved as: ", fn_fit )
-
     outputdir = dirname(fn_fit)
     if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
 
@@ -571,6 +569,8 @@ carstm_model_inla = function(
     fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
     read_write_fast( data=O, file=fn_modelinfo, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
       
+    message( "Model info saved as: \n", fn_modelinfo )
+
     gc()
 
 
@@ -578,10 +578,9 @@ carstm_model_inla = function(
     fit$.args = NULL
 
     inla_args= NULL; gc()
-
-    if (be_verbose)  message( "\nModel fit complete. Saving ...\n", fn_fit )
-
+ 
     read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
+    if (be_verbose)  message( "\nModel fit saved as: \n", fn_fit )
 
   } # END redo fit
 
@@ -607,17 +606,17 @@ carstm_model_inla = function(
  
   # do the computations here as fit can be massive ... best not to copy, etc ..
 
-
   # --------------------------------------------
   # --------------------------------------------
   # --------------------------------------------
   fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
   if (exists("modelinfo", fit)) {
-      O = fit$modelinfo  # priority to the fit$modelinfo
+    O = fit$modelinfo  # priority to the fit$modelinfo
   } else {
     if (file.exists(fn_modelinfo)) O = aegis::read_write_fast( fn_modelinfo )
   } 
-  
+
+
 
   if (exists("debug")) if (is.character(debug)) if (debug=="extract") browser()
 
