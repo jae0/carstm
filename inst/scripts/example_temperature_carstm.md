@@ -44,9 +44,9 @@ standard_libs = c(
 )
 #  warning INLA has a lot of dependencies 
 
-# fast compression in R using zstd or lz4
+# fast compression in R using zstd       or lz4
 # install.packages("devtools") 
-# devtools::install_github("fstPackage/fst", ref = "develop")
+# devtools::install_github("fstPackage/fst", ref = "develop") -- do not used ... limit to file size use qs -methods by default
 
 # install.packages("qs", type="source" )
 
