@@ -26,19 +26,19 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
   if ( "generic" %in% operation) {
     # simple wrapper to data .. direct access would give more control if a single set is wanted .. 
     # this is more useful when complex transformations are required using multiple sims (e.g. 2 or 3-operations below)
-    gen = carstm_model( p=pW, DS="carstm_modelled_summary", carstm_directory=carstm_directory  )
+    gen = carstm_model( p=pW, DS="carstm_samples", carstm_directory=carstm_directory  )
 
     if ( denoise == "" ) {
-      gen =  gen[["sims"]][["predictions"]]
+      gen =  gen[["predictions"]]
     } else {
       if (grepl( "spatial", denoise)) vnS = gen[["fm"]][["vn"]][["S"]]
       if (grepl( "spatiotemporal", denoise)) vnST = gen[["fm"]][["vn"]][["S2"]]
-      if ("spatial" %in% denoise )  gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnS]] [["re_total"]] 
-      if ("spatial_iid" %in% denoise )  gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnS]] [["re_unstructured"]]
-      if ("spatial_bym2" %in% denoise )  gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnS]] [["re_neighbourhood"]]
-      if ("spatiotemporal" %in% denoise ) gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnST]] [["re_total"]] 
-      if ("spatiotemporal_iid" %in% denoise ) gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnST]] [["re_unstructured"]]
-      if ("spatiotemporal_bym2" %in% denoise ) gen = gen[["sims"]][["predictions"]] - gen[["sims"]] [[vnST]] [["re_neighbourhood"]]
+      if ("spatial" %in% denoise )  gen = gen[["predictions"]] - gen [[vnS]] [["re_total"]] 
+      if ("spatial_iid" %in% denoise )  gen = gen[["predictions"]] - gen [[vnS]] [["re_unstructured"]]
+      if ("spatial_bym2" %in% denoise )  gen = gen[["predictions"]] - gen [[vnS]] [["re_neighbourhood"]]
+      if ("spatiotemporal" %in% denoise ) gen = gen[["predictions"]] - gen [[vnST]] [["re_total"]] 
+      if ("spatiotemporal_iid" %in% denoise ) gen = gen[["predictions"]] - gen [[vnST]] [["re_unstructured"]]
+      if ("spatiotemporal_bym2" %in% denoise ) gen = gen[["predictions"]] - gen [[vnST]] [["re_neighbourhood"]]
     }
 
     gen[!is.finite(gen)] = NA
@@ -63,18 +63,18 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
 
   if ( "presence_absence" %in% operation ) {
-    pa = carstm_model( p=pH, DS="carstm_modelled_summary", carstm_directory=carstm_directory    )
+    pa = carstm_model( p=pH, DS="carstm_samples", carstm_directory=carstm_directory    )
     if ( denoise == "" ) {
-      pa = pa[["sims"]][["predictions"]]
+      pa = pa[["predictions"]]
     } else {
       if (grepl( "spatial", denoise)) vnS = pa[["fm"]][["vn"]][["S"]]
       if (grepl( "spatiotemporal", denoise)) vnST = pa[["fm"]][["vn"]][["S2"]]
-      if ("spatial" %in% denoise )  pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnS]] [["re_total"]] 
-      if ("spatial_iid" %in% denoise )  pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnS]] [["re_unstructured"]]
-      if ("spatial_bym2" %in% denoise )  pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnS]] [["re_neighbourhood"]]
-      if ("spatiotemporal" %in% denoise ) pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnST]] [["re_total"]] 
-      if ("spatiotemporal_iid" %in% denoise ) pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnST]] [["re_unstructured"]]
-      if ("spatiotemporal_bym2" %in% denoise ) pa = pa[["sims"]][["predictions"]] - pa[["sims"]] [[vnST]] [["re_neighbourhood"]]
+      if ("spatial" %in% denoise )  pa = pa[["predictions"]] - pa [[vnS]] [["re_total"]] 
+      if ("spatial_iid" %in% denoise )  pa = pa[["predictions"]] - pa [[vnS]] [["re_unstructured"]]
+      if ("spatial_bym2" %in% denoise )  pa = pa[["predictions"]] - pa [[vnS]] [["re_neighbourhood"]]
+      if ("spatiotemporal" %in% denoise ) pa = pa[["predictions"]] - pa [[vnST]] [["re_total"]] 
+      if ("spatiotemporal_iid" %in% denoise ) pa = pa[["predictions"]] - pa [[vnST]] [["re_unstructured"]]
+      if ("spatiotemporal_bym2" %in% denoise ) pa = pa[["predictions"]] - pa [[vnST]] [["re_neighbourhood"]]
     }
 
     j = which( !is.finite(pa) )
@@ -87,18 +87,18 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
   # construct meansizes matrix used to convert number to weight
   if ( "meansize" %in% operation) {
-    wgts = carstm_model( p=pW, DS="carstm_modelled_summary", carstm_directory=carstm_directory  )
+    wgts = carstm_model( p=pW, DS="carstm_samples", carstm_directory=carstm_directory  )
     if ( denoise == "" ) {
-      wgts = wgts[["sims"]][["predictions"]]
+      wgts = wgts[["predictions"]]
     } else {
       if (grepl( "spatial", denoise)) vnS = wgts[["fm"]][["vn"]][["S"]]
       if (grepl( "spatiotemporal", denoise)) vnST = wgts[["fm"]][["vn"]][["S2"]]
-      if ("spatial" %in% denoise )  wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnS]] [["re_total"]] 
-      if ("spatial_iid" %in% denoise )  wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnS]] [["re_unstructured"]]
-      if ("spatial_bym2" %in% denoise )  wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnS]] [["re_neighbourhood"]]
-      if ("spatiotemporal" %in% denoise ) wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnST]] [["re_total"]] 
-      if ("spatiotemporal_iid" %in% denoise ) wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnST]] [["re_unstructured"]]
-      if ("spatiotemporal_bym2" %in% denoise ) wgts = wgts[["sims"]][["predictions"]] - wgts[["sims"]] [[vnST]] [["re_neighbourhood"]]
+      if ("spatial" %in% denoise )  wgts = wgts[["predictions"]] - wgts [[vnS]] [["re_total"]] 
+      if ("spatial_iid" %in% denoise )  wgts = wgts[["predictions"]] - wgts [[vnS]] [["re_unstructured"]]
+      if ("spatial_bym2" %in% denoise )  wgts = wgts[["predictions"]] - wgts [[vnS]] [["re_neighbourhood"]]
+      if ("spatiotemporal" %in% denoise ) wgts = wgts[["predictions"]] - wgts [[vnST]] [["re_total"]] 
+      if ("spatiotemporal_iid" %in% denoise ) wgts = wgts[["predictions"]] - wgts [[vnST]] [["re_unstructured"]]
+      if ("spatiotemporal_bym2" %in% denoise ) wgts = wgts[["predictions"]] - wgts [[vnST]] [["re_neighbourhood"]]
     }
 
     j = which( !is.finite(wgts) )
@@ -122,18 +122,18 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
 
   if ( "biomass" %in% operation) {
-    biom = carstm_model( p=pB, DS="carstm_modelled_summary", carstm_directory=carstm_directory   )
+    biom = carstm_model( p=pB, DS="carstm_samples", carstm_directory=carstm_directory   )
     if ( denoise == "" ) {
-      biom = biom[["sims"]][["predictions"]]
+      biom = biom[["predictions"]]
     } else {
       if (grepl( "spatial", denoise)) vnS = biom[["fm"]][["vn"]][["S"]]
       if (grepl( "spatiotemporal", denoise)) vnST = biom[["fm"]][["vn"]][["S2"]]
-      if ("spatial" %in% denoise )  biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnS]] [["re_total"]] 
-      if ("spatial_iid" %in% denoise )  biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnS]] [["re_unstructured"]]
-      if ("spatial_bym2" %in% denoise )  biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnS]] [["re_neighbourhood_neighbourhood"]]
-      if ("spatiotemporal" %in% denoise ) biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnST]] [["re_total"]] 
-      if ("spatiotemporal_iid" %in% denoise ) biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnST]] [["re_unstructured"]]
-      if ("spatiotemporal_bym2" %in% denoise ) biom = biom[["sims"]][["predictions"]] - biom[["sims"]] [[vnST]] [["re_neighbourhood"]]
+      if ("spatial" %in% denoise )  biom = biom[["predictions"]] - biom [[vnS]] [["re_total"]] 
+      if ("spatial_iid" %in% denoise )  biom = biom[["predictions"]] - biom [[vnS]] [["re_unstructured"]]
+      if ("spatial_bym2" %in% denoise )  biom = biom[["predictions"]] - biom [[vnS]] [["re_neighbourhood_neighbourhood"]]
+      if ("spatiotemporal" %in% denoise ) biom = biom[["predictions"]] - biom [[vnST]] [["re_total"]] 
+      if ("spatiotemporal_iid" %in% denoise ) biom = biom[["predictions"]] - biom [[vnST]] [["re_unstructured"]]
+      if ("spatiotemporal_bym2" %in% denoise ) biom = biom[["predictions"]] - biom [[vnST]] [["re_neighbourhood"]]
     }
 
     j = which( !is.finite(biom) )
@@ -156,19 +156,19 @@ carstm_posterior_simulations = function( p=NULL, pN=NULL, pW=NULL, pH=NULL, pB=N
 
 
   if ( "number" %in% operation ) {
-    nums = carstm_model( p=pN, DS="carstm_modelled_summary", carstm_directory=carstm_directory  )
+    nums = carstm_model( p=pN, DS="carstm_samples", carstm_directory=carstm_directory  )
         
     if ( denoise == "" ) {
-      nums = nums[["sims"]][["predictions"]]
+      nums = nums[["predictions"]]
     } else {
       if (grepl( "spatial", denoise)) vnS = nums[["fm"]][["vn"]][["S"]]
       if (grepl( "spatiotemporal", denoise)) vnST = nums[["fm"]][["vn"]][["S2"]]
-      if ("spatial" %in% denoise )  nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnS]] [["re_total"]] 
-      if ("spatial_iid" %in% denoise )  nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnS]] [["re_unstructured"]]
-      if ("spatial_bym2" %in% denoise )  nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnS]] [["re_neighbourhood"]]
-      if ("spatiotemporal" %in% denoise ) nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnST]] [["re_total"]] 
-      if ("spatiotemporal_iid" %in% denoise ) nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnST]] [["re_unstructured"]]
-      if ("spatiotemporal_bym2" %in% denoise ) nums = nums[["sims"]][["predictions"]] - nums[["sims"]] [[vnST]] [["re_neighbourhood"]]
+      if ("spatial" %in% denoise )  nums = nums[["predictions"]] - nums [[vnS]] [["re_total"]] 
+      if ("spatial_iid" %in% denoise )  nums = nums[["predictions"]] - nums [[vnS]] [["re_unstructured"]]
+      if ("spatial_bym2" %in% denoise )  nums = nums[["predictions"]] - nums [[vnS]] [["re_neighbourhood"]]
+      if ("spatiotemporal" %in% denoise ) nums = nums[["predictions"]] - nums [[vnST]] [["re_total"]] 
+      if ("spatiotemporal_iid" %in% denoise ) nums = nums[["predictions"]] - nums [[vnST]] [["re_unstructured"]]
+      if ("spatiotemporal_bym2" %in% denoise ) nums = nums[["predictions"]] - nums [[vnST]] [["re_neighbourhood"]]
     }
 
     j = which( !is.finite(nums) )

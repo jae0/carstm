@@ -7,7 +7,7 @@
     # permit passing a function rather than data directly .. less RAM usage in parent call
     if (class(data)=="character") assign("data", eval(parse(text=data) ) )
 
-    fn_res=tempfile(pattern="res_", fileext=".RDS")
+    fn_res= gsub( "_fit~", "_results~", fn_fit, fixed=TRUE )
 
     vn = O$variabletomodel
 

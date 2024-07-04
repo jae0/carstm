@@ -13,7 +13,7 @@ set.seed(12345)
 
 require(lubridate)
 fn = system.file("extdata", "aegis_spacetime_test.RDS", package="carstm" )
-bottemp = read_write_fast( fn )   
+bottemp = readRDS( fn )   
 bottemp$yr = year(bottemp$date )
 
 # bottemp = bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]

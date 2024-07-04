@@ -902,10 +902,13 @@ carstm_model_inla = function(
   
   # random effects (random spatial and random spatiotemporal) from INLA's marginals
   Orandom = list()
+  # copy a few items to keep each output autonomous
+  Orandom$sppoly = sppoly
+  Orandom$fm = O$fm
+
   if (exists("time_name", O)) Orandom$time_name = O$time_name
   if (exists("space_name", O)) Orandom$space_name = O$space_name
   if (exists("cyclic_name", O)) Orandom$cyclic_name = O$cyclic_name
-  Orandom$sppoly = sppoly
   
   # separate out random spatial and randomm spatiotemporal (as they can be large arrays)
   if ("random_spatial" %in% toget) {
@@ -1126,11 +1129,13 @@ carstm_model_inla = function(
 
 
   Opredictions = list()
-  
+  # copy a few items to keep each output autonomous
+  Opredictions$sppoly = sppoly
+  Opredictions$fm = O$fm
+
   if (exists("time_name", O)) Opredictions$time_name = O$time_name
   if (exists("space_name", O)) Opredictions$space_name = O$space_name
   if (exists("cyclic_name", O)) Opredictions$cyclic_name = O$cyclic_name
-  Opredictions$sppoly = sppoly
 
   if ("predictions" %in% toget ) {
 
@@ -1172,7 +1177,7 @@ carstm_model_inla = function(
           for (k in 1:length(names(m))) {
             W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
-          Opredictions = W[, tokeep, drop =FALSE]
+          Opredictions[["predictions"]] = W[, tokeep, drop =FALSE]
           m = W = NULL
         }
 
@@ -1203,7 +1208,7 @@ carstm_model_inla = function(
           for (k in 1:length(names(m))) {
             W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto)
           }
-          Opredictions = W[,, tokeep, drop =FALSE]
+          Opredictions[["predictions"]] = W[,, tokeep, drop =FALSE]
       
           m = W = NULL
         }
@@ -1235,7 +1240,7 @@ carstm_model_inla = function(
           for (k in 1:length(names(m))) {
             W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
-          Opredictions = W[,,, tokeep, drop =FALSE]
+          Opredictions[["predictions"]] = W[,,, tokeep, drop =FALSE]
           m = W = NULL
         }
       }
@@ -1304,11 +1309,12 @@ carstm_model_inla = function(
     fit = NULL; gc()  # no longer needed .. remove from memory
 
     Osamples = list()
-    
+    # copy a few items to keep each output autonomous
+    Osamples$sppoly = sppoly
+    Osamples$fm = O$fm
     if (exists("time_name", O)) Osamples$time_name = O$time_name
     if (exists("space_name", O)) Osamples$space_name = O$space_name
     if (exists("cyclic_name", O)) Osamples$cyclic_name = O$cyclic_name
-    Osamples$sppoly = sppoly
 
     if (summarize_simulations) Osamples[["summary"]] = list()
 
@@ -1323,6 +1329,8 @@ carstm_model_inla = function(
 
     if ( "summary" %in% posterior_simulations_to_retain ) {
       
+      # useful to check representativeness of samples
+
       if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_summary") browser()
       # -- check variable names here
       # posteriors
