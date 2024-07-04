@@ -12,7 +12,8 @@ The example data is bounded by longitudes (-65, -62) and latitudes (45, 43). It 
 set.seed(12345)
 
 require(lubridate)
-bottemp = aegis::read_write_fast( system.file("extdata", "aegis_spacetime_test.RDS", package="carstm" ) )   
+fn = system.file("extdata", "aegis_spacetime_test.RDS", package="carstm" )
+bottemp = read_write_fast( fn )   
 bottemp$yr = year(bottemp$date )
 
 # bottemp = bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
@@ -45,8 +46,6 @@ standard_libs = c(
 #  warning INLA has a lot of dependencies 
 
 # fast compression in R using zstd       or lz4
-# install.packages("devtools") 
-# devtools::install_github("fstPackage/fst", ref = "develop") -- do not used ... limit to file size use qs -methods by default
 
 # install.packages("qs", type="source" )
 
@@ -89,7 +88,7 @@ p$quantile_bounds =c(0.005, 0.995) # trim upper bounds (in posterior predictions
 # space resolution
 p$aegis_proj4string_planar_km = projection_proj4string("utm20")
 
-p$dres = 1/60/4 # resolution in angular units (degrees)
+p$dres =res 1/60/4 # resolution in angular units (degrees)
 p$pres = 1  # spatial resolution in planar units (km)
 p$lon0 = min( bottemp$lon )
 p$lon1 = max( bottemp$lon )
@@ -314,6 +313,7 @@ res = carstm_model(
     family="gaussian",  # inla family
     theta=theta,  # start closer to solution to speed up estimation
     control.mode = list(restart=TRUE), # without this inla seems to assume theta are true hypers
+    # improve.hyperparam.estimates=TRUE,
     # if problems, try other inla options: eg: 
     # control.inla = list( strategy='adaptive', int.strategy="eb" , optimise.strategy="plain", strategy='laplace', fast=FALSE),
     # control.inla = list( strategy='adaptive', int.strategy="eb" ),
@@ -365,39 +365,42 @@ This provides the following as a solution (with only a simple cyclic/seasonal co
 # modelinfo = carstm_model(  p=p, sppoly=sppoly, DS="carstm_modelinfo" )  # slow only used inside of carstm fitting
 
 # to see results without reloading the fit as it is a large file
-smmy = carstm_model(  p=p, sppoly=sppoly, DS="carstm_modelled_summary" )  # parameters in p and direct summary
-smmy$direct
 
+# parameters back transformed onto user scale
+cs = carstm_model(  p=p, sppoly=sppoly, DS="carstm_summary" )  # parameters in p and direct summary
+cs$direct
 
-Deviance Information Criterion (DIC) ...............: 67030.29
-Deviance Information Criterion (DIC, saturated) ....: 21918.56
-Effective number of parameters .....................: 2634.19
+Deviance Information Criterion (DIC) ...............: 67022.21
+Deviance Information Criterion (DIC, saturated) ....: 21912.19
+Effective number of parameters .....................: 2631.73
 
-Watanabe-Akaike information criterion (WAIC) ...: 69140.26
-Effective number of parameters .................: 3281.43
+Watanabe-Akaike information criterion (WAIC) ...: 69111.04
+Effective number of parameters .................: 3267.47
 
-Marginal log-Likelihood:  -18016.32 
- is computed 
+Marginal log-Likelihood:  -18018.17 
+ 
 
-$fixed_effects
+cs$fixed 
+
              mean     sd quant0.025 quant0.5 quant0.975          ID
-(Intercept) 7.379 0.1291      7.125    7.379      7.635 (Intercept)
+(Intercept) 7.379 0.1283      7.125    7.378      7.632 (Intercept)
 
-$random_effects
-                                                 mean        sd quant0.025
-SD Gaussian observations                      1.27369 7.619e-03    1.25889
-SD time                                       0.65066 7.701e-02    0.51446
-SD cyclic                                     0.43620 8.436e-02    0.28205
-SD space                                      0.10550 6.700e-02    0.02044
-SD inla.group(z, method = "quantile", n = 11) 1.05084 2.638e-01    0.62464
-SD space_cyclic                               0.80851 2.790e-02    0.75673
-SD space_time                                 0.67077 1.989e-02    0.63245
-Rho for time                                  0.02760 7.374e-02   -0.10623
-GroupRho for space_cyclic                     0.70578 2.154e-02    0.66369
-GroupRho for space_time                       0.05173 4.889e-02   -0.04464
-Phi for space                                 0.95138 5.275e-02    0.80308
-Phi for space_cyclic                          1.00000 4.321e-06    0.99999
-Phi for space_time                            0.99123 6.782e-03    0.97349
+cs$random
+                                                 mean       sd quant0.025
+SD Gaussian observations                      1.27362 0.007547    1.25886
+SD time                                       0.70293 0.066150    0.58447
+SD cyclic                                     0.46503 0.065247    0.34474
+SD space                                      0.29297 0.073496    0.16444
+SD inla.group(z, method = "quantile", n = 11) 0.88412 0.107622    0.69891
+SD space_cyclic                               0.76489 0.028283    0.71282
+SD space_time                                 0.67056 0.019227    0.63355
+Rho for time                                  0.01482 0.041646   -0.05911
+GroupRho for space_cyclic                     0.66438 0.025900    0.61303
+GroupRho for space_time                       0.04736 0.049169   -0.04814
+Phi for space                                 0.98326 0.010477    0.95668
+Phi for space_cyclic                          0.99310 0.007979    0.97208
+Phi for space_time                            0.99141 0.008420    0.96908
+
 
 ```
 
@@ -420,21 +423,16 @@ fit$summary$dic$p.eff
 # plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
 fit = NULL; gc()
 
-# to reload saved results summary
-# res = carstm_model( p=p, sppoly=sppoly, DS="carstm_modelled_summary")
-res = NULL; gc()
 
 
-# annual component
-marginals = carstm_model(  p=p, sppoly=sppoly, DS="carstm_marginals" ) 
-
-ts =  marginals$time 
+# annual component 
+ts =  cs$time 
 plot( mean ~ ID, ts, type="b", ylim=c(-2,2), lwd=1.5, xlab="year")
 lines( quant0.025 ~ ID, ts, col="gray", lty="dashed")
 lines( quant0.975 ~ ID, ts, col="gray", lty="dashed")
 
 # seasonal component
-ts =  marginals$cyclic
+ts =  cs$cyclic
 plot( mean ~ID, ts, type="b", ylim=c(-1, 1), lwd=1.5, xlab="fractional year")
 lines( quant0.025 ~ID, ts, col="gray", lty="dashed")
 lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
@@ -442,16 +440,13 @@ lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
 
 # maps of some of the results
  
+modelinfo = carstm_model(  p=p, sppoly=sppoly, DS="carstm_modelinfo" ) 
 
 # persistent spatial effects "re_total" ( icar neighbourhood random effects + unstructured random effects )
-
-# you might require the "grid"  library:  install.packages("grid")
 randomeffects = carstm_model(  p=p, sppoly=sppoly, DS="carstm_randomeffects" ) 
-
-require(grid)
-require(js)
-
+ 
 plt = carstm_map(  res=randomeffects, vn=c(  "space", "re_total" ), 
+    modelinfo=modelinfo,
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title="Bottom temperature spatial effects (Celsius)"
 )
@@ -476,6 +471,7 @@ tmatch="2010"
 umatch="0.75"  # == 0.75*12 = 9 (ie. Sept)  
 
 plt = carstm_map( res=predictions, tmatch=tmatch, umatch=umatch, 
+    modelinfo=modelinfo,
     breaks=seq(-1, 9, by=2), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title=paste( "Bottom temperature predictions", tmatch, umatch)  

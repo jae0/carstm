@@ -1,8 +1,10 @@
 
-  carstm_model_glm = function( O, data, fn_fit=tempfile(pattern="fit_", fileext=".RDS"), fn_res=tempfile(pattern="res_", fileext=".RDS"), 
+  carstm_model_glm = function( O, data, fn_fit=tempfile(pattern="fit_", fileext=".RDS"), 
     compress="gzip", compression_level=1, redo_fit=TRUE , ...  ) {
     
     # TODO:: assumes a fixed name convention .. look at carstm_model_inla to disconnect and use O$vn$*
+
+    fn_res=tempfile(pattern="res_", fileext=".RDS")
 
     # permit passing a function rather than data directly .. less RAM usage in parent call
     if (class(data)=="character") assign("data", eval(parse(text=data) ) )

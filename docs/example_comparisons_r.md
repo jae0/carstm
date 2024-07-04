@@ -118,26 +118,24 @@ Checking some plots
   # note offset is not logged ... link function handles it 
 
   fn_fit = tempfile( pattern="fit", tmpdir=p$modeldir )
-  fn_res = tempfile( pattern="res", tmpdir=p$modeldir )
 
   res = carstm_model( 
     p=p,
     data = Germany, 
     sppoly = sppoly,
     space.id = as.character(Germany$region),
-    fn_fit = fn_fit,
-    fn_res = fn_res,
+    fn_fit = fn_fit, 
     num.threads="4:2",
     verbose=TRUE
   ) 
 
   if (0) {
     # Or, to load currently saved results
-    res = carstm_model( p=p, fn_res = fn_res, DS="carstm_modelled_summary"  ) 
+    res = carstm_model( p=p, DS="carstm_summary"  ) 
     
     # extract currently saved model fit
     fit3 = carstm_model( p=p, fn_fit = fn_fit, DS="carstm_modelled_fit" )  
-    s
+    
     fit3$summary$dic$dic
     fit3$summary$dic$p.eff
     summary(fit3)  # identical to fit2
