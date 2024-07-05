@@ -737,13 +737,9 @@ carstm_model_inla = function(
     Osummary[["direct"]]$dic$local.p.eff = NULL
     Osummary[["direct"]]$dic$local.dic.sat = NULL
     Osummary[["direct"]]$dic$family = NULL
-     
-  }
-
-
-  if ( "marginals" %in% toget) {
-
-     # extract and back transform where possible
+      
+    
+    # extract and back transform where possible
     if (exists( "marginals.fixed", fit)) {
       m = fit$marginals.fixed  # make a copy to do transformations upon
       fi = grep("Intercept", names(m) )
@@ -1791,6 +1787,6 @@ carstm_model_inla = function(
     message("---------------------------------------")
   } 
 
-  return(O)  # O is Omodelinfo
+  return( O )  # O is Omodelinfo
   
 }

@@ -303,11 +303,11 @@ res = carstm_model(
     p=p, 
     data=M,
     sppoly=sppoly,
-    redo_fit=TRUE,  # force re-fit of model ?
+    # redo_fit=FALSE,  # force re-fit of model ?
     # debug = "posterior_samples_spatial",
     toget = c("summary", "random_spatial", "predictions"), 
     posterior_simulations_to_retain=c("predictions"), 
-    nposteriors=100,  # 1000 to 5000 would be sufficient to sample most distributions: trade-off between file size and information content .. 100 for speed 
+    nposteriors=100,  # ~ 5000 would be sufficient to sample most distributions: trade-off between file size and information content .. 100 for speed 
     # remaining args below are INLA options, passed directly to INLA
     formula=formula,
     family="gaussian",  # inla family
@@ -329,12 +329,13 @@ res = carstm_model(
 # NOTE: these files have an extentsion of *.RDS. This is due to historical reasons. Currently they are saved as **qs** files, but still retain the RDS extension. The RDS format can still be created by choosing compress="gzip" (or bzip2, or xz -- standard RDS compression formats
 
 # your timings will vary with OS, number of cores/threads and RAM/CPU ...
+ 
 ---------------------------------------
 Run times:
-Fit: 48.04 mins
-Extract results from marginals: 6.536 mins
-Posterior simulations: 1.16 mins
-Total: 56.32 mins
+Fit: 53.1 mins
+Summarize results from marginals: 2.375 mins
+Posterior simulations: 1.133 mins
+Total: 56.61 mins
 ---------------------------------------
 
 # params close to the final
@@ -367,7 +368,7 @@ This provides the following as a solution (with only a simple cyclic/seasonal co
 # to see results without reloading the fit as it is a large file
 
 # parameters back transformed onto user scale
-cs = carstm_model(  p=p, sppoly=sppoly, DS="carstm_summary" )  # parameters in p and direct summary
+cs = carstm_model(  p=p,  DS="carstm_summary" )  # parameters in p and direct summary
 cs$direct
 
 Deviance Information Criterion (DIC) ...............: 67022.21
@@ -380,12 +381,12 @@ Effective number of parameters .................: 3267.47
 Marginal log-Likelihood:  -18018.17 
  
 
-cs$fixed 
-
+cs$fixed_effects
              mean     sd quant0.025 quant0.5 quant0.975          ID
 (Intercept) 7.379 0.1283      7.125    7.378      7.632 (Intercept)
 
-cs$random
+
+cs$random_effects
                                                  mean       sd quant0.025
 SD Gaussian observations                      1.27362 0.007547    1.25886
 SD time                                       0.70293 0.066150    0.58447
@@ -412,41 +413,81 @@ And finally a few plots and maps.
 
 # to load saved fit
 # can be very large files .. slow 
-fit = carstm_model( p=p, sppoly=sppoly, DS="carstm_modelled_fit")
+fit = carstm_model( p=p,  DS="carstm_modelled_fit")
 
-summary(fit)
-names(fit)
-fit$summary$dic$dic
-fit$summary$dic$p.eff
+summary(fit)  # inla object
+names(fit) 
+
+fit = carstm_modle(p=p, DS="carstm_modelled_fit" )
 
 # plot(fit)
 # plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
+ 
+# EXAMINE POSTERIORS AND PRIORS
+all.hypers = INLA:::inla.all.hyper.postprocess(fit$all.hyper)
+hypers = fit$marginals.hyperpar
+
+names(hypers)
+
+    [1] "Precision for the Gaussian observations"                   
+    [2] "Precision for time"                                        
+    [3] "Rho for time"                                              
+    [4] "Precision for cyclic"                                      
+    [5] "Precision for space"                                       
+    [6] "Phi for space"                                             
+    [7] "Precision for inla.group(z, method = \"quantile\", n = 11)"
+    [8] "Precision for space_cyclic"                                
+    [9] "Phi for space_cyclic"                                      
+    [10] "GroupRho for space_cyclic"                                 
+    [11] "Precision for space_time"                                  
+    [12] "Phi for space_time"                                        
+    [13] "GroupRho for space_time"                                   
+  
+    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=2 )  
+    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=3 )  
+    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=5 )  
+    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=6 )  
+    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=7 )  
+
 fit = NULL; gc()
 
 
-
 # annual component 
-ts =  cs$time 
-plot( mean ~ ID, ts, type="b", ylim=c(-2,2), lwd=1.5, xlab="year")
-lines( quant0.025 ~ ID, ts, col="gray", lty="dashed")
-lines( quant0.975 ~ ID, ts, col="gray", lty="dashed")
+cs$time$yr = as.numeric(p$time_name[cs$time$ID])
+plt = ggplot( cs$time, aes(x=yr, y=mean)) +  geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
+  geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, position=position_dodge(0.05), width=0.5) +
+  labs(title="Annual component", x="Year", y = "Bottom temperature (deg C)") +
+  theme_light( base_size=22) 
+print(plt)    
+# fn_plt = file.path() 
+# ggsave(filename=fn_plt, plot=plt, device="png", width=12, height = 8)
 
-# seasonal component
-ts =  cs$cyclic
-plot( mean ~ID, ts, type="b", ylim=c(-1, 1), lwd=1.5, xlab="fractional year")
-lines( quant0.025 ~ID, ts, col="gray", lty="dashed")
-lines( quant0.975 ~ID, ts, col="gray", lty="dashed")
+# seasonal component 
+cs$cyclic$seas = as.numeric( p$cyclic_name[cs$cyclic$ID] )
+plt = ggplot( cs$cyclic, aes(x=seas, y=mean) ) + geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
+  geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, position=position_dodge(0.05), width=0.05) +
+  labs(title="Seasonal component", x="Year (fraction)", y = "Bottom temperature (deg C)") +
+  theme_light( base_size=22) 
+print(plt)    
+# fn_plt = file.path() 
+# ggsave(filename=fn_plt, plot=plt, device="png", width=12, height = 8)
 
+# relationship with depth
+vn = "inla.group(z, method = \"quantile\", n = 11)"
+plt = ggplot( cs[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
+  geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, position=position_dodge(0.05), width=5) +
+  labs(title="Depth component", x="Depth (m)", y = "Bottom temperature (deg C)") +
+  theme_light( base_size=22) 
+print(plt)    
+# fn_plt = file.path() 
+# ggsave(filename=fn_plt, plot=plt, device="png", width=12, height = 8)
 
 # maps of some of the results
- 
-modelinfo = carstm_model(  p=p, sppoly=sppoly, DS="carstm_modelinfo" ) 
-
+  
 # persistent spatial effects "re_total" ( icar neighbourhood random effects + unstructured random effects )
-randomeffects = carstm_model(  p=p, sppoly=sppoly, DS="carstm_randomeffects" ) 
+randomeffects = carstm_model(  p=p,  DS="carstm_randomeffects" ) 
  
 plt = carstm_map(  res=randomeffects, vn=c(  "space", "re_total" ), 
-    modelinfo=modelinfo,
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title="Bottom temperature spatial effects (Celsius)"
 )
@@ -465,27 +506,36 @@ Predictions can be accessed as well:
 ```r
  
 # maps of some of the results .. this brings a webbrowser interface
-predictions = carstm_model(  p=p, sppoly=sppoly, DS="carstm_predictions" ) 
+predictions = carstm_model(  p=p,  DS="carstm_predictions" ) 
 
-tmatch="2010"
+tmatch="1990"
 umatch="0.75"  # == 0.75*12 = 9 (ie. Sept)  
 
-plt = carstm_map( res=predictions, tmatch=tmatch, umatch=umatch, 
-    modelinfo=modelinfo,
-    breaks=seq(-1, 9, by=2), 
+plt = carstm_map( res=predictions, vn=c( "predictions") , tmatch=tmatch, umatch=umatch, 
+#    breaks=seq(-1, 9, by=2), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title=paste( "Bottom temperature predictions", tmatch, umatch)  
 )
 plt
 
-# and the posterior samples:
-psamples =  carstm_model(  p=p, sppoly=sppoly, DS="carstm_samples" )
 
+tmatch="2010"
+umatch="0.75"  # == 0.75*12 = 9 (ie. Sept)  
+
+plt = carstm_map( res=predictions, vn=c( "predictions") , tmatch=tmatch, umatch=umatch, 
+#    breaks=seq(-1, 9, by=2), 
+    colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
+    title=paste( "Bottom temperature predictions", tmatch, umatch)  
+)
+plt
+
+# and the posterior samples to do simulations etc:
+psamples =  carstm_model(  p=p, DS="carstm_samples" )
+ 
 ```
 ![../../docs/media/temperature_prediction.png](../../docs/media/temperature_prediction.png)
 
 To remove random effects and leave the "latent signals" will require some more work but relatively straightforward to do as you have posterior samples to work with...
-
 
 
 # finished
