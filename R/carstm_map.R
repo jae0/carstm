@@ -19,7 +19,7 @@
     outfilename=NULL,
     outscale= 1,
     digits = 3,
-    transformation=NA,
+    transformation=NULL,
     plotmethod="ggplot",
     tmapmode="view",
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")), 
@@ -68,7 +68,7 @@
         } else if (data_dimensionality==4) {
           toplot = toplot[ js, jt, ju, vv ] # year/subyear
         }
-        if (!is.na(transformation)) toplot = transformation(toplot)
+        if (!is.null(transformation)) toplot = transformation(toplot)
         if (exists("filter", sppoly)) toplot = toplot * sppoly[["filter"]]
 
       }
@@ -105,7 +105,7 @@
         toplot = st_transform(toplot, st_crs( sppoly ) )
         toplot_id = st_points_in_polygons( pts=res, polys=sppoly[, space], varname=space )
         toplot = tapply( toplot[[vn]], toplot_id, aggregate_function, na.rm=TRUE )
-        if (!is.na(transformation)) toplot = transformation(toplot)
+        if (!is.null(transformation)) toplot = transformation(toplot)
         if (exists("filter", sppoly)) toplot  = toplot  * sppoly[["filter"]]
       }
 
@@ -136,7 +136,7 @@
       if (length(vn) ==1 ) {
         if (!exists(vn, sppoly)) message( paste("variable: ", vn, "not found in sppoly ..."))
 
-        if (!is.na(transformation)) sppoly[[vn]] = transformation(sppoly[[vn]])
+        if (!is.null(transformation)) sppoly[[vn]] = transformation(sppoly[[vn]])
         if (exists("filter", sppoly)) sppoly[[vn]] = sppoly[[vn]] * sppoly[["filter"]]
 
         if  ( exists("breaks", ellps)) {
