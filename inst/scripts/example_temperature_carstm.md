@@ -45,8 +45,7 @@ standard_libs = c(
 )
 #  warning INLA has a lot of dependencies 
 
-# fast compression in R using zstd       or lz4
-
+# fast compression in R using zstd or lz4:
 # install.packages("qs", type="source" )
 
 # aegis.* libs (found on github.com/jae0)
@@ -368,8 +367,8 @@ This provides the following as a solution (with only a simple cyclic/seasonal co
 # to see results without reloading the fit as it is a large file
 
 # parameters back transformed onto user scale
-cs = carstm_model(  p=p,  DS="carstm_summary" )  # parameters in p and direct summary
-cs$direct
+res = carstm_model(  p=p,  DS="carstm_summary" )  # parameters in p and direct summary
+res$direct
 
 Deviance Information Criterion (DIC) ...............: 67022.21
 Deviance Information Criterion (DIC, saturated) ....: 21912.19
@@ -381,12 +380,12 @@ Effective number of parameters .................: 3267.47
 Marginal log-Likelihood:  -18018.17 
  
 
-cs$fixed_effects
+res$fixed_effects
              mean     sd quant0.025 quant0.5 quant0.975          ID
 (Intercept) 7.379 0.1283      7.125    7.378      7.632 (Intercept)
 
 
-cs$random_effects
+res$random_effects
                                                  mean       sd quant0.025
 SD Gaussian observations                      1.27362 0.007547    1.25886
 SD time                                       0.70293 0.066150    0.58447
@@ -411,24 +410,27 @@ And finally a few plots and maps.
 
 ```r
 
-# to load saved fit
-# can be very large files .. slow 
-fit = carstm_model( p=p,  DS="carstm_modelled_fit")
+if (0) {
+    # to load saved fit
+    # can be very large files .. slow 
+    fit = carstm_model( p=p,  DS="carstm_modelled_fit")
 
-summary(fit)  # inla object
-names(fit) 
-
-fit = carstm_modle(p=p, DS="carstm_modelled_fit" )
-
-# plot(fit)
-# plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
+    summary(fit)  # inla object
+    names(fit) 
+    
+    plot(fit)
+    plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
  
-# EXAMINE POSTERIORS AND PRIORS
-all.hypers = INLA:::inla.all.hyper.postprocess(fit$all.hyper)
-hypers = fit$marginals.hyperpar
+    # EXAMINE POSTERIORS AND PRIORS
+    all.hypers = INLA:::inla.all.hyper.postprocess(fit$all.hyper)
+    hypers = fit$marginals.hyperpar
+    names(hypers)
 
-names(hypers)
-
+    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=2, xrange=c(0.02, 10) )  # note xrange is for precision .. this gets converted to SD   
+    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, vn="Rho for time" )  
+    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, vn="Phi for space" )  
+    
+    
     [1] "Precision for the Gaussian observations"                   
     [2] "Precision for time"                                        
     [3] "Rho for time"                                              
@@ -442,52 +444,48 @@ names(hypers)
     [11] "Precision for space_time"                                  
     [12] "Phi for space_time"                                        
     [13] "GroupRho for space_time"                                   
-  
-    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=2 )  
-    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=3 )  
-    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=5 )  
-    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=6 )  
-    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=7 )  
+
+}  
 
 fit = NULL; gc()
 
 
 # annual component 
-cs$time$yr = as.numeric(p$time_name[cs$time$ID])
-plt = ggplot( cs$time, aes(x=yr, y=mean)) +  geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
+res$time$yr = as.numeric(p$time_name[res$time$ID])
+plt = ggplot( res$time, aes(x=yr, y=mean)) +  geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
   geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, position=position_dodge(0.05), width=0.5) +
   labs(title="Annual component", x="Year", y = "Bottom temperature (deg C)") +
   theme_light( base_size=22) 
 print(plt)    
 # fn_plt = file.path() 
-# ggsave(filename=fn_plt, plot=plt, device="png", width=12, height = 8)
+# ggsave(filename=fn_plt, plot=plt, device="svg",dpi=144, width=12, height = 8)
 
 # seasonal component 
-cs$cyclic$seas = as.numeric( p$cyclic_name[cs$cyclic$ID] )
-plt = ggplot( cs$cyclic, aes(x=seas, y=mean) ) + geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
+res$cyclic$seas = as.numeric( p$cyclic_name[res$cyclic$ID] )
+plt = ggplot( res$cyclic, aes(x=seas, y=mean) ) + geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
   geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, position=position_dodge(0.05), width=0.05) +
   labs(title="Seasonal component", x="Year (fraction)", y = "Bottom temperature (deg C)") +
   theme_light( base_size=22) 
 print(plt)    
 # fn_plt = file.path() 
-# ggsave(filename=fn_plt, plot=plt, device="png", width=12, height = 8)
+# ggsave(filename=fn_plt, plot=plt, device="svg",dpi=144, width=12, height = 8)
 
 # relationship with depth
 vn = "inla.group(z, method = \"quantile\", n = 11)"
-plt = ggplot( cs[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
+plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
   geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, position=position_dodge(0.05), width=5) +
   labs(title="Depth component", x="Depth (m)", y = "Bottom temperature (deg C)") +
   theme_light( base_size=22) 
 print(plt)    
 # fn_plt = file.path() 
-# ggsave(filename=fn_plt, plot=plt, device="png", width=12, height = 8)
+# ggsave(filename=fn_plt, plot=plt, device="svg",dpi=144, width=12, height = 8)
 
 # maps of some of the results
   
-# persistent spatial effects "re_total" ( icar neighbourhood random effects + unstructured random effects )
-randomeffects = carstm_model(  p=p,  DS="carstm_randomeffects" ) 
- 
-plt = carstm_map(  res=randomeffects, vn=c(  "space", "re_total" ), 
+# persistent spatial effects "re_total" ( icar neighbourhood random effects + unstructured random effects ) 
+plt = carstm_map(  
+    res=carstm_model( p=p,  DS="carstm_randomeffects" ) , 
+    vn=c(  "space", "re_total" ), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title="Bottom temperature spatial effects (Celsius)"
 )
@@ -506,12 +504,15 @@ Predictions can be accessed as well:
 ```r
  
 # maps of some of the results .. this brings a webbrowser interface
-predictions = carstm_model(  p=p,  DS="carstm_predictions" ) 
+
+res = carstm_model( p=p,  DS="carstm_predictions" )
 
 tmatch="1990"
 umatch="0.75"  # == 0.75*12 = 9 (ie. Sept)  
 
-plt = carstm_map( res=predictions, vn=c( "predictions") , tmatch=tmatch, umatch=umatch, 
+plt = carstm_map( 
+    res = res, 
+    vn=c( "predictions"), tmatch=tmatch, umatch=umatch, 
 #    breaks=seq(-1, 9, by=2), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title=paste( "Bottom temperature predictions", tmatch, umatch)  
@@ -522,7 +523,9 @@ plt
 tmatch="2010"
 umatch="0.75"  # == 0.75*12 = 9 (ie. Sept)  
 
-plt = carstm_map( res=predictions, vn=c( "predictions") , tmatch=tmatch, umatch=umatch, 
+plt = carstm_map( 
+    res=res, 
+    vn=c( "predictions") , tmatch=tmatch, umatch=umatch, 
 #    breaks=seq(-1, 9, by=2), 
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")),
     title=paste( "Bottom temperature predictions", tmatch, umatch)  
@@ -530,7 +533,7 @@ plt = carstm_map( res=predictions, vn=c( "predictions") , tmatch=tmatch, umatch=
 plt
 
 # and the posterior samples to do simulations etc:
-psamples =  carstm_model(  p=p, DS="carstm_samples" )
+res =  carstm_model(  p=p, DS="carstm_samples" )
  
 ```
 ![../../docs/media/temperature_prediction.png](../../docs/media/temperature_prediction.png)

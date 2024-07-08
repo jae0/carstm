@@ -1,7 +1,7 @@
 
 carstm_model_inla = function(
   O, # p parameter list
-  DS = "",
+  DS = NULL,
   sppoly =NULL,
   fit = NULL,
   space_id=NULL, time_id=NULL, cyclic_id=NULL, 
@@ -38,7 +38,29 @@ carstm_model_inla = function(
     }
     return( fit )
   }
- 
+  
+  if (DS=="carstm_modelled_summary") {   
+    O = NULL
+
+    fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
+    O = c(O, read_write_fast( file=fn_modelinfo ) )
+    
+    fn_summary = gsub( "_fit~", "_summary~", fn_fit, fixed=TRUE ) 
+    O = c(O, read_write_fast( file=fn_summary ) )
+    
+    fn_randomeffects = gsub( "_fit~", "_randomeffects~", fn_fit, fixed=TRUE )
+    O = c(O, read_write_fast( file=fn_randomeffects ) )
+    
+    fn_preds = gsub( "_fit~", "_predictions~",  fn_fit, fixed=TRUE )
+    O = c(O, read_write_fast( file=fn_preds ) )
+    
+    fn_samples = gsub( "_fit~", "_samples~", fn_fit, fixed=TRUE )
+    O = c(O, read_write_fast(  file=fn_samples ) )
+
+    return( O )
+  }
+
+
   if (DS=="carstm_modelinfo") {   
     fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
     O = read_write_fast( file=fn_modelinfo )

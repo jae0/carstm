@@ -1,11 +1,34 @@
 
-  carstm_model_glm = function( O, data, fn_fit=tempfile(pattern="fit_", fileext=".RDS"), 
-    compress="gzip", compression_level=1, redo_fit=TRUE , ...  ) {
+  carstm_model_glm = function( O, DS=NULL, data=NULL, 
+    fn_fit=tempfile(pattern="fit_", fileext=".RDS"), 
+    compress="qs-preset", 
+    compression_level=3,
+    qs_preset="high", redo_fit=TRUE , ...  ) {
     
     # TODO:: assumes a fixed name convention .. look at carstm_model_inla to disconnect and use O$vn$*
-
+    fit = NULL
+    if (DS=="modelled_fit") {
+        if (!is.null(fn_fit)) {
+          if (file.exists(fn_fit)) {
+            if (grepl("\\.RDS$", fn_fit)) {
+              fit = aegis::read_write_fast(fn_fit)
+            } else {
+              load( fn_fit )
+            }
+          }
+          if (is.null(fit)) message("Modelled fit was not found.")
+        }
+        return( fit )
+    }
+      
     fn_res= gsub( "_fit~", "_results~", fn_fit, fixed=TRUE )
 
+    if (DS=="carstm_modelled_summary") {   
+      res = NULL
+      res = aegis::read_write_fast( fn_res )
+      return( res )
+    }
+ 
     # permit passing a function rather than data directly .. less RAM usage in parent call
     if (class(data)=="character") assign("data", eval(parse(text=data) ) )
 
@@ -13,9 +36,7 @@
     vn = O$variabletomodel
 
     if (exists("data_transformation", O)) data[, vn]  = O$data_transformation$forward( data[, vn] ) # make all positive
-
-    fit = NULL
-
+ 
     if (redo_fit) {
       fit = try( glm( O$formula , data=data, family=O$family ) )
 
