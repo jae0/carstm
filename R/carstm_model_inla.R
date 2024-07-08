@@ -3,6 +3,7 @@ carstm_model_inla = function(
   O, # p parameter list
   DS = NULL,
   sppoly =NULL,
+  data=NULL,
   fit = NULL,
   space_id=NULL, time_id=NULL, cyclic_id=NULL, 
   fn_fit=tempfile(pattern="fit_", fileext=".RDS"), 
@@ -217,8 +218,13 @@ carstm_model_inla = function(
       inla_args[["data"]] = try( eval(parse(text=inla_args[["data"]]) ) )
     }
 
-    if (inherits(inla_args[["data"]], "try-error"))  inla_args[["data"]] = NULL
-
+    if (inherits(inla_args[["data"]], "try-error")) {
+      if (!is.null(data)) {
+        inla_args[["data"]] = data
+      } else {
+        inla_args[["data"]] = NULL
+      }
+    }
     if (is.null(inla_args[["data"]])) stop("Data not found")
 
     setDT(inla_args[["data"]])

@@ -1,5 +1,5 @@
 
-carstm_prior_posterior_compare = function( hypers, all.hypers, i=1, vn=NULL, xrange=NULL ) {
+carstm_prior_posterior_compare = function( hypers, all.hypers, i=1, vn=NULL, xrange=NULL, transf=TRUE ) {
     
     # extracted from INLA:::plot.inla()
     # all.hypers = INLA:::inla.all.hyper.postprocess(fit$all.hyper)
@@ -25,10 +25,12 @@ carstm_prior_posterior_compare = function( hypers, all.hypers, i=1, vn=NULL, xra
         range = range(xrange), intern = FALSE, debug = FALSE
     )
 
-    if (grepl("precision", vn, ignore.case =TRUE )) {
-        iposterior = inla.tmarginal( fun=function(y) 1/sqrt( y ), iposterior )
-        iprior = inla.tmarginal( fun=function(y) 1/sqrt( y ), iprior )
-        label = gsub( "Precision", "SD", label)
+    if (transf)   {
+        if (grepl("precision", vn, ignore.case =TRUE )) {
+            iposterior = inla.tmarginal( fun=function(y) 1/sqrt( y ), iposterior )
+            iprior = inla.tmarginal( fun=function(y) 1/sqrt( y ), iprior )
+            label = gsub( "Precision", "SD", label)
+        }
     }
 
     ipo = as.data.frame(iposterior)
