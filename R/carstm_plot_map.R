@@ -7,7 +7,9 @@ carstm_plot_map = function( p=NULL,
   colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")), 
   # colors=RColorBrewer::brewer.pal(5, "YlOrRd"),
   transf=NULL ) {
-  
+
+  require(ggplot2)
+
   if (is.null(p)) stop("Require parameter list 'p'")
 
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )

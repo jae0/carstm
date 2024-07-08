@@ -1,5 +1,7 @@
 carstm_plot_marginaleffects = function( p, outputdir, fn_root="" ) {
-  
+
+  require(ggplot2)
+    
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
  
   if ( grepl("probability", fn_root) | grepl("presence_absence", fn_root)  ) {
