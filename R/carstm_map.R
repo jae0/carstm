@@ -22,7 +22,8 @@
     transformation=NA,
     plotmethod="ggplot",
     tmapmode="view",
-    colors=RColorBrewer::brewer.pal(5, "YlOrRd"), # display.brewer.all()
+    colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")), 
+    # colors=RColorBrewer::brewer.pal(5, "YlOrRd"), # display.brewer.all()
     ...) {
  
 

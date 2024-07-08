@@ -24,74 +24,76 @@ carstm_model_inla = function(
   ndiscretization = 1024L,
   eps = 1e-12,
   ... ) {
-    
-  if (DS=="modelled_fit") {
-    if (!is.null(fn_fit)) {
-      if (file.exists(fn_fit)) {
-        if (grepl("\\.RDS$", fn_fit)) {
-          fit = aegis::read_write_fast(fn_fit)
-        } else {
-          load( fn_fit )
-        }
-      }
-      if (is.null(fit)) message("Modelled fit was not found.")
-    }
-    return( fit )
-  }
   
-  if (DS=="carstm_modelled_summary") {   
-    O = NULL
+  if (!is.null(DS)) {
 
-    fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
-    O = c(O, read_write_fast( file=fn_modelinfo ) )
+    if (DS=="modelled_fit") {
+      if (!is.null(fn_fit)) {
+        if (file.exists(fn_fit)) {
+          if (grepl("\\.RDS$", fn_fit)) {
+            fit = aegis::read_write_fast(fn_fit)
+          } else {
+            load( fn_fit )
+          }
+        }
+        if (is.null(fit)) message("Modelled fit was not found.")
+      }
+      return( fit )
+    }
     
-    fn_summary = gsub( "_fit~", "_summary~", fn_fit, fixed=TRUE ) 
-    O = c(O, read_write_fast( file=fn_summary ) )
-    
-    fn_randomeffects = gsub( "_fit~", "_randomeffects~", fn_fit, fixed=TRUE )
-    O = c(O, read_write_fast( file=fn_randomeffects ) )
-    
-    fn_preds = gsub( "_fit~", "_predictions~",  fn_fit, fixed=TRUE )
-    O = c(O, read_write_fast( file=fn_preds ) )
-    
-    fn_samples = gsub( "_fit~", "_samples~", fn_fit, fixed=TRUE )
-    O = c(O, read_write_fast(  file=fn_samples ) )
+    if (DS=="carstm_modelled_summary") {   
+      O = NULL
 
-    return( O )
-  }
-
-
-  if (DS=="carstm_modelinfo") {   
-    fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
-    O = read_write_fast( file=fn_modelinfo )
-    return( O )
-  }
-
-  if (DS=="carstm_summary") {   
-    fn_summary = gsub( "_fit~", "_summary~", fn_fit, fixed=TRUE )
-    Osummary = read_write_fast( file=fn_summary )
-    return( Osummary )
-  }
-
-  if (DS=="carstm_randomeffects") {   
-    fn_randomeffects = gsub( "_fit~", "_randomeffects~", fn_fit, fixed=TRUE )
-    Orandom = read_write_fast( file=fn_randomeffects ) 
-    return( Orandom )  
-  }
-
-  if (DS=="carstm_predictions") {   
-    fn_preds = gsub( "_fit~", "_predictions~",  fn_fit, fixed=TRUE )
-    Opredictions = read_write_fast( file=fn_preds ) 
-    return( Opredictions)  
-  }
-
-  if (DS=="carstm_samples") {   
+      fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
+      O = c(O, read_write_fast( file=fn_modelinfo ) )
+      
+      fn_summary = gsub( "_fit~", "_summary~", fn_fit, fixed=TRUE ) 
+      O = c(O, read_write_fast( file=fn_summary ) )
+      
+      fn_randomeffects = gsub( "_fit~", "_randomeffects~", fn_fit, fixed=TRUE )
+      O = c(O, read_write_fast( file=fn_randomeffects ) )
+      
+      fn_preds = gsub( "_fit~", "_predictions~",  fn_fit, fixed=TRUE )
+      O = c(O, read_write_fast( file=fn_preds ) )
+      
       fn_samples = gsub( "_fit~", "_samples~", fn_fit, fixed=TRUE )
-      Osamples = read_write_fast(  file=fn_samples ) 
-      return( Osamples )
+      O = c(O, read_write_fast(  file=fn_samples ) )
+
+      return( O )
+    }
+
+
+    if (DS=="carstm_modelinfo") {   
+      fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
+      O = read_write_fast( file=fn_modelinfo )
+      return( O )
+    }
+
+    if (DS=="carstm_summary") {   
+      fn_summary = gsub( "_fit~", "_summary~", fn_fit, fixed=TRUE )
+      Osummary = read_write_fast( file=fn_summary )
+      return( Osummary )
+    }
+
+    if (DS=="carstm_randomeffects") {   
+      fn_randomeffects = gsub( "_fit~", "_randomeffects~", fn_fit, fixed=TRUE )
+      Orandom = read_write_fast( file=fn_randomeffects ) 
+      return( Orandom )  
+    }
+
+    if (DS=="carstm_predictions") {   
+      fn_preds = gsub( "_fit~", "_predictions~",  fn_fit, fixed=TRUE )
+      Opredictions = read_write_fast( file=fn_preds ) 
+      return( Opredictions)  
+    }
+
+    if (DS=="carstm_samples") {   
+        fn_samples = gsub( "_fit~", "_samples~", fn_fit, fixed=TRUE )
+        Osamples = read_write_fast(  file=fn_samples ) 
+        return( Osamples )
+    }
+
   }
-
-
 
   if (exists("debug")) if (is.logical(debug)) if (debug) browser()
 
