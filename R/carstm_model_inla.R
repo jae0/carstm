@@ -208,6 +208,9 @@ carstm_model_inla = function(
         if ( be_verbose) message( "Data not passed as an argument, using data found in options, O")
         inla_args[["data"]] = O[["data"]]  # priority to inla_args
         O[["data"]] = NULL  # reduce mem usage
+      } else if (!is.null(data)) {
+        inla_args[["data"]] = data
+        data = NULL
       } else {
         stop("No data")
       }
