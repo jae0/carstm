@@ -218,7 +218,6 @@ carstm_model_inla = function(
       }
     }
     
-    browser()
     if (any(class(inla_args[["data"]])=="character")) {
       if ( be_verbose) message( "Data is a function. Getting data ...")
        Odata = try( eval(parse(text=inla_args[["data"]]) ) )
@@ -488,7 +487,7 @@ carstm_model_inla = function(
 
     # check INLA options
 
-    if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( strategy='adaptive', cmin=0, h=0.75*0.001, step.factor=0.75*0.01, diagonal=1e-6 ) #int.strategy='eb'
+    if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( strategy='adaptive', cmin=0,  diagonal=1e-6 ) #int.strategy='eb' h=0.75*0.001, step.factor=0.75*0.01,
     if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if (!exists("control.mode", inla_args ) ) inla_args[["control.mode"]] = list( restart=TRUE ) 
     if (!is.null(theta) ) inla_args[["control.mode"]]$theta= theta
@@ -505,7 +504,12 @@ carstm_model_inla = function(
     fit = try( do.call( inla, inla_args ) )      
 
     if (inherits(fit, "try-error" )) {
-      inla_args[["control.inla"]] = list( int.strategy='eb', cmin=0, diagonal=1e-5 )
+      inla_args[["control.inla"]] = list( h=0.75*0.001, step.factor=0.75*0.01, cmin=0, diagonal=1e-8 )
+      fit = try( do.call( inla, inla_args ) )      
+    }
+
+    if (inherits(fit, "try-error" )) {
+      inla_args[["control.inla"]] = list( h=1.25*0.001, step.factor=1.25*0.01, cmin=0, diagonal=1e-6 )
       fit = try( do.call( inla, inla_args ) )      
     }
 
