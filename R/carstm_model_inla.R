@@ -173,10 +173,12 @@ carstm_model_inla = function(
   if (!exists("family", inla_args))  stop( "Model family was not provided")
   O[["family"]] = inla_args[["family"]]  # copy to O in case it was provided as inla_args
 
+  # CHECK: inla.models()$likelihood[[inla_args[["family"]]]][["link"]][2] ... NOT EXACTLY AS IN GLM, add more as required ..
+
   if ( inla_args[["family"]] == "gaussian" ) {
     lnk_function = inla.link.identity
   } else if ( inla_args[["family"]] == "lognormal" ) {
-    lnk_function = inla.link.log
+    lnk_function = inla.link.identity
   } else if ( grepl( ".*poisson", inla_args[["family"]])) {
     lnk_function = inla.link.log
   } else if ( grepl( ".*nbinomial", inla_args[["family"]])) {
