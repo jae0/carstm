@@ -173,12 +173,12 @@ carstm_model_inla = function(
   if (!exists("family", inla_args))  stop( "Model family was not provided")
   O[["family"]] = inla_args[["family"]]  # copy to O in case it was provided as inla_args
 
-  # CHECK: inla.models()$likelihood[[inla_args[["family"]]]][["link"]][2] ... NOT EXACTLY AS IN GLM, add more as required ..
-
   if ( inla_args[["family"]] == "gaussian" ) {
     lnk_function = inla.link.identity
   } else if ( inla_args[["family"]] == "lognormal" ) {
-    lnk_function = inla.link.identity
+    # inla:: lognormal is treated as log(X)~normaLl() .. need to manually intervene in a few calcs below (with identity link)
+    lnk_function = inla.link.log  # required to get correct invlink (inla considers it identity  asfter above transform)
+
   } else if ( grepl( ".*poisson", inla_args[["family"]])) {
     lnk_function = inla.link.log
   } else if ( grepl( ".*nbinomial", inla_args[["family"]])) {
@@ -903,7 +903,7 @@ carstm_model_inla = function(
  
         raneff = setdiff( names( fit$marginals.random ), c(vS, vS2, vS3  ) )
         for (rnef in raneff) {
-          m = marginal_summary( fit$marginals.random[[rnef]], invlink=invlink )
+          m = marginal_summary( fit$marginals.random[[rnef]]  )
           if (test_for_error(m) =="error") {  
              message( "failed to transform marginals .. copying directly from INLA summary instead: ", rnef)
             m = fit$summary.random[[rnef]][, inla_tokeep, drop =FALSE ]
@@ -972,11 +972,9 @@ carstm_model_inla = function(
       if (length(iSP) == 1) {
 
         # vS = fmre$vn[ iSP ]  # == vS as it is a single spatial effect
-        
         model_name = fmre$model[ iSP ]  # iid (re_unstructured)
 
         m = fit$marginals.random[[vS]]
- 
         m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization ) , silent=TRUE )
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE ), silent=TRUE )
         m = try( simplify2array( m ), silent=TRUE)
@@ -1026,7 +1024,6 @@ carstm_model_inla = function(
           model_name = fmre$model[ iSP[j] ]  
           
           m = fit$marginals.random[[vnS]]
-         
           m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization), silent=TRUE  )
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE) , silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE) 
@@ -1086,7 +1083,6 @@ carstm_model_inla = function(
  
           m = fit$marginals.random[[vnST]]
           m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization) , silent=TRUE )
-
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE), silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE)
           m = try( list_simplify( m ), silent=TRUE )
@@ -1196,7 +1192,8 @@ carstm_model_inla = function(
         if ( O[["dimensionality"]] == "space" ) {
 
           m = fit$marginals.fitted.values[O[["ipred"]]]  # already incorporates offsets
-  
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization), silent=TRUE )
+
           if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
@@ -1226,7 +1223,8 @@ carstm_model_inla = function(
         if (O[["dimensionality"]] == "space-time"  ) {
 
           m = fit$marginals.fitted.values[O[["ipred"]]]   
-  
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization), silent=TRUE )
+
           if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
@@ -1258,6 +1256,8 @@ carstm_model_inla = function(
         if ( O[["dimensionality"]] == "space-time-cyclic" ) {
 
           m = fit$marginals.fitted.values[O[["ipred"]]]   
+
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization), silent=TRUE )
 
           if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 
@@ -1399,7 +1399,6 @@ carstm_model_inla = function(
         rkk = unlist( rkk )
         for (i in 1:O[["nposteriors"]]) random[,i] = S[[i]]$latent[rkk,]  
         rlabels = names(S[[1]]$latent[rkk,])
-        Osamples[["random_effects"]] = invlink(Osamples[["random_effects"]])
         row.names(Osamples[["random_effects"]]) = rlabels
 
         if (summarize_simulations) {
@@ -1532,7 +1531,7 @@ carstm_model_inla = function(
         Osamples[["summary"]] [[vS]] [["re_total"]] = W[, tokeep, drop =FALSE] 
       }
 
-      Osamples[[vS]][["re_total"]] = space  # already inverse link scale
+      Osamples[[vS]][["re_total"]] = space  # already inverse link scale (line 1517)
       
       if ( "random_spatial12" %in% posterior_simulations_to_retain ) {
         if (!is.null(space1)) Osamples [[vS]] [[model_name1]] =  invlink(space1) 
@@ -1658,7 +1657,7 @@ carstm_model_inla = function(
       }
 
       if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
-        Osamples [[vnST]] [["re_total"]] = space_time
+        Osamples [[vnST]] [["re_total"]] = space_time  # already invlinked .. line 1626
       }
       if ( "random_spatiotemporal12" %in% posterior_simulations_to_retain ) {
         if (!is.null(space_time1)) Osamples [[vnST]] [[model_name1]] = invlink(space_time1)
