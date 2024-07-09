@@ -100,7 +100,7 @@ carstm_plot_map = function( p=NULL,
 
     } else if (p$dimensionality == "space_time") {
 
-      for (y in res$time_name){
+      for (y in res$time_name) {
 
         if (is.null(brks)) {
           qn = quantile( tf(toplot[,,"mean"]), probs=probs, na.rm=TRUE )
@@ -122,8 +122,8 @@ carstm_plot_map = function( p=NULL,
  
     } else if (p$dimensionality == "space_time_season") {
 
-      for (y in res$time_name){
-      for ( u in res$cyclic_name  ){
+      for ( y in res$time_name ) {
+      for ( u in res$cyclic_name ) {
         tmatch = as.character(y) 
         umatch = as.character(u)
         u = res$cyclic_id[7]

@@ -413,7 +413,7 @@ And finally a few plots and maps.
 if (0) {
     # to load saved fit
     # can be very large files .. slow 
-    fit = carstm_model( p=p,  DS="carstm_modelled_fit")
+    fit = carstm_model( p=p,  DS="modelled_fit")
 
     summary(fit)  # inla object
     names(fit) 

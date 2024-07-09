@@ -134,7 +134,7 @@ Checking some plots
     res = carstm_model( p=p, DS="carstm_summary"  ) 
     
     # extract currently saved model fit
-    fit3 = carstm_model( p=p, fn_fit = fn_fit, DS="carstm_modelled_fit" )  
+    fit3 = carstm_model( p=p, fn_fit = fn_fit, DS="modelled_fit" )  
     
     fit3$summary$dic$dic
     fit3$summary$dic$p.eff
