@@ -33,7 +33,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
   if (exists("carstm_modelengine", p)) carstm_modelengine = p$carstm_modelengine
 
   if (!is.null(areal_units_fn)) {
-    if (is.null(fn_fit)) fn_fit = carstm_filenames( p=p, returntype="modelled_fit", areal_units_fn=areal_units_fn )
+    if (is.null(fn_fit)) fn_fit = carstm_filenames( p=p, returntype="carstm_modelled_fit", areal_units_fn=areal_units_fn )
   }
 
   if (exists("carstm_directory", p)) {
