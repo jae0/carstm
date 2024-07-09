@@ -489,7 +489,7 @@ carstm_model_inla = function(
 
     # check INLA options
 
-    if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( cmin=0, diagonal=1e-9 ) #int.strategy='eb' h=0.75*0.001, step.factor=0.75*0.01,
+    if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( ) #int.strategy='eb' h=0.75*0.001, step.factor=0.75*0.01,
     if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
     if (!exists("control.mode", inla_args ) ) inla_args[["control.mode"]] = list( restart=TRUE ) 
     if (!is.null(theta) ) inla_args[["control.mode"]]$theta= theta
@@ -506,7 +506,7 @@ carstm_model_inla = function(
     fit = try( do.call( inla, inla_args ) )      
 
     if (inherits(fit, "try-error" )) {
-      inla_args[["control.inla"]] = list( h=0.75*0.001, step.factor=0.75*0.01, cmin=0, diagonal=1e-7 )
+      inla_args[["control.inla"]] = list( h=0.75*0.001, step.factor=0.75*0.01, cmin=0, diagonal=1e-8 )
       fit = try( do.call( inla, inla_args ) )      
     }
 
