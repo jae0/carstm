@@ -369,6 +369,45 @@ This provides the following as a solution (with only a simple cyclic/seasonal co
 # parameters back transformed onto user scale
 res = carstm_model(  p=p,  DS="carstm_summary" )  # parameters in p and direct summary
 res$direct
+Time used:
+    Pre = 19, Running = 2816, Post = 42.1, Total = 2877 
+Fixed effects:
+             mean    sd 0.025quant 0.5quant 0.975quant  mode kld
+(Intercept) 7.379 0.129      7.127    7.379      7.635 7.379   0
+
+Random effects:
+  Name	  Model
+    time AR1 model
+   cyclic RW2 model
+   space BYM2 model
+   inla.group(z, method = "quantile", n = 11) RW2 model
+   space_cyclic BYM2 model
+   space_time BYM2 model
+
+Model hyperparameters:
+                                                            mean       sd
+Precision for the Gaussian observations                    0.617    0.007
+Precision for time                                         2.109    0.557
+Rho for time                                               0.023    0.077
+Precision for cyclic                                       8.414    4.827
+Precision for space                                      256.905 1899.225
+Phi for space                                              0.780    0.285
+Precision for inla.group(z, method = "quantile", n = 11)   1.217    0.686
+Precision for space_cyclic                                 1.550    0.293
+Phi for space_cyclic                                       0.984    0.060
+GroupRho for space_cyclic                                  0.702    0.067
+Precision for space_time                                   2.232    0.133
+Phi for space_time                                         0.991    0.010
+GroupRho for space_time                                    0.047    0.050 
+
+Deviance Information Criterion (DIC) ...............: 67014.64
+Deviance Information Criterion (DIC, saturated) ....: 21899.96
+Effective number of parameters .....................: 2627.94
+
+Watanabe-Akaike information criterion (WAIC) ...: 69082.19
+Effective number of parameters .................: 3251.78
+
+Marginal log-Likelihood:  -18012.39 
 
 Deviance Information Criterion (DIC) ...............: 67022.21
 Deviance Information Criterion (DIC, saturated) ....: 21912.19
@@ -429,7 +468,10 @@ if (0) {
     carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=2, xrange=c(0.02, 10) )  # note xrange is for precision .. this gets converted to SD   
     carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, vn="Rho for time" )  
     carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, vn="Phi for space" )  
-    
+      
+    # posterior predictive check
+    carstm_posterior_predictive_check(p=p, M=M  )
+
     
     [1] "Precision for the Gaussian observations"                   
     [2] "Precision for time"                                        
@@ -479,6 +521,12 @@ plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=
 print(plt)    
 # fn_plt = file.path() 
 # ggsave(filename=fn_plt, plot=plt, device="svg",dpi=144, width=12, height = 8)
+
+# or all at once:
+  oeffdir = file.path(p$modeldir, p$carstm_model_label, "figures")
+    fn_root_prefix = p$
+    carstm_plot_marginaleffects( p=p, outputdir=oeffdir, fn_root_prefix=fn_root_prefix ) 
+
 
 # maps of some of the results
   
@@ -531,6 +579,7 @@ plt = carstm_map(
     title=paste( "Bottom temperature predictions", tmatch, umatch)  
 )
 plt
+ 
 
 # and the posterior samples to do simulations etc:
 res =  carstm_model(  p=p, DS="carstm_samples" )
