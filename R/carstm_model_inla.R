@@ -176,8 +176,11 @@ carstm_model_inla = function(
   if ( inla_args[["family"]] == "gaussian" ) {
     lnk_function = inla.link.identity
   } else if ( inla_args[["family"]] == "lognormal" ) {
-    # inla:: lognormal is treated as log(X)~normaLl() .. need to manually intervene in a few calcs below (with identity link)
-    lnk_function = inla.link.log  # required to get correct invlink (inla considers it identity  asfter above transform)
+    # inla uses identity link and simply transforms Y ::  log(X)~normaLl()
+    # however to back-transform properly to user scale, we override with a log-exp link
+    # need to manually intervene in a few calcs below (with identity link)
+
+    lnk_function = inla.link.log  
 
   } else if ( grepl( ".*poisson", inla_args[["family"]])) {
     lnk_function = inla.link.log

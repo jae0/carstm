@@ -1,26 +1,27 @@
-carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=NULL ) {
+carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=NULL, prefix = "" ) {
 
   require(ggplot2)
 
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
  
-  prefix = ""
+  
+  if (prefix=="") {
+    if (!is.null(fn_root_prefix)) {
 
-  if (!is.null(fn_root_prefix)) {
-
-    if ( grepl("probability", fn_root_prefix) | grepl("presence_absence", fn_root_prefix)  ) {
-      prefix = "habitat"
-    } else if ( grepl("numerical", fn_root_prefix) ) {
-      prefix = "number"
-    } else if ( grepl("biomass", fn_root_prefix) ) {
-      prefix = "biomass"
-    } else if ( grepl("weight", fn_root_prefix) |  grepl("meansize", fn_root_prefix)  ) {
-      prefix = "weight"
-    } else {
-      prefix = ""
+      if ( grepl("probability", fn_root_prefix,  ignore.case =TRUE) | grepl("presence_absence", fn_root_prefix,  ignore.case =TRUE)  ) {
+        prefix = "habitat"
+      } else if ( grepl("numerical", fn_root_prefix,  ignore.case =TRUE) ) {
+        prefix = "number"
+      } else if ( grepl("biomass", fn_root_prefix),  ignore.case =TRUE ) {
+        prefix = "biomass"
+      } else if ( grepl("weight", fn_root_prefix,  ignore.case =TRUE) |  grepl("meansize", fn_root_prefix,  ignore.case =TRUE)  ) {
+        prefix = "weight"
+      } else {
+        prefix = ""
+      }
     }
   }
-
+  
   res = carstm_model( p=p,  DS="carstm_summary" )  # parameters in p and direct summary
   names_res = names(res)
 
