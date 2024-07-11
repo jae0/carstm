@@ -10,9 +10,9 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
 
       if ( grepl("probability", fn_root_prefix,  ignore.case =TRUE) | grepl("presence_absence", fn_root_prefix,  ignore.case =TRUE)  ) {
         prefix = "habitat"
-      } else if ( grepl("numerical", fn_root_prefix,  ignore.case =TRUE) ) {
+      } else if ( grepl("numerical", fn_root_prefix,  ignore.case =TRUE ) ) {
         prefix = "number"
-      } else if ( grepl("biomass", fn_root_prefix),  ignore.case =TRUE ) {
+      } else if ( grepl("biomass", fn_root_prefix,  ignore.case =TRUE ) ) {
         prefix = "biomass"
       } else if ( grepl("weight", fn_root_prefix,  ignore.case =TRUE) |  grepl("meansize", fn_root_prefix,  ignore.case =TRUE)  ) {
         prefix = "weight"
