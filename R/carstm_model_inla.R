@@ -14,9 +14,9 @@ carstm_model_inla = function(
   compress="qs-preset", 
   compression_level=3,
   qs_preset="high", 
-  toget = c("modelinfo", "marginals", "random_spatial", "predictions"), 
+  toget = c("modelinfo", "summary", "random_spatial", "predictions"), 
   nposteriors=NULL, 
-  posterior_simulations_to_retain=c( "predictions" ),
+  posterior_simulations_to_retain=c( "summary", "predictions" ),
   exceedance_threshold=NULL, 
   deceedance_threshold=NULL, 
   exceedance_threshold_predictions=NULL,
@@ -49,16 +49,16 @@ carstm_model_inla = function(
       O = c(O, read_write_fast( file=fn_modelinfo ) )
       
       fn_summary = gsub( "_fit~", "_summary~", fn_fit, fixed=TRUE ) 
-      O = c(O, read_write_fast( file=fn_summary ) )
+      O = c(O, summary=read_write_fast( file=fn_summary ) )
       
       fn_randomeffects = gsub( "_fit~", "_randomeffects~", fn_fit, fixed=TRUE )
-      O = c(O, read_write_fast( file=fn_randomeffects ) )
+      O = c(O, effects=read_write_fast( file=fn_randomeffects ) )
       
       fn_preds = gsub( "_fit~", "_predictions~",  fn_fit, fixed=TRUE )
-      O = c(O, read_write_fast( file=fn_preds ) )
+      O = c(O, predictions=read_write_fast( file=fn_preds ) )
       
       fn_samples = gsub( "_fit~", "_samples~", fn_fit, fixed=TRUE )
-      O = c(O, read_write_fast(  file=fn_samples ) )
+      O = c(O, samples=read_write_fast(  file=fn_samples ) )
 
       return( O )
     }
@@ -160,7 +160,7 @@ carstm_model_inla = function(
   vU2 = O[["fm"]]$vn$U2
   vS3 = O[["fm"]]$vn$S3 
 
-  # family related  
+  # family related  O
   if ( !exists("family", inla_args ) ) {
     if ( exists("family", O) ) {
       if ( be_verbose ) message( "Family found in options, O" )
@@ -549,6 +549,18 @@ carstm_model_inla = function(
   
     # collect a few objects for ease of extraction
 
+    O[["carstm_prediction_surface_parameters"]] = NULL
+     
+    fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
+    read_write_fast( data=O, file=fn_modelinfo, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
+      
+    message( "Model info saved as: \n", fn_modelinfo )
+
+    gc()
+
+
+    # only after file save as there is no need to store the following  (ipred, matchfrom)
+
     setDT(inla_args[["data"]]) # revert to DT for faster / efficient operations
 
     # make these temporary indices here to drop inla_args and reduce RAM usage and make things easier later
@@ -575,22 +587,7 @@ carstm_model_inla = function(
         time=O[["time_id"]][inla_args[["data"]][[vT]][O[["ipred"]]]],
         cyclic=O[["cyclic_id"]][inla_args[["data"]][[vU]][O[["ipred"]]]]
       )
-    }
- 
-
-    O[["carstm_prediction_surface_parameters"]] = NULL
-    
-    # fit$modelinfo = O  # store in case a restart is needed
-
-
-    fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
-    read_write_fast( data=O, file=fn_modelinfo, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
-      
-    message( "Model info saved as: \n", fn_modelinfo )
-
-    gc()
-
-
+    } 
 
     fit$.args = NULL
 
@@ -627,16 +624,13 @@ carstm_model_inla = function(
   # --------------------------------------------
   # --------------------------------------------
   fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
-  if (exists("modelinfo", fit)) {
-    O = fit$modelinfo  # priority to the fit$modelinfo
+  if (file.exists(fn_modelinfo)) {
+    O = aegis::read_write_fast( fn_modelinfo )
   } else {
-    if (file.exists(fn_modelinfo)) O = aegis::read_write_fast( fn_modelinfo )
-  } 
-
-
+    stop("modelinfo not found")
+  }
 
   if (exists("debug")) if (is.character(debug)) if (debug=="extract") browser()
-
 
   if (exists("data_transformation", O))  {
     backtransform = function( b ) {
