@@ -268,7 +268,16 @@ if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next
 
 M$cyclic = match( M$dyri, dylev )  # easier to deal with numeric indices 
 M$cyclic_space = M$cyclic # copy cyclic for space - cyclic component .. for groups, must be numeric index
- 
+
+if (0) {
+    # save data for carstm in julia
+    nb = attributes(sppoly)$nb$nbs
+    obs = M[tag=="observations"]
+    preds = M[tag=="predictions"]
+    save( obs, nb, preds, file=file.path(p$modeldir, "example_bottom_temp.RData"), compress=TRUE)
+
+}
+
 # "H" in formula are created on the fly in carstm ... they can be dropped in formula or better priors defined manually
 
 formula = as.formula( paste(

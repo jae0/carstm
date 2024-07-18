@@ -484,6 +484,45 @@ carstm_model_inla = function(
     m = yl = ii = ll = fy = ol = NULL
     gc()
   
+    outputdir = dirname(fn_fit)
+    if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
+ 
+
+    if (exists("carstm_prediction_surface_parameters", O)) O[["carstm_prediction_surface_parameters"]] = NULL
+     
+    # make these temporary indices here to drop inla_args and reduce RAM usage and make things easier later
+ 
+    O[["ipred"]] = which( inla_args[["data"]][["tag"]]=="predictions" )  
+
+    if (  O[["dimensionality"]] == "space" ) {
+        # filter by S and T in case additional data in other areas and times are used in the input data
+      O[["matchfrom"]] = list( 
+        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] 
+      ) 
+    }
+
+    if (O[["dimensionality"]] == "space-time"  ) {
+      O[["matchfrom"]] = list( 
+        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] , 
+        time=O[["time_id"]][inla_args[["data"]][[vT]][O[["ipred"]]] ]
+      )
+    }
+
+    if ( O[["dimensionality"]] == "space-time-cyclic" ) {
+      O[["matchfrom"]] = list( 
+        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] , 
+        time=O[["time_id"]][inla_args[["data"]][[vT]][O[["ipred"]]]],
+        cyclic=O[["cyclic_id"]][inla_args[["data"]][[vU]][O[["ipred"]]]]
+      )
+    } 
+
+    fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
+    read_write_fast( data=O, file=fn_modelinfo, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
+      
+    message( "Model info saved as: \n", fn_modelinfo )
+
+    gc() 
+ 
     if (exists("debug")) if (is.character(debug)) if ( debug =="fit") browser()
    
     # access H, cyclic_values, etc
@@ -504,7 +543,6 @@ carstm_model_inla = function(
     if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = H$fixed
 
     setDF(inla_args[["data"]]) # in case .. INLA requires this ?
- 
  
     fit = try( do.call( inla, inla_args ) )      
 
@@ -542,56 +580,15 @@ carstm_model_inla = function(
     if (is.null(fit)) warning("model fit error")
     if ("try-error" %in% class(fit) ) warning("model fit error")
 
-
-    outputdir = dirname(fn_fit)
-    if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
-
-  
-    # collect a few objects for ease of extraction
-
-    O[["carstm_prediction_surface_parameters"]] = NULL
-     
-    fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
-    read_write_fast( data=O, file=fn_modelinfo, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
-      
-    message( "Model info saved as: \n", fn_modelinfo )
-
-    gc()
-
-
     # only after file save as there is no need to store the following  (ipred, matchfrom)
 
     setDT(inla_args[["data"]]) # revert to DT for faster / efficient operations
 
-    # make these temporary indices here to drop inla_args and reduce RAM usage and make things easier later
- 
-    O[["ipred"]] = which( inla_args[["data"]][["tag"]]=="predictions" )  
+    fit$.args = NULL  # reduce size
+    gc()
 
-    if (  O[["dimensionality"]] == "space" ) {
-        # filter by S and T in case additional data in other areas and times are used in the input data
-      O[["matchfrom"]] = list( 
-        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] 
-      ) 
-    }
-
-    if (O[["dimensionality"]] == "space-time"  ) {
-      O[["matchfrom"]] = list( 
-        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] , 
-        time=O[["time_id"]][inla_args[["data"]][[vT]][O[["ipred"]]] ]
-      )
-    }
-
-    if ( O[["dimensionality"]] == "space-time-cyclic" ) {
-      O[["matchfrom"]] = list( 
-        space=O[["space_id"]][inla_args[["data"]][[vS]][O[["ipred"]]]] , 
-        time=O[["time_id"]][inla_args[["data"]][[vT]][O[["ipred"]]]],
-        cyclic=O[["cyclic_id"]][inla_args[["data"]][[vU]][O[["ipred"]]]]
-      )
-    } 
-
-    fit$.args = NULL
-
-    inla_args= NULL; gc()
+    inla_args= NULL; 
+    gc()
  
     read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
     if (be_verbose)  message( "\nModel fit saved as: \n", fn_fit )

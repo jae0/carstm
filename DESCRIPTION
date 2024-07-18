@@ -1,6 +1,6 @@
 Package: carstm
 Title: Conditional autoregressive spatiotemporal models with a focus upon fisheries stock assessment
-Version: 2021.1
+Version: 2024.7
 Authors@R: c( person("Jae", "Choi", email="choi.jae.seok@gmail.com", role=c("aut", "cre")) )
 Description: Spatio-temporal models using conditional autoregressive methods.
 Depends: R (>= 3.5.0), data.table
