@@ -15,7 +15,7 @@ carstm_model_inla = function(
   compression_level=3,
   qs_preset="high", 
   toget = c("modelinfo", "summary", "random_spatial", "predictions"), 
-  nposteriors=NULL, 
+  nposteriors=0, 
   posterior_simulations_to_retain=c( "summary", "predictions" ),
   exceedance_threshold=NULL, 
   deceedance_threshold=NULL, 
@@ -749,9 +749,10 @@ carstm_model_inla = function(
 
   # some info required for posterior simulations
   O[["names.fixed"]] = fit$names.fixed
-  O[["nposteriors"]] = nposteriors
-
   
+  if (!exists("nposteriors", O)) O[["nposteriors"]] = nposteriors
+
+ 
   if (exists("debug")) if (is.character(debug)) if (debug=="summary") browser()
 
  
@@ -1307,496 +1308,499 @@ carstm_model_inla = function(
       if (exists("nposteriors", O)) {
         nposteriors = O$nposteriors
       } else {
-        message("nposteriors not found, defaulting to 1000")
-        nposteriors = 1000 
+        message("nposteriors not found, defaulting to 0")
+        nposteriors = 0 
       }
     }
 
     message( "Sampling from joint posteriors: n = ", nposteriors )
-  
-    S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, num.threads=mc.cores ), silent=TRUE)
-    if ( "try-error" %in%  class(S) ) {
-      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, use.improved.mean=FALSE ), silent=TRUE)
-    }
-    if ( "try-error" %in%  class(S) ) {
-      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, skew.corr =FALSE ), silent=TRUE)
-    }
-    if ( "try-error" %in%  class(S) ) {
-      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, use.improved.mean=FALSE, skew.corr =FALSE ), silent=TRUE)
-    }
-    
-    if ( "try-error" %in%  class(S) ) stop("posterior sampling error")
 
-      if (0) {
-        # not used at the moment .. 
-        nlogdens = length(S[[1]]$logdens)
-        logdens = array(NA, dim=c( nlogdens, nposteriors  ) )
-        for (i in 1:nposteriors) {
-          logdens[,i] = unlist(S[[i]]$logdens)
-        }
-        logdens_names =  names(S[[1]]$logdens)
-        logdens = format_results( logdens, labels=logdens_names  ) # same seq as space_id ( == attributes(space)$row.names )
+    if (nposteriors > 0) {
+
+      S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, num.threads=mc.cores ), silent=TRUE)
+      if ( "try-error" %in%  class(S) ) {
+        S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, use.improved.mean=FALSE ), silent=TRUE)
       }
-    
-    if (be_verbose)  message( "\nPosterior simulations complete. Extracting required components ... "  )
-
-
-    fit = NULL; gc()  # no longer needed .. remove from memory
-
-    Osamples = list()
-    # copy a few items to keep each output autonomous
-    Osamples$sppoly = sppoly
-    Osamples$fm = O$fm
-    if (exists("time_name", O)) Osamples$time_name = O$time_name
-    if (exists("space_name", O)) Osamples$space_name = O$space_name
-    if (exists("cyclic_name", O)) Osamples$cyclic_name = O$cyclic_name
-
-    if (summarize_simulations) Osamples[["summary"]] = list()
-
-    # extraction here as no need for fit object anymore (reduces RAM requirements)
-    if (is.null(exceedance_threshold)) if (exists("exceedance_threshold", O)) exceedance_threshold = O[["exceedance_threshold"]]
-    if (is.null(deceedance_threshold)) if (exists("deceedance_threshold", O)) deceedance_threshold = O[["deceedance_threshold"]]
-
-    if (is.null(deceedance_threshold_predictions)) if (exists("deceedance_threshold_predictions", O)) deceedance_threshold_predictions = O[["deceedance_threshold_predictions"]]
-    if (is.null(exceedance_threshold_predictions)) if (exists("exceedance_threshold_predictions", O)) exceedance_threshold_predictions = O[["exceedance_threshold_predictions"]]
-
-    for (z in c("tag", "start", "length") ) assign(z, attributes(S)[[".contents"]][[z]] )  # index info
-
-    if ( "summary" %in% posterior_simulations_to_retain ) {
+      if ( "try-error" %in%  class(S) ) {
+        S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, skew.corr =FALSE ), silent=TRUE)
+      }
+      if ( "try-error" %in%  class(S) ) {
+        S = try( inla.posterior.sample( nposteriors, fit, add.names=FALSE, use.improved.mean=FALSE, skew.corr =FALSE ), silent=TRUE)
+      }
       
-      # useful to check representativeness of samples
+      if ( "try-error" %in%  class(S) ) stop("posterior sampling error")
 
-      if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_summary") browser()
-      # -- check variable names here
-      # posteriors
-      flabels= O[["names.fixed"]]
-      nfixed = length(O[["names.fixed"]])
-      Osamples[["fixed_effects"]] = array(NA, dim=c( nfixed, O[["nposteriors"]]  ) )
-      fkk = inla_get_indices(O[["names.fixed"]], tag=tag, start=start, len=length, model="direct_match")
-      fkk = unlist(fkk)
-      for (i in 1:O[["nposteriors"]]) Osamples[["fixed_effects"]][,i] = S[[i]]$latent[fkk,]  
-      Osamples[["fixed_effects"]] = invlink(Osamples[["fixed_effects"]])
-      row.names(Osamples[["fixed_effects"]]) = flabels
+        if (0) {
+          # not used at the moment .. 
+          nlogdens = length(S[[1]]$logdens)
+          logdens = array(NA, dim=c( nlogdens, nposteriors  ) )
+          for (i in 1:nposteriors) {
+            logdens[,i] = unlist(S[[i]]$logdens)
+          }
+          logdens_names =  names(S[[1]]$logdens)
+          logdens = format_results( logdens, labels=logdens_names  ) # same seq as space_id ( == attributes(space)$row.names )
+        }
+      
+      if (be_verbose)  message( "\nPosterior simulations complete. Extracting required components ... "  )
 
-      if (summarize_simulations) {
-        Osamples[["summary"]][["fixed_effects"]] = posterior_summary(format_results( fixed, labels=flabels))
-      }
-      fkk = fixed = NULL
- 
 
-      other_random = setdiff( names(O$random), c(vS, vS2 ) )
+      fit = NULL; gc()  # no longer needed .. remove from memory
 
-      if (length(other_random) > 0 ) {
-        nrandom = sum(sapply(O$random[other_random], nrow))  
-        Osamples[["random_effects"]] = array(NA, dim=c(nrandom, O[["nposteriors"]]  ) )
-        rkk = inla_get_indices(other_random, tag=tag, start=start, len=length, model="direct_match"  )  # if bym2, must be decomposed  
-        rkk = unlist( rkk )
-        for (i in 1:O[["nposteriors"]]) random[,i] = S[[i]]$latent[rkk,]  
-        rlabels = names(S[[1]]$latent[rkk,])
-        row.names(Osamples[["random_effects"]]) = rlabels
+      Osamples = list()
+      # copy a few items to keep each output autonomous
+      Osamples$sppoly = sppoly
+      Osamples$fm = O$fm
+      if (exists("time_name", O)) Osamples$time_name = O$time_name
+      if (exists("space_name", O)) Osamples$space_name = O$space_name
+      if (exists("cyclic_name", O)) Osamples$cyclic_name = O$cyclic_name
+
+      if (summarize_simulations) Osamples[["summary"]] = list()
+
+      # extraction here as no need for fit object anymore (reduces RAM requirements)
+      if (is.null(exceedance_threshold)) if (exists("exceedance_threshold", O)) exceedance_threshold = O[["exceedance_threshold"]]
+      if (is.null(deceedance_threshold)) if (exists("deceedance_threshold", O)) deceedance_threshold = O[["deceedance_threshold"]]
+
+      if (is.null(deceedance_threshold_predictions)) if (exists("deceedance_threshold_predictions", O)) deceedance_threshold_predictions = O[["deceedance_threshold_predictions"]]
+      if (is.null(exceedance_threshold_predictions)) if (exists("exceedance_threshold_predictions", O)) exceedance_threshold_predictions = O[["exceedance_threshold_predictions"]]
+
+      for (z in c("tag", "start", "length") ) assign(z, attributes(S)[[".contents"]][[z]] )  # index info
+
+      if ( "summary" %in% posterior_simulations_to_retain ) {
+        
+        # useful to check representativeness of samples
+
+        if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_summary") browser()
+        # -- check variable names here
+        # posteriors
+        flabels= O[["names.fixed"]]
+        nfixed = length(O[["names.fixed"]])
+        Osamples[["fixed_effects"]] = array(NA, dim=c( nfixed, O[["nposteriors"]]  ) )
+        fkk = inla_get_indices(O[["names.fixed"]], tag=tag, start=start, len=length, model="direct_match")
+        fkk = unlist(fkk)
+        for (i in 1:O[["nposteriors"]]) Osamples[["fixed_effects"]][,i] = S[[i]]$latent[fkk,]  
+        Osamples[["fixed_effects"]] = invlink(Osamples[["fixed_effects"]])
+        row.names(Osamples[["fixed_effects"]]) = flabels
 
         if (summarize_simulations) {
-          Osamples[["summary"]][["random_effects"]] = posterior_summary( format_results( Osamples[["random_effects"]], labels=rlabels ) )
+          Osamples[["summary"]][["fixed_effects"]] = posterior_summary(format_results( fixed, labels=flabels))
         }
-        rkk = nrandom= rlabels= NULL
-      }
-
-      hyper_names = names(S[[1]]$hyperpar)
-      nhyperpar = length(hyper_names)
-      if (nhyperpar == 0) stop("No hyperparameters? ... control.mode(restart=TRUE) might help" )
-      Osamples[["hyperpars"]] = array( NA,dim=c(nhyperpar, O[["nposteriors"]]  ) )
-      for (i in 1:O[["nposteriors"]]) Osamples[["hyperpars"]][,i] = S[[i]]$hyperpar
-      k = grep("Precision", hyper_names)
-      if (length(k) > 0) {
-          Osamples[["hyperpars"]][k,] = 1 / sqrt(Osamples[["hyperpars"]][k,]) 
-          hyper_names[k] = gsub("Precision for", "SD", hyper_names[k] )
-      }
-      hyper_names = gsub("for ", "", hyper_names )
-      hyper_names = gsub("the ", "", hyper_names )
-      row.names( Osamples[["hyperpars"]] ) = hyper_names
- 
-      if (summarize_simulations) {
-        Osamples[["summary"]][["hyperpars"]] = posterior_summary( format_results( Osamples[["hyperpars"]], labels=hyper_names) )
-      }
-      hyper_names = nhyperpar = k = NULL
-    }  # end summary
-    
-    k = known = unknown = m  = NULL
-
-    gc()
+        fkk = fixed = NULL
   
-    if ( "random_spatial" %in% posterior_simulations_to_retain ) {
-      if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_spatial") browser()
-      # -- check variable names here
 
-      # POSTERIOR samples
-      space = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
-      row.names(space) = O[["space_name"]]
-      space1 = space2 = NULL
+        other_random = setdiff( names(O$random), c(vS, vS2 ) )
 
-      fmre =  O[["fm"]]$random_effects
-      iSP = which( fmre$dimensionality=="s" & fmre$level=="main")
+        if (length(other_random) > 0 ) {
+          nrandom = sum(sapply(O$random[other_random], nrow))  
+          Osamples[["random_effects"]] = array(NA, dim=c(nrandom, O[["nposteriors"]]  ) )
+          rkk = inla_get_indices(other_random, tag=tag, start=start, len=length, model="direct_match"  )  # if bym2, must be decomposed  
+          rkk = unlist( rkk )
+          for (i in 1:O[["nposteriors"]]) random[,i] = S[[i]]$latent[rkk,]  
+          rlabels = names(S[[1]]$latent[rkk,])
+          row.names(Osamples[["random_effects"]]) = rlabels
 
-      matchto = list( space=O[["space_id"]] )
+          if (summarize_simulations) {
+            Osamples[["summary"]][["random_effects"]] = posterior_summary( format_results( Osamples[["random_effects"]], labels=rlabels ) )
+          }
+          rkk = nrandom= rlabels= NULL
+        }
 
-      if (length(iSP) == 1) {
-        stx1 = paste("^", fmre$vn[iSP], "$", sep="")
-        if (fmre$model[iSP] %in% c("bym2", "bym") ) {
-          # special case bym2 has two factors rolled together
+        hyper_names = names(S[[1]]$hyperpar)
+        nhyperpar = length(hyper_names)
+        if (nhyperpar == 0) stop("No hyperparameters? ... control.mode(restart=TRUE) might help" )
+        Osamples[["hyperpars"]] = array( NA,dim=c(nhyperpar, O[["nposteriors"]]  ) )
+        for (i in 1:O[["nposteriors"]]) Osamples[["hyperpars"]][,i] = S[[i]]$hyperpar
+        k = grep("Precision", hyper_names)
+        if (length(k) > 0) {
+            Osamples[["hyperpars"]][k,] = 1 / sqrt(Osamples[["hyperpars"]][k,]) 
+            hyper_names[k] = gsub("Precision for", "SD", hyper_names[k] )
+        }
+        hyper_names = gsub("for ", "", hyper_names )
+        hyper_names = gsub("the ", "", hyper_names )
+        row.names( Osamples[["hyperpars"]] ) = hyper_names
+  
+        if (summarize_simulations) {
+          Osamples[["summary"]][["hyperpars"]] = posterior_summary( format_results( Osamples[["hyperpars"]], labels=hyper_names) )
+        }
+        hyper_names = nhyperpar = k = NULL
+      }  # end summary
+      
+      k = known = unknown = m  = NULL
+
+      gc()
+    
+      if ( "random_spatial" %in% posterior_simulations_to_retain ) {
+        if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_spatial") browser()
+        # -- check variable names here
+
+        # POSTERIOR samples
+        space = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
+        row.names(space) = O[["space_name"]]
+        space1 = space2 = NULL
+
+        fmre =  O[["fm"]]$random_effects
+        iSP = which( fmre$dimensionality=="s" & fmre$level=="main")
+
+        matchto = list( space=O[["space_id"]] )
+
+        if (length(iSP) == 1) {
+          stx1 = paste("^", fmre$vn[iSP], "$", sep="")
+          if (fmre$model[iSP] %in% c("bym2", "bym") ) {
+            # special case bym2 has two factors rolled together
+            space1 = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
+            space2 = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
+            row.names(space1) = O[["space_name"]]
+            row.names(space2) = O[["space_name"]]
+            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
+            for (i in 1:O[["nposteriors"]]) {
+              space[,i]  = S[[i]]$latent[skk1[["re_total"]],]   # ICAR + IID 
+              space2[,i] = S[[i]]$latent[skk1[["re_neighbourhood"]],]   # ICAR
+            }      
+            space1 = space - space2  # re_unstructured (IID) 
+          } else {
+            # single spatial effect of some kind
+            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  
+            skk1 = unlist(skk1)
+            for (i in 1:O[["nposteriors"]]) {
+              space[,i] = S[[i]]$latent[skk1,]   # ICAR or IID 
+            }
+          }
+        }
+
+        if (length(iSP) == 2) {
+          # Assume additive 
           space1 = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
           space2 = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
           row.names(space1) = O[["space_name"]]
           row.names(space2) = O[["space_name"]]
-          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
+          model_name1 = fmre$model[ iSP[1] ] 
+          model_name2 = fmre$model[ iSP[2] ] 
+          stx1 = paste("^", fmre$vn[iSP[1]], "$", sep="")
+          stx2 = paste("^", fmre$vn[iSP[i]], "$", sep="")
+          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+          skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
           for (i in 1:O[["nposteriors"]]) {
-            space[,i]  = S[[i]]$latent[skk1[["re_total"]],]   # ICAR + IID 
-            space2[,i] = S[[i]]$latent[skk1[["re_neighbourhood"]],]   # ICAR
+            space1[,i] = S[[i]]$latent[skk1[[1]],]  
+            space2[,i] = S[[i]]$latent[skk2[[1]],]
           }      
-          space1 = space - space2  # re_unstructured (IID) 
-        } else {
-          # single spatial effect of some kind
-          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  
-          skk1 = unlist(skk1)
-          for (i in 1:O[["nposteriors"]]) {
-            space[,i] = S[[i]]$latent[skk1,]   # ICAR or IID 
+          space = space1 + space2  
+          message("Two spatial effects .. assuming they are are additive")
+        }
+
+        space = invlink(space)   # the overall spatial random effect 
+        row.names(space) = O[["space_name"]]
+        matchfrom = list( space=O[["space_id"]] )
+        
+        Osamples[[vS]] = list()
+
+        if (!is.null(exceedance_threshold)) {
+          if (be_verbose)  message("Extracting random spatial effects exceedence"  )
+          for ( b in 1:length(exceedance_threshold)) {
+            m = apply ( space, 1, FUN=function(x) length( which(x > exceedance_threshold[b]) ) ) / O[["nposteriors"]]
+            m = reformat_to_array( input = m, matchfrom=matchfrom, matchto = matchto )
+            names(dimnames(m))[1] = vS
+            dimnames( m )[[vS]] = O[["space_name"]]
+            Osamples[[vS]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) )
+            m = NULL
           }
         }
-      }
 
-      if (length(iSP) == 2) {
-        # Assume additive 
-        space1 = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
-        space2 = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
-        row.names(space1) = O[["space_name"]]
-        row.names(space2) = O[["space_name"]]
-        model_name1 = fmre$model[ iSP[1] ] 
-        model_name2 = fmre$model[ iSP[2] ] 
-        stx1 = paste("^", fmre$vn[iSP[1]], "$", sep="")
-        stx2 = paste("^", fmre$vn[iSP[i]], "$", sep="")
-        skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-        skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-        for (i in 1:O[["nposteriors"]]) {
-          space1[,i] = S[[i]]$latent[skk1[[1]],]  
-          space2[,i] = S[[i]]$latent[skk2[[1]],]
-        }      
-        space = space1 + space2  
-        message("Two spatial effects .. assuming they are are additive")
-      }
-
-      space = invlink(space)   # the overall spatial random effect 
-      row.names(space) = O[["space_name"]]
-      matchfrom = list( space=O[["space_id"]] )
-      
-      Osamples[[vS]] = list()
-
-      if (!is.null(exceedance_threshold)) {
-        if (be_verbose)  message("Extracting random spatial effects exceedence"  )
-        for ( b in 1:length(exceedance_threshold)) {
-          m = apply ( space, 1, FUN=function(x) length( which(x > exceedance_threshold[b]) ) ) / O[["nposteriors"]]
-          m = reformat_to_array( input = m, matchfrom=matchfrom, matchto = matchto )
-          names(dimnames(m))[1] = vS
-          dimnames( m )[[vS]] = O[["space_name"]]
-          Osamples[[vS]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) )
-          m = NULL
+        if (!is.null(deceedance_threshold)) {
+          if (be_verbose)  message("Extracting random spatial effects deceedance"  )
+          # redundant but generalizable to higher dims
+          for ( b in 1:length(deceedance_threshold)) {
+            m = apply ( space, 1, FUN=function(x) length( which(x < deceedance_threshold[b]) ) ) / O[["nposteriors"]]
+            m = reformat_to_array( input = m, matchfrom=matchfrom, matchto=matchto  )
+            names(dimnames(m))[1] = vS
+            dimnames( m )[[vS]] = O[["space_name"]]
+            Osamples[[vS]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) ) 
+            m = NULL
+          }
         }
-      }
 
-      if (!is.null(deceedance_threshold)) {
-        if (be_verbose)  message("Extracting random spatial effects deceedance"  )
-        # redundant but generalizable to higher dims
-        for ( b in 1:length(deceedance_threshold)) {
-          m = apply ( space, 1, FUN=function(x) length( which(x < deceedance_threshold[b]) ) ) / O[["nposteriors"]]
-          m = reformat_to_array( input = m, matchfrom=matchfrom, matchto=matchto  )
-          names(dimnames(m))[1] = vS
-          dimnames( m )[[vS]] = O[["space_name"]]
-          Osamples[[vS]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = data.frame( m [, tokeep, drop =FALSE], ID=row.names(m) ) 
-          m = NULL
+        if (summarize_simulations) {
+          Osamples[["summary"]] [[vS]] = list()
+          m = posterior_summary( format_results( space, labels=O[["space_name"]]  ) )
+          W = array( NA, dim=c( O[["space_n"]], length(tokeep) ), dimnames=list( space=O[["space_name"]], stat=tokeep ) )
+          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+          for (k in 1:length(tokeep)) {
+            W[,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
+          }
+          Osamples[["summary"]] [[vS]] [["re_total"]] = W[, tokeep, drop =FALSE] 
         }
-      }
 
-      if (summarize_simulations) {
-        Osamples[["summary"]] [[vS]] = list()
-        m = posterior_summary( format_results( space, labels=O[["space_name"]]  ) )
-        W = array( NA, dim=c( O[["space_n"]], length(tokeep) ), dimnames=list( space=O[["space_name"]], stat=tokeep ) )
-        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-        for (k in 1:length(tokeep)) {
-          W[,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
+        Osamples[[vS]][["re_total"]] = space  # already inverse link scale (line 1517)
+        
+        if ( "random_spatial12" %in% posterior_simulations_to_retain ) {
+          if (!is.null(space1)) Osamples [[vS]] [[model_name1]] =  invlink(space1) 
+          if (!is.null(space2)) Osamples [[vS]] [[model_name2]] =  invlink(space2) 
         }
-        Osamples[["summary"]] [[vS]] [["re_total"]] = W[, tokeep, drop =FALSE] 
-      }
+      } # END random spatial post samples
 
-      Osamples[[vS]][["re_total"]] = space  # already inverse link scale (line 1517)
-      
-      if ( "random_spatial12" %in% posterior_simulations_to_retain ) {
-        if (!is.null(space1)) Osamples [[vS]] [[model_name1]] =  invlink(space1) 
-        if (!is.null(space2)) Osamples [[vS]] [[model_name2]] =  invlink(space2) 
-      }
-    } # END random spatial post samples
+      matchfrom = i1 = i2= NULL
+      Z = W = m = space = space1 = space2 = skk1 = skk2 = iSP = NULL
+      gc()
 
-    matchfrom = i1 = i2= NULL
-    Z = W = m = space = space1 = space2 = skk1 = skk2 = iSP = NULL
-    gc()
-
-
-    if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
-      # posterior simulations
-      if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_spatiotemporal") browser()
-
-      fmre =  O[["fm"]]$random_effects
-      iST = which( fmre$dimensionality=="st" & fmre$level=="main")
-
-      matchto = list( space=O[["space_id"]], time=O[["time_id"]]  )
-
-      space_time1 = space_time2  = space_time = array( NA, 
-        dim=c( O[["space_n"]] * O[["time_n"]] , O[["nposteriors"]]  ) )
-      L = CJ( time=O[["time_id"]], space=O[["space_id"]] )  # note:: CJ has reverse order vs expand.grid
-      stlabels = paste(L[["space"]], L[["time"]], sep="_")
-
-      if (length(iST) == 1) {
-        stx1 = paste("^", fmre$vn[iST], "$", sep="")
-        if (fmre$model[iST] %in% c("bym", "bym2") ) {
-          # special case bym2 has two factors rolled together
-          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
-          for (i in 1:O[["nposteriors"]]) {
-            space_time[,i]  = S[[i]]$latent[skk1[["re_total"]],]  
-            space_time2[,i] = S[[i]]$latent[skk1[["re_neighbourhood"]],]
-          }    
-          space_time1 = space_time - space_time2   # re_unstructured
-          row.names(space_time1) = stlabels
-          row.names(space_time2) = stlabels
-          row.names(space_time) = stlabels
-
-        } else {
-          # single spatial effect of some kind
-          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-          skk1 = unlist(skk1)
-          for (i in 1:O[["nposteriors"]]) {
-            space_time[,i] = S[[i]]$latent[skk1,] 
-          }      
-        }
-      }
-      
-      if (length(iST) == 2) {
-        model_name1 = fmre$model[ iST[1] ] 
-        model_name2 = fmre$model[ iST[2] ] 
-        stx1 = paste("^", fmre$vn[iST[1]], "$", sep="")
-        stx2 = paste("^", fmre$vn[iST[2]], "$", sep="")
-        skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-        skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
-        for (i in 1:O[["nposteriors"]]) {
-          space_time1[,i] = S[[i]]$latent[skk1[[1]],] 
-          space_time2[,i] = S[[i]]$latent[skk2[[1]],]
-        }      
-        space_time  = space_time1 + space_time2  # assume additive
-        row.names(space_time1) = stlabels
-        row.names(space_time2) = stlabels 
-      }
-    
-      space_time = invlink(space_time)
-      row.names(space_time) = stlabels
-
-      Z = expand.grid( space=O[["space_id"]], type ="re_total", time=O[["time_id"]], stringsAsFactors =FALSE )
-      jst =  which(Z$type=="re_total")
-      matchfrom = list( space=Z[["space"]][jst], time=Z[["time"]][jst]  )
-
-      Osamples[[vnST]] = list()
-
-      if (!is.null(exceedance_threshold)) {
-        if (be_verbose)  message("Extracting random spatiotemporal errors exceedence"  )
-
-        Osamples[[vnST]] [["exceedance"]] = list()
-
-        for ( b in 1:length(exceedance_threshold)) {
-          m = apply ( space_time, 1, FUN=function(x) length( which(x > exceedance_threshold[b] ) ) ) / O[["nposteriors"]]
-          m = reformat_to_array( input=m, matchfrom=matchfrom,  matchto=matchto )
-          names(dimnames(m))[1] = vS
-          names(dimnames(m))[2] = vT
-          dimnames( m )[[vS]] = O[["space_name"]]
-          dimnames( m )[[vT]] = O[["time_name"]]
-          Osamples[[vnST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = m
-        }
-        m = NULL
-      }
-
-      if (!is.null(deceedance_threshold)) {
-        if (be_verbose)  message("Extracting random spatiotemporal errors deceedance"  )
-
-        Osamples[[vnST]] [["deceedance"]] = list()
-
-        for ( b in 1:length(deceedance_threshold)) {
-          m = apply ( space_time, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / O[["nposteriors"]]
-          m = reformat_to_array( input = m, matchfrom=matchfrom,  matchto=matchto )
-          names(dimnames(m))[1] = vS
-          names(dimnames(m))[2] = O[["time_name"]]
-          dimnames( m )[[vS]] = O[["space_name"]]
-          dimnames( m )[[vT]] = vT
-          Osamples[[vnST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = m
-        }
-        m = NULL
-      }
-
-      if (summarize_simulations) {
-        W = array( NA, 
-          dim=c( O[["space_n"]], O[["time_n"]], length(tokeep) ), 
-          dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=tokeep ) )
-        names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-        names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-
-        m = posterior_summary(format_results( space_time, labels=stlabels ))
-        for (k in 1:length(tokeep)) {
-          W[,,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
-        }
-        Osamples[["summary"]][[vnST]] = list()
-        Osamples[["summary"]][[vnST]] [["re_total"]] = W[,, tokeep, drop =FALSE] 
-      }
 
       if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
-        Osamples [[vnST]] [["re_total"]] = space_time  # already invlinked .. line 1626
-      }
-      if ( "random_spatiotemporal12" %in% posterior_simulations_to_retain ) {
-        if (!is.null(space_time1)) Osamples [[vnST]] [[model_name1]] = invlink(space_time1)
-        if (!is.null(space_time2)) Osamples [[vnST]] [[model_name2]] = invlink(space_time2)
-      }
+        # posterior simulations
+        if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_spatiotemporal") browser()
 
-    }  # END sp-temp post samples
-    Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL
-    gc()
+        fmre =  O[["fm"]]$random_effects
+        iST = which( fmre$dimensionality=="st" & fmre$level=="main")
 
+        matchto = list( space=O[["space_id"]], time=O[["time_id"]]  )
 
-    if ( "predictions" %in% posterior_simulations_to_retain ) {
-  
-      # marginals.fitted.values are on response scale (for both experimental and classical) and  already incorporates offsets
-      # summary.fitted.values on response scale ((for both experimental and classical)) 
-      # posteriors are on link scale and already incorporates offsets
-      if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_predictions") browser()
-      if (be_verbose) message("Extracting posterior predictions" )
+        space_time1 = space_time2  = space_time = array( NA, 
+          dim=c( O[["space_n"]] * O[["time_n"]] , O[["nposteriors"]]  ) )
+        L = CJ( time=O[["time_id"]], space=O[["space_id"]] )  # note:: CJ has reverse order vs expand.grid
+        stlabels = paste(L[["space"]], L[["time"]], sep="_")
 
-      # prepapre prediction simulations (from joint posteriors)
-      ptx = "^Predictor"
-      preds = O[["predictions_range"]][1]:O[["predictions_range"]][2]  
-      npredictions = length(preds)
-      
-      pkk = inla_get_indices(ptx, tag=tag, start=start, len=length)
-      pkk = unlist(pkk)[preds]
-      predictions = array(NA, dim=c( npredictions, O[["nposteriors"]]  ) )
-      for (i in 1:O[["nposteriors"]])  predictions[,i] = S[[i]]$latent[pkk, ]
-      predictions = invlink(predictions)  #  required for both classical and experimental
+        if (length(iST) == 1) {
+          stx1 = paste("^", fmre$vn[iST], "$", sep="")
+          if (fmre$model[iST] %in% c("bym", "bym2") ) {
+            # special case bym2 has two factors rolled together
+            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length, model="bym2" )  # if bym2, must be decomposed  
+            for (i in 1:O[["nposteriors"]]) {
+              space_time[,i]  = S[[i]]$latent[skk1[["re_total"]],]  
+              space_time2[,i] = S[[i]]$latent[skk1[["re_neighbourhood"]],]
+            }    
+            space_time1 = space_time - space_time2   # re_unstructured
+            row.names(space_time1) = stlabels
+            row.names(space_time2) = stlabels
+            row.names(space_time) = stlabels
 
-      pkk = preds = S = NULL
-      gc()
-
-      if ( exists("data_transformation", O))  predictions = O$data_transformation$backward( predictions  )
-  
-      if ( O[["dimensionality"]] == "space" ) {
-
-          matchto = list( space=O[["space_id"]] )
-
-          W = array( NA, 
-            dim=c( O[["space_n"]], O[["nposteriors"]] ),  
-            dimnames=list( space=O[["space_name"]], sim=1:O[["nposteriors"]] ) )
-          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-          for (k in 1:O[["nposteriors"]] ) {
-            W[,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+          } else {
+            # single spatial effect of some kind
+            skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+            skk1 = unlist(skk1)
+            for (i in 1:O[["nposteriors"]]) {
+              space_time[,i] = S[[i]]$latent[skk1,] 
+            }      
           }
-          Osamples[["predictions"]] = W[, drop =FALSE]
-          W = NULL 
-      }
-
-
-      if (O[["dimensionality"]] == "space-time"  ) {
-
-          matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
-
-          W = array( NA, 
-            dim=c( O[["space_n"]], O[["time_n"]], O[["nposteriors"]] ),  
-            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], sim=1:O[["nposteriors"]] ) )
-          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-          names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-
-          for (k in 1:O[["nposteriors"]] ) {
-            W[,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
-          }
-          Osamples[["predictions"]] = W[,,, drop =FALSE]
-          W = NULL
-      }
-
-
-      if ( O[["dimensionality"]] == "space-time-cyclic" ) {
-
-          matchto = list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]] )
-
-          W = array( NA, 
-            dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], O[["nposteriors"]] ),  
-            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], sim=1:O[["nposteriors"]] ) )
-          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-          names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-          names(dimnames(W))[3] = vU  # need to do this in a separate step ..
-          for (k in 1:O[["nposteriors"]] ) {
-            W[,,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
-          }
-          Osamples[["predictions"]] = W[,,, ,drop =FALSE]
-          W = NULL
-      }
-  
-      
-      if (!is.null(exceedance_threshold_predictions)) {
-        if (be_verbose)  message("Extracting de/exceedance of predictions"  )
+        }
         
-        Osamples[["predictions_exceedance"]] = list()
-        Osamples[["predictions_exceedance"]] [["exceedance"]]  = list()
-
-        for ( b in 1:length(exceedance_threshold_predictions)) {
-            m = apply ( predictions, 1, FUN=function(x) length( which(x > exceedance_threshold_predictions[b] ) ) ) / O[["nposteriors"]]
-            W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
-            names(dimnames(W))[1] = vS
-            dimnames( W )[[vS]] = O[["space_name"]]
-            m = NULL
-            if ( length(O[["matchfrom"]]) > 1 ) {
-              names(dimnames(W))[2] = vT
-              dimnames( W )[[vT]] = O[["time_name"]]
-            }
-            if (length(O[["matchfrom"]]) > 2  ) {
-              names(dimnames(W))[3] = vU
-              dimnames( W )[[vU]] = O[["cyclic_name"]]
-            }
-            Osamples[["predictions_exceedance"]] [["exceedance"]] [[ as.character(exceedance_threshold_predictions[b]) ]]= W
-            W = NULL
-          }
-      }
-
-      if (!is.null(deceedance_threshold_predictions)) {
-          
-          Osamples[["predictions_deceedance"]]  = list()
-          Osamples[["predictions_deceedance"]] [["deceedance"]] = list()
-
-          for ( b in 1:length(deceedance_threshold_predictions)) {
-            m = apply ( predictions, 1, FUN=function(x) length( which(x < deceedance_threshold_predictions[b] ) ) ) / O[["nposteriors"]]
-            W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
-            names(dimnames(W))[1] = vS
-            dimnames( W )[[vS]] = O[["space_name"]]
-            m = NULL
-            if ( length(O[["matchfrom"]]) > 1 ) {
-              names(dimnames(W))[2] = vT
-              dimnames( W )[[vT]] = O[["time_name"]]
-            }
-            if ( length(O[["matchfrom"]]) > 2 ) {
-              names(dimnames(W))[3] = vU
-              dimnames( W )[[vU]] = O[["cyclic_name"]]
-            }
-            Osamples[["predictions_deceedance"]] [["deceedance"]] [[ as.character(deceedance_threshold_predictions[b]) ]]= W
-            W = NULL
-          }
-      }
-          
-      predictions = NULL
-
-      # save summary
-      fn_samples = gsub( "_fit~", "_samples~", fn_fit, fixed=TRUE )
-      read_write_fast( data=Osamples, file=fn_samples, compress=compress, compression_level=compression_level, qs_preset=qs_preset ) 
-      Osamples = NULL 
-      gc()
+        if (length(iST) == 2) {
+          model_name1 = fmre$model[ iST[1] ] 
+          model_name2 = fmre$model[ iST[2] ] 
+          stx1 = paste("^", fmre$vn[iST[1]], "$", sep="")
+          stx2 = paste("^", fmre$vn[iST[2]], "$", sep="")
+          skk1 = inla_get_indices(stx1, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+          skk2 = inla_get_indices(stx2, tag=tag, start=start, len=length )  # if bym2, must be decomposed  
+          for (i in 1:O[["nposteriors"]]) {
+            space_time1[,i] = S[[i]]$latent[skk1[[1]],] 
+            space_time2[,i] = S[[i]]$latent[skk2[[1]],]
+          }      
+          space_time  = space_time1 + space_time2  # assume additive
+          row.names(space_time1) = stlabels
+          row.names(space_time2) = stlabels 
+        }
       
-    } # END predictions posteriors loop
+        space_time = invlink(space_time)
+        row.names(space_time) = stlabels
+
+        Z = expand.grid( space=O[["space_id"]], type ="re_total", time=O[["time_id"]], stringsAsFactors =FALSE )
+        jst =  which(Z$type=="re_total")
+        matchfrom = list( space=Z[["space"]][jst], time=Z[["time"]][jst]  )
+
+        Osamples[[vnST]] = list()
+
+        if (!is.null(exceedance_threshold)) {
+          if (be_verbose)  message("Extracting random spatiotemporal errors exceedence"  )
+
+          Osamples[[vnST]] [["exceedance"]] = list()
+
+          for ( b in 1:length(exceedance_threshold)) {
+            m = apply ( space_time, 1, FUN=function(x) length( which(x > exceedance_threshold[b] ) ) ) / O[["nposteriors"]]
+            m = reformat_to_array( input=m, matchfrom=matchfrom,  matchto=matchto )
+            names(dimnames(m))[1] = vS
+            names(dimnames(m))[2] = vT
+            dimnames( m )[[vS]] = O[["space_name"]]
+            dimnames( m )[[vT]] = O[["time_name"]]
+            Osamples[[vnST]] [["exceedance"]] [[as.character(exceedance_threshold[b])]] = m
+          }
+          m = NULL
+        }
+
+        if (!is.null(deceedance_threshold)) {
+          if (be_verbose)  message("Extracting random spatiotemporal errors deceedance"  )
+
+          Osamples[[vnST]] [["deceedance"]] = list()
+
+          for ( b in 1:length(deceedance_threshold)) {
+            m = apply ( space_time, 1, FUN=function(x) length( which(x < deceedance_threshold) ) ) / O[["nposteriors"]]
+            m = reformat_to_array( input = m, matchfrom=matchfrom,  matchto=matchto )
+            names(dimnames(m))[1] = vS
+            names(dimnames(m))[2] = O[["time_name"]]
+            dimnames( m )[[vS]] = O[["space_name"]]
+            dimnames( m )[[vT]] = vT
+            Osamples[[vnST]] [["deceedance"]] [[as.character(deceedance_threshold[b])]] = m
+          }
+          m = NULL
+        }
+
+        if (summarize_simulations) {
+          W = array( NA, 
+            dim=c( O[["space_n"]], O[["time_n"]], length(tokeep) ), 
+            dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=tokeep ) )
+          names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+          names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+
+          m = posterior_summary(format_results( space_time, labels=stlabels ))
+          for (k in 1:length(tokeep)) {
+            W[,,k] = reformat_to_array(  input = m[, tokeep[k]], matchfrom=matchfrom, matchto=matchto )
+          }
+          Osamples[["summary"]][[vnST]] = list()
+          Osamples[["summary"]][[vnST]] [["re_total"]] = W[,, tokeep, drop =FALSE] 
+        }
+
+        if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
+          Osamples [[vnST]] [["re_total"]] = space_time  # already invlinked .. line 1626
+        }
+        if ( "random_spatiotemporal12" %in% posterior_simulations_to_retain ) {
+          if (!is.null(space_time1)) Osamples [[vnST]] [[model_name1]] = invlink(space_time1)
+          if (!is.null(space_time2)) Osamples [[vnST]] [[model_name2]] = invlink(space_time2)
+        }
+      }  # END sp-temp post samples
+      Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL
+      gc()
+
+
+      if ( "predictions" %in% posterior_simulations_to_retain ) {
+    
+        # marginals.fitted.values are on response scale (for both experimental and classical) and  already incorporates offsets
+        # summary.fitted.values on response scale ((for both experimental and classical)) 
+        # posteriors are on link scale and already incorporates offsets
+        if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_predictions") browser()
+        if (be_verbose) message("Extracting posterior predictions" )
+
+        # prepapre prediction simulations (from joint posteriors)
+        ptx = "^Predictor"
+        preds = O[["predictions_range"]][1]:O[["predictions_range"]][2]  
+        npredictions = length(preds)
+        
+        pkk = inla_get_indices(ptx, tag=tag, start=start, len=length)
+        pkk = unlist(pkk)[preds]
+        predictions = array(NA, dim=c( npredictions, O[["nposteriors"]]  ) )
+        for (i in 1:O[["nposteriors"]])  predictions[,i] = S[[i]]$latent[pkk, ]
+        predictions = invlink(predictions)  #  required for both classical and experimental
+
+        pkk = preds = S = NULL
+        gc()
+
+        if ( exists("data_transformation", O))  predictions = O$data_transformation$backward( predictions  )
+    
+        if ( O[["dimensionality"]] == "space" ) {
+
+            matchto = list( space=O[["space_id"]] )
+
+            W = array( NA, 
+              dim=c( O[["space_n"]], O[["nposteriors"]] ),  
+              dimnames=list( space=O[["space_name"]], sim=1:O[["nposteriors"]] ) )
+            names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+            for (k in 1:O[["nposteriors"]] ) {
+              W[,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+            }
+            Osamples[["predictions"]] = W[, drop =FALSE]
+            W = NULL 
+        }
+
+
+        if (O[["dimensionality"]] == "space-time"  ) {
+
+            matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
+
+            W = array( NA, 
+              dim=c( O[["space_n"]], O[["time_n"]], O[["nposteriors"]] ),  
+              dimnames=list( space=O[["space_name"]], time=O[["time_name"]], sim=1:O[["nposteriors"]] ) )
+            names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+            names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+
+            for (k in 1:O[["nposteriors"]] ) {
+              W[,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+            }
+            Osamples[["predictions"]] = W[,,, drop =FALSE]
+            W = NULL
+        }
+
+
+        if ( O[["dimensionality"]] == "space-time-cyclic" ) {
+
+            matchto = list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]] )
+
+            W = array( NA, 
+              dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], O[["nposteriors"]] ),  
+              dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], sim=1:O[["nposteriors"]] ) )
+            names(dimnames(W))[1] = vS  # need to do this in a separate step ..
+            names(dimnames(W))[2] = vT  # need to do this in a separate step ..
+            names(dimnames(W))[3] = vU  # need to do this in a separate step ..
+            for (k in 1:O[["nposteriors"]] ) {
+              W[,,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
+            }
+            Osamples[["predictions"]] = W[,,, ,drop =FALSE]
+            W = NULL
+        }
+    
+        
+        if (!is.null(exceedance_threshold_predictions)) {
+          if (be_verbose)  message("Extracting de/exceedance of predictions"  )
+          
+          Osamples[["predictions_exceedance"]] = list()
+          Osamples[["predictions_exceedance"]] [["exceedance"]]  = list()
+
+          for ( b in 1:length(exceedance_threshold_predictions)) {
+              m = apply ( predictions, 1, FUN=function(x) length( which(x > exceedance_threshold_predictions[b] ) ) ) / O[["nposteriors"]]
+              W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
+              names(dimnames(W))[1] = vS
+              dimnames( W )[[vS]] = O[["space_name"]]
+              m = NULL
+              if ( length(O[["matchfrom"]]) > 1 ) {
+                names(dimnames(W))[2] = vT
+                dimnames( W )[[vT]] = O[["time_name"]]
+              }
+              if (length(O[["matchfrom"]]) > 2  ) {
+                names(dimnames(W))[3] = vU
+                dimnames( W )[[vU]] = O[["cyclic_name"]]
+              }
+              Osamples[["predictions_exceedance"]] [["exceedance"]] [[ as.character(exceedance_threshold_predictions[b]) ]]= W
+              W = NULL
+            }
+        }
+
+        if (!is.null(deceedance_threshold_predictions)) {
+            
+            Osamples[["predictions_deceedance"]]  = list()
+            Osamples[["predictions_deceedance"]] [["deceedance"]] = list()
+
+            for ( b in 1:length(deceedance_threshold_predictions)) {
+              m = apply ( predictions, 1, FUN=function(x) length( which(x < deceedance_threshold_predictions[b] ) ) ) / O[["nposteriors"]]
+              W = reformat_to_array( input=m, matchfrom=O[["matchfrom"]],  matchto=matchto )
+              names(dimnames(W))[1] = vS
+              dimnames( W )[[vS]] = O[["space_name"]]
+              m = NULL
+              if ( length(O[["matchfrom"]]) > 1 ) {
+                names(dimnames(W))[2] = vT
+                dimnames( W )[[vT]] = O[["time_name"]]
+              }
+              if ( length(O[["matchfrom"]]) > 2 ) {
+                names(dimnames(W))[3] = vU
+                dimnames( W )[[vU]] = O[["cyclic_name"]]
+              }
+              Osamples[["predictions_deceedance"]] [["deceedance"]] [[ as.character(deceedance_threshold_predictions[b]) ]]= W
+              W = NULL
+            }
+        }
+            
+        predictions = NULL
+
+        # save summary
+        fn_samples = gsub( "_fit~", "_samples~", fn_fit, fixed=TRUE )
+        read_write_fast( data=Osamples, file=fn_samples, compress=compress, compression_level=compression_level, qs_preset=qs_preset ) 
+        Osamples = NULL 
+        gc()
+        
+      } # END predictions posteriors loop
+    }  # nposteriors > 0
+
   } # END redo posterior samples
 
 
