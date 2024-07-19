@@ -52,10 +52,10 @@ carstm_plot_map = function( p=NULL,
       annotation=paste( p$carstm_model_label, "persistent spatial effect" )
     }
 
-    toplot = carstm_results_unpack( res, vn )
+    datatoplot = carstm_results_unpack( res, vn )
     
     if (is.null(brks)) {
-      qn = quantile( tf(toplot[,"mean"]), probs=probs, na.rm=TRUE ) 
+      qn = quantile( tf(datatoplot[,"mean"]), probs=probs, na.rm=TRUE ) 
       brks = pretty( qn )
     }
 
@@ -67,18 +67,17 @@ carstm_plot_map = function( p=NULL,
     )
     return("done")
   }
-
-
+ 
   if (toplot=="predictions") {
     res = carstm_model( p=p,  DS="carstm_predictions" ) 
     vn="predictions"
-    toplot = carstm_results_unpack( res, vn )
+    datatoplot = carstm_results_unpack( res, vn )
   
     if (p$dimensionality == "space") {
 
       if (is.null(brks)) {
-        qn = quantile( tf(toplot[,"mean"]), probs=probs, na.rm=TRUE ) 
-        brks = pretty( qn )
+        qn = quantile( datatoplot[,"mean"], probs=probs, na.rm=TRUE ) 
+        brks = pretty( tf(qn) )
       }
       
       if (is.null(fn)) {
@@ -98,18 +97,20 @@ carstm_plot_map = function( p=NULL,
         outfilename=fn
       )
 
-    } else if (p$dimensionality == "space_time") {
+    } else if (p$dimensionality == "space-time") {
+
+      if (is.null(brks)) {
+        qn = quantile( datatoplot[,,"mean"], probs=probs, na.rm=TRUE )
+        brks = pretty(  tf(qn)  )
+      }
 
       for (y in res$time_name) {
 
-        if (is.null(brks)) {
-          qn = quantile( tf(toplot[,,"mean"]), probs=probs, na.rm=TRUE )
-          brks = pretty(  qn  )
-        }
-
         tmatch = as.character(y) 
         u = res$cyclic_id[7]
-        fn = file.path( outputdir,  paste(fn_root_prefix, paste0(vn, collapse="_"), tmatch, "png", sep=".") )
+        fnx = paste(paste0(vn, collapse="_"), tmatch, "png", sep=".")
+        if (!is.null(fn_root_prefix)) fnx = paste( fn_root_prefix, fnx, sep="." )
+        fn = file.path( outputdir,  fnx )
         annotation = paste( p$carstm_model_label, "  ", paste0(tmatch, collapse="-") )
 
         carstm_map( res=res, vn=vn,  tmatch=tmatch, umatch=as.character(u),
@@ -120,15 +121,21 @@ carstm_plot_map = function( p=NULL,
         )
       }
  
-    } else if (p$dimensionality == "space_time_season") {
-
+    } else if (p$dimensionality == "space-time-cyclic") {
+      if (is.null(brks)) {
+        qn = quantile( datatoplot[,,,"mean"], probs=probs, na.rm=TRUE )
+        brks = pretty(  tf(qn)  )
+      }
+ 
       for ( y in res$time_name ) {
       for ( u in res$cyclic_name ) {
         tmatch = as.character(y) 
         umatch = as.character(u)
         u = res$cyclic_id[7]
-        fn = file.path( outputdir,  paste(fn_root_prefix, paste0(vn, collapse="_"), tmatch, umatch, "png", sep=".") )
-        annotation = paste( p$carstm_model_label, "  ", paste0(tmatch, collapse="-") )
+        fnx = paste(paste0(vn, collapse="_"), tmatch, umatch, "png", sep=".")
+        if (!is.null(fn_root_prefix)) fnx = paste( fn_root_prefix, fnx, sep="." )
+        fn = file.path( outputdir,  fnx )
+        annotation = paste( p$carstm_model_label, "  ", paste0(tmatch, collapse="-"),  umatch)
         carstm_map( res=res, vn=vn,  tmatch=tmatch, umatch=umatch,
           breaks = brks, colors=colors, additional_features=additional_features,
           legend.position.inside=legend.position, transformation=tf,
