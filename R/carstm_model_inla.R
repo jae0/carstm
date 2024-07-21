@@ -579,14 +579,9 @@ carstm_model_inla = function(
 
     if (is.null(fit)) warning("model fit error")
     if ("try-error" %in% class(fit) ) warning("model fit error")
-
-    # only after file save as there is no need to store the following  (ipred, matchfrom)
-
+ 
     setDT(inla_args[["data"]]) # revert to DT for faster / efficient operations
-
     fit$.args = NULL  # reduce size
-    gc()
-
     inla_args= NULL; 
     gc()
  
@@ -614,12 +609,7 @@ carstm_model_inla = function(
     message( "Fit file not found, set option: redo_fit=TRUE" )
     stop()
   }
- 
-  # do the computations here as fit can be massive ... best not to copy, etc ..
-
-  # --------------------------------------------
-  # --------------------------------------------
-  # --------------------------------------------
+  
   fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
   if (file.exists(fn_modelinfo)) {
     O = aegis::read_write_fast( fn_modelinfo )
@@ -687,8 +677,13 @@ carstm_model_inla = function(
   marginal_summary = function(Z, invlink=NULL ) {
     
     if (!is.null(invlink)) {
-      Z = try( apply_generic( Z, inla.tmarginal, fun=invlink, n=ndiscretization) )
+      Z = try( apply_generic( Z, inla.tmarginal, fun=invlink ) )
       if (test_for_error(Z) =="error") {
+        Z = try( apply_generic( Z, inla.tmarginal, fun=invlink, n=ndiscretization, method = "linear" ) )
+        if (test_for_error(Z) =="error") {
+          class(m) = "try-error"
+          return(m) 
+        }
         class(m) = "try-error"
         return(m) 
       }
@@ -756,15 +751,16 @@ carstm_model_inla = function(
   if (exists("debug")) if (is.character(debug)) if (debug=="summary") browser()
 
  
-  Osummary = list()
-
-  if ( "summary" %in% toget) {
-    
-    if (be_verbose)  message("Extracting parameter summary" )
+  if ( "summary" %in% toget) {  # add marginals to summary
+     
+    Osummary = list()
  
-    dic = fit$dic[c("dic", "p.eff", "dic.sat", "mean.deviance")]
-    waic = fit$waic[c("waic", "p.eff")]
-    mlik = fit$mlik[2]
+    Osummary[["all.hypers"]] = INLA:::inla.all.hyper.postprocess(fit$all.hyper)
+    Osummary[["hypers"]] = fit$marginals.hyperpar
+
+    Osummary[["dic"]] = fit$dic[c("dic", "p.eff", "dic.sat", "mean.deviance")]
+    Osummary[["waic"]] = fit$waic[c("waic", "p.eff")]
+    Osummary[["mlik"]] = fit$mlik[2]
 
     Osummary[["direct"]] = summary(fit)
     # print(Osummary[["direct"]])
@@ -778,12 +774,17 @@ carstm_model_inla = function(
     Osummary[["direct"]]$dic$local.dic.sat = NULL
     Osummary[["direct"]]$dic$family = NULL
       
-    
+
+    if (be_verbose)  message("Extracting parameter summary" )
+  
     # extract and back transform where possible
     if (exists( "marginals.fixed", fit)) {
       m = fit$marginals.fixed  # make a copy to do transformations upon
       fi = grep("Intercept", names(m) )
-      m = try( apply_generic( m, function(x) marginal_clean( inla.tmarginal( invlink, x, n=ndiscretization)) ), silent=TRUE  )
+      m = try( apply_generic( m, function(x) marginal_clean( inla.tmarginal( invlink, x)) ), silent=TRUE  )
+      if (test_for_error(m) =="error") { 
+        m = try( apply_generic( m, function(x) marginal_clean( inla.tmarginal( invlink, x, n=ndiscretization, method="linear" )) ), silent=TRUE  )
+      }
       if ( exists("data_transformation", O))  {
         m[[fi]] = inla.tmarginal( O$data_transformation$backward, m[[fi]] , n=ndiscretization ) # on user scale
       }
@@ -817,7 +818,10 @@ carstm_model_inla = function(
       if (length(prcs) > 0) {
   
         m = fit$marginals.hyperpar[prcs]
-        m = try( apply_generic( m, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps ), n = ndiscretization ), silent=TRUE)
+        m = try( apply_generic( m, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps )  ), silent=TRUE)
+        if (test_for_error(m) =="error") { 
+          m = try( apply_generic( m, inla.tmarginal, fun=function(y) 1/sqrt_safe( y, eps ), n = ndiscretization, method="linear" ), silent=TRUE  )
+        }
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
         m = try( simplify2array( m ), silent=TRUE)
         if (test_for_error(m) =="error") {  
@@ -932,8 +936,8 @@ carstm_model_inla = function(
     read_write_fast( data=Osummary, file=fn_summary, compress=compress, compression_level=compression_level, qs_preset=qs_preset )
     Osummary = NULL 
     gc()
+    
   }  # end parameters
-   
   
   
   # random effects (random spatial and random spatiotemporal) from INLA's marginals
@@ -970,7 +974,10 @@ carstm_model_inla = function(
         model_name = fmre$model[ iSP ]  # iid (re_unstructured)
 
         m = fit$marginals.random[[vS]]
-        m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization ) , silent=TRUE )
+        m = try( apply_generic( m, inla.tmarginal, fun=invlink  ) , silent=TRUE )
+        if (test_for_error(m) =="error") { 
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear" ) , silent=TRUE )
+        }
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE ), silent=TRUE )
         m = try( simplify2array( m ), silent=TRUE)
         m = try( list_simplify( m ), silent=TRUE )
@@ -1019,7 +1026,10 @@ carstm_model_inla = function(
           model_name = fmre$model[ iSP[j] ]  
           
           m = fit$marginals.random[[vnS]]
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization), silent=TRUE  )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE  )
+          if (test_for_error(m) =="error") { 
+            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear"), silent=TRUE  )
+          }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE) , silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE) 
           m = try( list_simplify(m), silent=TRUE  )
@@ -1077,7 +1087,10 @@ carstm_model_inla = function(
         if (exists(vnST, fit$marginals.random )) {
  
           m = fit$marginals.random[[vnST]]
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization) , silent=TRUE )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink ) , silent=TRUE )
+          if (test_for_error(m) =="error") { 
+            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear" ) , silent=TRUE )
+          }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE), silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE)
           m = try( list_simplify( m ), silent=TRUE )
@@ -1124,7 +1137,10 @@ carstm_model_inla = function(
           model_name = fmre$model[ iST[j] ]  
 
           m = fit$marginals.random[[vnST]]
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization), silent=TRUE )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE )
+          if (test_for_error(m) =="error") { 
+            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear"), silent=TRUE )
+          }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE)
           m = try( list_simplify( m ), silent=TRUE )
@@ -1187,7 +1203,10 @@ carstm_model_inla = function(
         if ( O[["dimensionality"]] == "space" ) {
 
           m = fit$marginals.fitted.values[O[["ipred"]]]  # already incorporates offsets
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization), silent=TRUE )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE )
+          if (test_for_error(m) =="error") { 
+            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear"), silent=TRUE )
+          }
 
           if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
 
@@ -1218,7 +1237,10 @@ carstm_model_inla = function(
         if (O[["dimensionality"]] == "space-time"  ) {
 
           m = fit$marginals.fitted.values[O[["ipred"]]]   
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization), silent=TRUE )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE )
+          if (test_for_error(m) =="error") { 
+            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear"), silent=TRUE )
+          }
 
           if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
@@ -1251,8 +1273,10 @@ carstm_model_inla = function(
         if ( O[["dimensionality"]] == "space-time-cyclic" ) {
 
           m = fit$marginals.fitted.values[O[["ipred"]]]   
-
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization), silent=TRUE )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE )
+          if (test_for_error(m) =="error") { 
+            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear" ), silent=TRUE )
+          }
 
           if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
 

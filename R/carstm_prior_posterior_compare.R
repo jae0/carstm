@@ -27,8 +27,8 @@ carstm_prior_posterior_compare = function( hypers, all.hypers, i=1, vn=NULL, xra
 
     if (transf)   {
         if (grepl("precision", vn, ignore.case =TRUE )) {
-            iposterior = inla.tmarginal( fun=function(y) 1/sqrt( y ), iposterior )
-            iprior = inla.tmarginal( fun=function(y) 1/sqrt( y ), iprior )
+            iposterior = inla.tmarginal( fun=function(y) 1/sqrt( y ), iposterior, method = "linear" )
+            iprior = inla.tmarginal( fun=function(y) 1/sqrt( y ), iprior, method = "linear" )
             label = gsub( "Precision", "SD", label)
         }
     }
