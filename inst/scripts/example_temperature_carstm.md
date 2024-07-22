@@ -499,8 +499,7 @@ if (0) {
     [13] "GroupRho for space_time"                                   
 
     # or more succinctly:
-    
-    # EXAMINE POSTERIORS AND PRIORS
+     
     res = carstm_model(  p=p, DS="carstm_summary" )  # parameters in p and summary
 
     names(res$hypers)
