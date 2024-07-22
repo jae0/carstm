@@ -469,6 +469,11 @@ if (0) {
     plot(fit)
     plot(fit, plot.prior=TRUE, plot.hyperparameters=TRUE, plot.fixed.effects=FALSE )
  
+    # posterior predictive check
+    M = speciescomposition_db( p=p, DS='carstm_inputs', sppoly=sppoly  )
+    carstm_posterior_predictive_check(p=p, M=M  )
+
+
     # EXAMINE POSTERIORS AND PRIORS
     all.hypers = INLA:::inla.all.hyper.postprocess(fit$all.hyper)
     hypers = fit$marginals.hyperpar
@@ -477,10 +482,7 @@ if (0) {
     carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=2, xrange=c(0.02, 10) )  # note xrange is for precision .. this gets converted to SD   
     carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, vn="Rho for time" )  
     carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, vn="Phi for space" )  
-      
-    # posterior predictive check
-    carstm_posterior_predictive_check(p=p, M=M  )
-
+       
     
     [1] "Precision for the Gaussian observations"                   
     [2] "Precision for time"                                        
@@ -495,6 +497,17 @@ if (0) {
     [11] "Precision for space_time"                                  
     [12] "Phi for space_time"                                        
     [13] "GroupRho for space_time"                                   
+
+    # or more succinctly:
+    
+    # EXAMINE POSTERIORS AND PRIORS
+    res = carstm_model(  p=p, DS="carstm_summary" )  # parameters in p and summary
+
+    names(res$hypers)
+    for (i in 1:length(names(res$hypers)) ){
+    o = carstm_prior_posterior_compare( hypers=res$hypers, all.hypers=res$all.hypers, vn=names(res$hypers)[i] )  
+    dev.new(); print(o)
+    } 
 
 }  
 
