@@ -504,8 +504,8 @@ if (0) {
 
     names(res$hypers)
     for (i in 1:length(names(res$hypers)) ){
-    o = carstm_prior_posterior_compare( hypers=res$hypers, all.hypers=res$all.hypers, vn=names(res$hypers)[i] )  
-    dev.new(); print(o)
+        o = carstm_prior_posterior_compare( hypers=res$hypers, all.hypers=res$all.hypers, vn=names(res$hypers)[i] )  
+        dev.new(); print(o)
     } 
 
 }  
