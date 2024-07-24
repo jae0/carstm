@@ -35,7 +35,7 @@ carstm_posterior_predictive_check = function( p, M )  {
       theme( plot.caption = element_text(hjust = 0, size=12 ) )# move caption to the left 
    
     outputdir = file.path( p$modeldir, p$carstm_model_label )
-    fn = file.path(outputdir, "posterior_predictive_check.png" )
+    fn = file.path(outputdir, paste(vn, "posterior_predictive_check.png", sep="_" ) )
     ggsave(filename=fn, plot=out, device="png", width=12, height = 8)
     print(out)  
     return(fn)
