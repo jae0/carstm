@@ -667,7 +667,7 @@ carstm_model_inla = function(
     } else if (is.vector(Z) ){
       if (any( inherits(Z, "try-error")))  {
         return("error")
-      } else if (any(grepl("Error", m))) {
+      } else if (any(grepl("error", m, ignore.case =TRUE))) {
         return("error")
       }  
     }
@@ -1187,9 +1187,11 @@ carstm_model_inla = function(
 
   if ("predictions" %in% toget ) {
 
-    # marginals.fitted.values are on response scale (for both experimental and classical) and  already incorporates offsets
-    # summary.fitted.values on response scale ((for both experimental and classical)) 
-    # posteriors are on link scale and already incorporates offsets
+    # **************** README 
+    # marginals.fitted.values are on **response scale** and  already incorporates offsets
+    # summary.fitted.values on **response scale**  
+    # posterior samples are on **link scale** and already incorporates offsets
+    # **************** README 
 
     if (be_verbose) message("Extracting posterior predictions" )
 
@@ -1197,24 +1199,18 @@ carstm_model_inla = function(
  
   
     if (exists("marginals.fitted.values", fit)) {
-
+      
       if (length(fit[["marginals.fitted.values"]]) > 0 ) {
 
         if ( O[["dimensionality"]] == "space" ) {
 
-          m = fit$marginals.fitted.values[O[["ipred"]]]  # already incorporates offsets
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE )
-          if (test_for_error(m) =="error") { 
-            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear"), silent=TRUE )
-          }
-
+          m = fit$marginals.fitted.values[O[["ipred"]]]  # on **response scale** & already incorporates offsets
           if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
-
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
           if (test_for_error(m) =="error") {  
               message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
-              m = fit$summary.fitted.values[, inla_tokeep ]
+              m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
               names(m) = tokeep
           } 
 
@@ -1236,20 +1232,15 @@ carstm_model_inla = function(
 
         if (O[["dimensionality"]] == "space-time"  ) {
 
-          m = fit$marginals.fitted.values[O[["ipred"]]]   
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE )
-          if (test_for_error(m) =="error") { 
-            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear"), silent=TRUE )
-          }
-
+          m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
           if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
           if (test_for_error(m) =="error") {  
               message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
-              m = fit$summary.fitted.values[, inla_tokeep ]
+              m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
               names(m) = tokeep
-            } 
+          } 
 
           W = array( NA, 
             dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
@@ -1272,19 +1263,13 @@ carstm_model_inla = function(
 
         if ( O[["dimensionality"]] == "space-time-cyclic" ) {
 
-          m = fit$marginals.fitted.values[O[["ipred"]]]   
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE )
-          if (test_for_error(m) =="error") { 
-            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear" ), silent=TRUE )
-          }
-
+          m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
           if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
-
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
           m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
           if (test_for_error(m) =="error") {  
               message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
-              m = fit$summary.fitted.values[, inla_tokeep ]
+              m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
               names(m) = tokeep
           } 
 
@@ -1454,9 +1439,8 @@ carstm_model_inla = function(
     
       if ( "random_spatial" %in% posterior_simulations_to_retain ) {
         if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_spatial") browser()
-        # -- check variable names here
-
-        # POSTERIOR samples
+  
+        # POSTERIOR samples  (on link scale)
         space = array(NA, dim=c( O$space_n, O[["nposteriors"]]  ) )
         row.names(space) = O[["space_name"]]
         space1 = space2 = NULL
@@ -1566,7 +1550,7 @@ carstm_model_inla = function(
 
 
       if ( "random_spatiotemporal" %in% posterior_simulations_to_retain ) {
-        # posterior simulations
+        # posterior simulations (on link scale)
         if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_spatiotemporal") browser()
 
         fmre =  O[["fm"]]$random_effects
@@ -1694,10 +1678,11 @@ carstm_model_inla = function(
         # marginals.fitted.values are on response scale (for both experimental and classical) and  already incorporates offsets
         # summary.fitted.values on response scale ((for both experimental and classical)) 
         # posteriors are on link scale and already incorporates offsets
+        
         if (exists("debug")) if (is.character(debug)) if ( debug =="posterior_samples_predictions") browser()
         if (be_verbose) message("Extracting posterior predictions" )
 
-        # prepapre prediction simulations (from joint posteriors)
+        # prepare prediction simulations (from joint posteriors)
         ptx = "^Predictor"
         preds = O[["predictions_range"]][1]:O[["predictions_range"]][2]  
         npredictions = length(preds)
@@ -1706,7 +1691,7 @@ carstm_model_inla = function(
         pkk = unlist(pkk)[preds]
         predictions = array(NA, dim=c( npredictions, O[["nposteriors"]]  ) )
         for (i in 1:O[["nposteriors"]])  predictions[,i] = S[[i]]$latent[pkk, ]
-        predictions = invlink(predictions)  #  required for both classical and experimental
+        predictions = invlink(predictions)  #  was on link scale .. now on response scale
 
         pkk = preds = S = NULL
         gc()
@@ -1724,7 +1709,7 @@ carstm_model_inla = function(
             for (k in 1:O[["nposteriors"]] ) {
               W[,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
             }
-            Osamples[["predictions"]] = W[, drop =FALSE]
+            Osamples[["predictions"]] = W[, drop =FALSE] # on response scale
             W = NULL 
         }
 
@@ -1742,7 +1727,7 @@ carstm_model_inla = function(
             for (k in 1:O[["nposteriors"]] ) {
               W[,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
             }
-            Osamples[["predictions"]] = W[,,, drop =FALSE]
+            Osamples[["predictions"]] = W[,,, drop =FALSE] # on response scale
             W = NULL
         }
 
@@ -1760,7 +1745,7 @@ carstm_model_inla = function(
             for (k in 1:O[["nposteriors"]] ) {
               W[,,,k] = reformat_to_array( input=unlist(predictions[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
             }
-            Osamples[["predictions"]] = W[,,, ,drop =FALSE]
+            Osamples[["predictions"]] = W[,,, ,drop =FALSE] # on response scale
             W = NULL
         }
     
