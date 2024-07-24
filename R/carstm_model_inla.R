@@ -531,13 +531,18 @@ carstm_model_inla = function(
 
     # check INLA options
 
-    if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list( ) #int.strategy='eb' h=0.75*0.001, step.factor=0.75*0.01,
-    if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list( compute=TRUE, link=1  ) #everything on link scale
+    if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list(strategy = "auto", optimiser="default") 
+
+    if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list()
+
+    # these are required to know the scale of predictions
+    inla_args[["control.predictor"]]$compute = TRUE   # force
+    inla_args[["control.predictor"]]$link = 1  # force
+
     if (!exists("control.mode", inla_args ) ) inla_args[["control.mode"]] = list( restart=TRUE ) 
     if (!is.null(theta) ) inla_args[["control.mode"]]$theta= theta
     
     if (!exists("control.compute", inla_args)) inla_args[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
-
 
     # if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = list(mean.intercept=0.0, prec.intercept=0.001, mean=0, prec=0.001)
     if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = H$fixed
@@ -547,24 +552,54 @@ carstm_model_inla = function(
     fit = try( do.call( inla, inla_args ) )      
 
     if (inherits(fit, "try-error" )) {
-      inla_args[["control.inla"]] = list( h=0.75*0.001, step.factor=0.75*0.01, cmin=0, diagonal=1e-8 )
+      inla_args[["control.inla"]]$strategy="laplace"
+      inla_args[["control.inla"]]$optimiser="gsl"
+      inla_args[["control.inla"]]$restart=1
+      inla_args[["control.inla"]]$cmin=0
+      inla_args[["control.inla"]]$diagonal=1e-8 
       fit = try( do.call( inla, inla_args ) )      
     }
 
     if (inherits(fit, "try-error" )) {
-      inla_args[["control.inla"]] = list( h=1.25*0.001, step.factor=1.25*0.01, cmin=0, diagonal=1e-6 )
+      inla_args[["control.inla"]]$strategy="laplace"
+      inla_args[["control.inla"]]$optimiser="gsl"
+      inla_args[["control.inla"]]$restart=1
+      inla_args[["control.inla"]]$h = 0.00075
+      inla_args[["control.inla"]]$step.factor = 0.0075
+      inla_args[["control.inla"]]$cmin=0
+      inla_args[["control.inla"]]$diagonal=1e-8 
+      fit = try( do.call( inla, inla_args ) )      
+    }
+
+
+    if (inherits(fit, "try-error" )) {
+      
+      inla_args[["control.inla"]]$strategy="laplace"
+      inla_args[["control.inla"]]$optimiser="gsl"
+      inla_args[["control.inla"]]$h = 0.00125
+      inla_args[["control.inla"]]$step.factor = 0.0125
+      inla_args[["control.inla"]]$cmin=0
+      inla_args[["control.inla"]]$diagonal=1e-6 
       fit = try( do.call( inla, inla_args ) )      
     }
 
     if (inherits(fit, "try-error" )) {
       inla_args[["safe"]] = TRUE
-      inla_args[["control.inla"]] = list( cmin=0, diagonal=1e-6  )
+      inla_args[["control.inla"]]$h = NULL
+      inla_args[["control.inla"]]$step.factor = NULL
+      inla_args[["control.inla"]]$cmin = 0
+      inla_args[["control.inla"]]$diagonal = 1e-6 
+
       fit = try( do.call( inla, inla_args ) )      
     }
 
     if (inherits(fit, "try-error" )) {
       inla_args[["safe"]] = TRUE
-      inla_args[["control.inla"]] = list(  int.strategy='eb', cmin=0 )
+      inla_args[["control.inla"]]$h = NULL
+      inla_args[["control.inla"]]$step.factor = NULL
+      inla_args[["control.inla"]]$cmin = 0
+      inla_args[["control.inla"]]$diagonal = 1e-6 
+      inla_args[["control.inla"]]$int.strategy='eb'
       fit = try( do.call( inla, inla_args ) )      
     }
 

@@ -17,19 +17,27 @@ carstm_plot_map = function( p=NULL,
   prefix = ""
   tf = identity
   if (!is.null(fn_root_prefix)) {
-
-    if ( grepl("probability", fn_root_prefix) | grepl("presence_absence", fn_root_prefix)  ) {
+    if ( grepl("presence_absence", fn_root_prefix)) {
+      prefix = "habitat"
+      tf = identity 
+    } else if ( grepl("probability", fn_root_prefix)) {
       prefix = "habitat"
       tf = identity
     } else if ( grepl("numerical", fn_root_prefix) ) {
       prefix = "number"
       tf = log10
+    } else if ( grepl("number", fn_root_prefix) ) {
+      prefix = "number"
+      tf = log10
     } else if ( grepl("biomass", fn_root_prefix) ) {
       prefix = "biomass"
       tf = log10
-    } else if ( grepl("weight", fn_root_prefix) |  grepl("meansize", fn_root_prefix)  ) {
+    } else if ( grepl("weight", fn_root_prefix)  ) {
       prefix = "weight"
-      tf = log10
+      tf = identity
+    } else if (  grepl("meansize", fn_root_prefix)  ) {
+      prefix = "weight"
+      tf = identity
     } 
   }
 
