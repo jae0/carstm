@@ -42,7 +42,7 @@ carstm_model_inla = function(
       return( fit )
     }
     
-    if (DS=="carstm_modelled_summary") {   
+    if (DS=="carstm_modelled_summary") {   # used for look up tables
       O = NULL
 
       fn_modelinfo = gsub( "_fit~", "_modelinfo~", fn_fit, fixed=TRUE )
@@ -52,7 +52,7 @@ carstm_model_inla = function(
       if (file.exists(fn_summary)) O = c(O, summary=read_write_fast( file=fn_summary ) )
       
       fn_randomeffects = gsub( "_fit~", "_randomeffects~", fn_fit, fixed=TRUE )
-      if (file.exists(fn_randomeffects)) O = c(O, effects=read_write_fast( file=fn_randomeffects ) )
+      if (file.exists(fn_randomeffects)) O = c(O, randomeffects=read_write_fast( file=fn_randomeffects ) )
       
       fn_preds = gsub( "_fit~", "_predictions~",  fn_fit, fixed=TRUE )
       if (file.exists(fn_preds)) O = c(O, predictions=read_write_fast( file=fn_preds ) )
