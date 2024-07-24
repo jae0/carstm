@@ -68,8 +68,8 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
     vn = names_res[i]
     # vn = paste( "inla.group(z, method = \"quantile\", n = ", n_discret, ")", sep="")
     plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
-      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, position=position_dodge(0.05), width=5) +
-      labs(title="Depth effect", x="Depth (m)", y =prefix) +
+      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0 ) +
+      labs(title="Depth effect", x="Depth (log; m)", y =prefix) +
       theme_light( base_size=22) 
     fn = "depth.png"
     if (prefix != "") fn = paste(prefix, fn, sep="_")
