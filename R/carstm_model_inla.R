@@ -490,7 +490,7 @@ carstm_model_inla = function(
 
     if (exists("carstm_prediction_surface_parameters", O)) O[["carstm_prediction_surface_parameters"]] = NULL
      
-    # make these temporary indices here to drop inla_args and reduce RAM usage and make things easier later
+    # make these temporary indices here to drop inla_args early and reduce RAM usage and make things easier later
  
     O[["ipred"]] = which( inla_args[["data"]][["tag"]]=="predictions" )  
 
@@ -1262,7 +1262,7 @@ carstm_model_inla = function(
             if (test_for_error(m) =="error") m = NULL
           }  
           if (is.null(m)) {
-            m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
+            m = fit$summary.fitted.values[O[["ipred"]], inla_tokeep ] # on **response scale** & already incorporates offsets
             names(m) = tokeep
           } 
           W = array( NA, 
@@ -1287,7 +1287,7 @@ carstm_model_inla = function(
             if (test_for_error(m) =="error") m = NULL
           }
           if (is.null(m)) {  
-            m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
+            m = fit$summary.fitted.values[O[["ipred"]], inla_tokeep ] # on **response scale** & already incorporates offsets
             names(m) = tokeep
           } 
           W = array( NA, 
@@ -1316,7 +1316,7 @@ carstm_model_inla = function(
             if (test_for_error(m) =="error") m = NULL  
           }
           if (is.null(m)) {
-            m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
+            m = fit$summary.fitted.values[O[["ipred"]], inla_tokeep ] # on **response scale** & already incorporates offsets
             names(m) = tokeep
           } 
           W = array( NA, 
