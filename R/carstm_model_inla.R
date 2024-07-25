@@ -986,6 +986,9 @@ carstm_model_inla = function(
   if (exists("cyclic_name", O)) Orandom$cyclic_name = O$cyclic_name
   
   # separate out random spatial and randomm spatiotemporal (as they can be large arrays)
+  # NOTE ::: marginals and summary of fitted.values are on the response scale 
+  # ... BUT .. random effects are not and require inverse transform (check with inst/scripts/test_inla.R)
+
   if ("random_spatial" %in% toget) {
     # space only
     Z = NULL
@@ -1008,7 +1011,10 @@ carstm_model_inla = function(
         # vS = fmre$vn[ iSP ]  # == vS as it is a single spatial effect
         model_name = fmre$model[ iSP ]  # iid (re_unstructured)
 
-        m = fit$marginals.random[[vS]]
+        m = fit$marginals.random[[vS]]  
+        # NOTE ::: marginals and summary of fitted.values are on the response scale 
+        # ... BUT .. random effects are not and require inverse transform (check with inst/scripts/test_inla.R)
+
         m = try( apply_generic( m, inla.tmarginal, fun=invlink  ) , silent=TRUE )
         if (test_for_error(m) =="error") { 
           m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear" ) , silent=TRUE )
@@ -1018,7 +1024,7 @@ carstm_model_inla = function(
         m = try( list_simplify( m ), silent=TRUE )
         # single spatial effect (eg in conjuction with besag) .. indexing not needed but here in case more complex models ..
         if (test_for_error(m) =="error") {  
-          message( "failed to transform random_spatial marginals .. copying directly from INLA summary instead")
+          message( "failed to transform random_spatial marginals .. copying directly from INLA summary instead .. sd's will not be correct")
           m = fit$summary.random[[vS]][, inla_tokeep ]
           names(m) =  tokeep
         } 
@@ -1061,6 +1067,9 @@ carstm_model_inla = function(
           model_name = fmre$model[ iSP[j] ]  
           
           m = fit$marginals.random[[vnS]]
+          # NOTE ::: marginals and summary of fitted.values are on the response scale 
+          # ... BUT .. random effects are not and require inverse transform (check with inst/scripts/test_inla.R)
+
           m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE  )
           if (test_for_error(m) =="error") { 
             m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear"), silent=TRUE  )
@@ -1069,7 +1078,7 @@ carstm_model_inla = function(
           m = try( simplify2array( m ), silent=TRUE) 
           m = try( list_simplify(m), silent=TRUE  )
           if (test_for_error(m) =="error") {  
-            message( "failed to transform random_spatial marginals .. copying directly from INLA summary instead")
+            message( "failed to transform random_spatial marginals .. copying directly from INLA summary instead.. sd's will not be correct")
             m = fit$summary.random[[vnS]][, inla_tokeep ]
             names(m) = c("ID", tokeep)
           } 
@@ -1122,6 +1131,9 @@ carstm_model_inla = function(
         if (exists(vnST, fit$marginals.random )) {
  
           m = fit$marginals.random[[vnST]]
+          # NOTE ::: marginals and summary of fitted.values are on the response scale 
+          # ... BUT .. random effects are not and require inverse transform (check with inst/scripts/test_inla.R)
+
           m = try( apply_generic( m, inla.tmarginal, fun=invlink ) , silent=TRUE )
           if (test_for_error(m) =="error") { 
             m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear" ) , silent=TRUE )
@@ -1130,7 +1142,7 @@ carstm_model_inla = function(
           m = try( simplify2array( m ), silent=TRUE)
           m = try( list_simplify( m ), silent=TRUE )
           if (test_for_error(m) =="error") {  
-            message( "!!! Failed to transform random_spatial marginals .. copying directly from INLA summary instead")
+            message( "!!! Failed to transform random_spatial marginals .. copying directly from INLA summary instead.. sd's will not be correct")
             m = fit$summary.random[[vnST]][, inla_tokeep ]
             names(m) = tokeep
           } 
@@ -1172,6 +1184,9 @@ carstm_model_inla = function(
           model_name = fmre$model[ iST[j] ]  
 
           m = fit$marginals.random[[vnST]]
+          # NOTE ::: marginals and summary of fitted.values are on the response scale 
+          # ... BUT .. random effects are not and require inverse transform (check with inst/scripts/test_inla.R)
+
           m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE )
           if (test_for_error(m) =="error") { 
             m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear"), silent=TRUE )
@@ -1180,7 +1195,7 @@ carstm_model_inla = function(
           m = try( simplify2array( m ), silent=TRUE)
           m = try( list_simplify( m ), silent=TRUE )
           if (test_for_error(m) =="error") { 
-            message( "!!! Failed to transform random_spatiotemporal marginals .. copying directly from INLA summary instead")
+            message( "!!! Failed to transform random_spatiotemporal marginals .. copying directly from INLA summary instead.. sd's will not be correct")
             m = fit$summary.random[[vnST]][, inla_tokeep ]
             names(m) = tokeep
           } 
@@ -1238,25 +1253,23 @@ carstm_model_inla = function(
       if (length(fit[["marginals.fitted.values"]]) > 0 ) {
 
         if ( O[["dimensionality"]] == "space" ) {
-
-          m = fit$marginals.fitted.values[O[["ipred"]]]  # on **response scale** & already incorporates offsets
-          if ( exists("data_transformation", O))  m = apply_generic( m, backtransform )
-          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-          if (test_for_error(m) =="error") {  
-              message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
-              m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
-              names(m) = tokeep
+          m = NULL
+          if (exists("data_transformation", O)) {
+            m = fit$marginals.fitted.values[O[["ipred"]]]  # on **response scale** & already incorporates offsets
+            m = apply_generic( m, backtransform )
+            m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+            m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+            if (test_for_error(m) =="error") m = NULL
+          }  
+          if (is.null(m)) {
+            m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
+            names(m) = tokeep
           } 
-
           W = array( NA, 
             dim=c( O[["space_n"]],  length(names(m)) ),  
             dimnames=list( space=O[["space_name"]], stat=names(m) ) )
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
-          
-          # matchfrom already created higher up
-          matchto = list( space=O[["space_id"]] )
-
+          matchto = list( space=O[["space_id"]] )           # matchfrom already created higher up
           for (k in 1:length(names(m))) {
             W[,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }
@@ -1264,59 +1277,55 @@ carstm_model_inla = function(
           m = W = NULL
         }
 
-
         if (O[["dimensionality"]] == "space-time"  ) {
-
-          m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
-          if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
-          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-          if (test_for_error(m) =="error") {  
-              message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
-              m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
-              names(m) = tokeep
+          m = NULL
+          if (exists("data_transformation", O)) {
+            m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
+            m = apply_generic( m, backtransform )
+            m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+            m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+            if (test_for_error(m) =="error") m = NULL
+          }
+          if (is.null(m)) {  
+            m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
+            names(m) = tokeep
           } 
-
           W = array( NA, 
             dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
             dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=names(m) ) 
           )
-  
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
           names(dimnames(W))[2] = vT  # need to do this in a separate step ..
-
           # matchfrom already created higher up
           matchto = list( space=O[["space_id"]], time=O[["time_id"]] )
           for (k in 1:length(names(m))) {
             W[,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto)
           }
           Opredictions[["predictions"]] = W[,, tokeep, drop =FALSE]
-      
           m = W = NULL
         }
 
 
         if ( O[["dimensionality"]] == "space-time-cyclic" ) {
-
-          m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
-          if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
-          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-          if (test_for_error(m) =="error") {  
-              message( "!!! Failed to summarize marginals.fitted.values .. copying directly from INLA summary instead")
-              m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
-              names(m) = tokeep
+          m = NULL
+          if (exists("data_transformation", O)) {
+            m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
+            m = apply_generic( m, backtransform )
+            m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+            m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+            if (test_for_error(m) =="error") m = NULL  
+          }
+          if (is.null(m)) {
+            m = fit$summary.fitted.values[, inla_tokeep ] # on **response scale** & already incorporates offsets
+            names(m) = tokeep
           } 
-
           W = array( NA, 
             dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], length(names(m)) ),  
             dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], stat=names(m) ) )
           names(dimnames(W))[1] = vS  # need to do this in a separate step ..
           names(dimnames(W))[2] = vT  # need to do this in a separate step ..
           names(dimnames(W))[3] = vU  # need to do this in a separate step ..
-
           matchto = list( space=O[["space_id"]], time=O[["time_id"]], cyclic=O[["cyclic_id"]] )
-
           for (k in 1:length(names(m))) {
             W[,,,k] = reformat_to_array( input=unlist(m[,k]), matchfrom=O[["matchfrom"]], matchto=matchto )
           }

@@ -5,7 +5,181 @@ carstm_test_inla = function( family = "poisson" ) {
   
   Seeds$rate = Seeds$r/ Seeds$n
 
-  # NOTE CARSTM log-transforms offset so do not transform itsss
+  # NOTE CARSTM log-transforms offset so do not transform it
+     # predictions from posterior distributions
+    posterior_means = function( x, n=1000, func=function(x){x} ) {
+      pp = inla.posterior.sample.eval( function() Predictor, inla.posterior.sample( n, x ) )
+      return(rowMeans( func( pp ) ))  # <<< note conversion here
+    }
+ 
+    posterior_means2 = function( x, n=1000, func=function(x){x} ) {
+      # method used in carstm  .. posterior is on link scale ((for both experimental and classical))
+      pp = inla.posterior.sample( n, x, selection=list(Predictor=0)  )
+      oo = apply( simplify2array( lapply( pp, function(x) { func(x$latent) } ) ), 1, mean)
+      return( oo )
+    }
+
+    
+  if (family=="besag") {
+ 
+    source(system.file("demodata/Bym-map.R", package="INLA"))  # load polygons "germany.graph", etc
+    g = system.file("demodata/germany.graph", package = "INLA")
+    
+    Germany = INLA::Germany  # data
+    Germany$region.copy = Germany$region
+    Germany$logE = log(Germany$E)
+
+    obsrate = Germany$Y / Germany$E
+
+    
+    # NOTE: all models give same parameter estimates
+
+    # besag model .. offset not in formula but as a parameter for inla
+    formula1 = Y ~ f(region.copy, model="besag", graph=g) + f(region,model="iid")
+    
+
+    # no offsets in formula, but use "offset log transformed" ( note: results are counts and not rates)
+    m1a = inla(formula1, family="poisson", data=Germany, 
+        offset=Germany$logE,
+        control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+        control.fixed=list(prec.intercept=1),
+        control.predictor = list(compute=TRUE, link=1)
+    )
+
+    # no offsets in formula, but use "E" (eta) not log transformed
+    m1 = inla(formula1, family="poisson", data=Germany, E=Germany$E, 
+        control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+        control.fixed=list(prec.intercept=1),
+        control.predictor = list(compute=TRUE, link=1)
+    )
+
+    # not same results: one is a rate the the other is a count
+    plot(m1a$summary.fitted.values$mean, m1$summary.fitted.values$mean)   
+    PREDICTEDCOUNTS = m1$summary.fitted.values$mean * Germany$E  # rate * offset
+    plot(m1a$summary.fitted.values$mean, PREDICTEDCOUNTS ) 
+
+
+    # NOTE: using offset in formula is the approach used in carstm: it is consistent 
+    # besag model .. offset in formula
+    formula2 = Y ~ offset(logE) + f(region.copy, model="besag",graph=g) + f(region,model="iid")
+
+    # offset in formula
+    m2 = inla(formula2, family="poisson", data=Germany, 
+        control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+        control.fixed=list(prec.intercept=1),
+        control.predictor = list(compute=TRUE, link=1)
+    )
+
+
+    p1 = posterior_means(m1, func=exp)
+    p1marginals  = unlist( sapply( m1$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
+
+    # results are rates and not counts: also, varying offset and scale issues no longer exist:
+    if (0) {
+      plot( obsrate ~ m1$summary.fitted.values$mean ) 
+      plot( obsrate ~ p1 )   
+      plot( obsrate ~ p1marginals )
+    }  
+
+    # however, using the "offset" argument returns counts
+    p1a = posterior_means(m1a, func=exp)
+    p1amarginals  = unlist( sapply( m1a$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
+
+    # results are rates and not counts: also, varying offset and scale issues no longer exist:
+    if (0) {
+      plot( Germany$Y ~ m1a$summary.fitted.values$mean ) # fitted.values on user scale and ignores offsets for prediction p.. prediction is rate
+      plot( Germany$Y ~ p1a )  # posterior samples on link scale that are inverted (log/exp) and ignores offsets for prediction .. prediction is rate
+      plot( Germany$Y ~ p1amarginals ) # posterior marginals also on user scale and ignores offsets for prediction  .. prediction is rate
+    }    
+
+ 
+    # results are counts and not rates:
+    # NOTE: the varying offset and scale issues now fixed ... all are same
+    p2 = posterior_means(m2, func=exp)  # range of p2 larger
+    p2marginals  = unlist( sapply( m2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
+
+    if (0) {
+      plot( Germany$Y ~ m2$summary.fitted.values$mean  ) #  summary.fitted.values$mean is on user scale with offset .. prediction is count
+      plot( Germany$Y ~ p2 ) # posterior samples are on link scale .. which are then exponentiated and with offsets .. prediction is count
+      plot( Germany$Y ~ p2marginals ) # marginals are again on user scale with offsets .. prediction is count
+    }
+
+
+
+    # negative binomial .. has offsets in formula
+    nb2 = inla(formula2, family="nbinomial", data=Germany, 
+        control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+        control.fixed=list(prec.intercept=1),
+        control.predictor = list(compute=TRUE, link=1)
+    )
+
+    pnb2 = posterior_means(nb2, func=exp)
+    pnb2marginals  = unlist( sapply( nb2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
+
+    if (0) {
+      plot( Germany$Y ~ nb2$summary.fitted.values$mean ) # fitted.values on user scale and ignores offsets for prediction .. prediction is rate even when offsets given
+      plot( Germany$Y ~ pnb2 )  # posterior means incorporates given offsets and predicts a count 
+      plot( Germany$Y ~ pnb2marginals ) #   posterior marginals also on user scale and ignores offsets for prediction  .. prediction is rate
+    } 
+   
+    # bym2 model .. offset in formula  
+    formula3 = Y ~ offset(logE) + f(region, model="bym2",graph=g)  
+
+    m3 = inla(formula3, family="poisson", data=Germany, 
+        control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+        control.fixed=list(prec.intercept=1),
+        control.predictor = list(compute=TRUE, link=1)
+    )
+   
+    p3 = posterior_means(m3, func=exp)
+    p3marginals  = unlist( sapply( m3$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
+
+    # note: results are in counts
+    if (0) {
+      plot( Germany$Y ~ m3$summary.fitted.values$mean ) # fitted.values on user scale and ignores offsets for prediction p.. prediction is rate
+      plot( Germany$Y ~ p3 )  # posterior samples on link scale that are inverted (log/exp) and ignores offsets for prediction .. prediction is rate
+      plot( Germany$Y ~ p3marginals ) # posterior marginals also on user scale and ignores offsets for prediction  .. prediction is rate
+
+      # recall marginals.fitted.values and summary.fitted.values are on user scale (counts) 
+      plot( m3$marginals.fitted.values[[1]] )
+      abline(v=m3$summary.fitted.values[1,"mean"])
+  
+      # however, marginals.random$region and summary.random$region are on internal link scale ... need to be inverted
+      x = m3$marginals.random$region[[1]]
+      plot( x[,1], x[,2] )
+      abline(v=m3$summary.random$region[1,"mean"]) # (e.g., counts cannot be negative values)
+      
+      plot( exp(x[,1]), x[,2] )
+      abline(v=exp(m3$summary.random$region[1,"mean"]))
+
+      # note: posterior samples would also need an inverse transform
+
+    }    
+    
+      
+    u =  cbind(Germany$Y, 
+      m1$summary.fitted.values$mean * Germany$E, p1 * Germany$E, p1marginals * Germany$E, 
+      m1a$summary.fitted.values$mean, p1a, p1amarginals, 
+      m2$summary.fitted.values$mean, p2, p2marginals, 
+      m3$summary.fitted.values$mean, p3, p3marginals, 
+      nb2$summary.fitted.values$mean, pnb2, pnb2marginals ) 
+    plot( as.data.frame(u) )
+    o = cor(u)  # should all be 1
+    o [ abs(o-1) <= 0.05 ] = 1
+    o [ abs(o-1) > 0.05 ] = 0
+    print(o)
+    print( round( (u - rowMeans(u))/ rowMeans(u) , 4 ) )  
+    if (any(o != 1)) {
+      warning("\nThere has been a change in INLA's internals in terms of predcition scale!\n")
+    } else {
+      message("\nAll predictions for poisson/nbinomial besag + bym2 look good!\n" )
+    } 
+
+    # note: lognormal is handled as log Y ~ normal() ... be careful .. manual back transforms are required
+
+  }
+
+
 
   if (family=="poisson") {
 
@@ -140,38 +314,25 @@ carstm_test_inla = function( family = "poisson" ) {
     pfit4e = pfit4e * Seeds$n  # ***
 
 
-    # predictions from posterior distributions
-    posterior_means = function( x, n=1000 ) {
-      pp = inla.posterior.sample.eval( function() Predictor, inla.posterior.sample( n, x ) )
-      return(rowMeans( exp( pp ) ))  # <<< note conversion here
-    }
 
-    posterior_means2 = function( x, n=1000 ) {
-      # method used in carstm  .. posterior is on link scale ((for both experimental and classical))
-      pp = inla.posterior.sample( n, x, selection=list(Predictor=0)  )
-      oo = apply( simplify2array( lapply( pp, function(x) { exp(x$latent) } ) ), 1, mean)
-      return( oo )
-    }
-
-    
     # all on response scale:
 
     p0 = predict( fitc, type="response" )
     p1 = predict( fit1, type="response" )
-    p2c = posterior_means2(fit2) 
-    p2 = posterior_means(fit2) 
+    p2c = posterior_means2(fit2, func=exp) 
+    p2 = posterior_means(fit2, func=exp ) 
 
     # method used in carstm  .. 
     # posterior sims is on link scale ((for both experimental and classical))
     #  marginals.fitted.values are on response scale (for both experimental and classical)
     # summary.fitted.values on response scale ((for both experimental and classical))
 
-    p2e = posterior_means(fit2e)  # captures offset information
-    p2e2 = posterior_means2(fit2e) # captures offset information  -- method used in carstm
-    p3 = posterior_means(fit3) 
-    p3e = posterior_means(fit3e) 
-    p4 = posterior_means(fit4) 
-    p4e = posterior_means(fit4e) 
+    p2e = posterior_means(fit2e, func=exp)  # captures offset information
+    p2e2 = posterior_means2(fit2e, func=exp) # captures offset information  -- method used in carstm
+    p3 = posterior_means(fit3, func=exp) 
+    p3e = posterior_means(fit3e, func=exp) 
+    p4 = posterior_means(fit4, func=exp) 
+    p4e = posterior_means(fit4e, func=exp) 
 
     # changed behaviour 2023:
     p4 = p4 * Seeds$n  # ***
@@ -225,7 +386,7 @@ carstm_test_inla = function( family = "poisson" ) {
     plot( as.data.frame(u) )
     o = cor(u)  # should all be 1
     o [ abs(o-1) <= 0.001 ] = 1
-    o [ abs(o-1) > 0.001 ] = 99999
+    o [ abs(o-1) > 0.001 ] = 0
     print(o)
     print( round( (u - rowMeans(u))/ rowMeans(u) , 4 ) )  
     if (any(o != 1)) {
@@ -314,17 +475,12 @@ carstm_test_inla = function( family = "poisson" ) {
     pfit2  = unlist( sapply( fit2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
 
     pfit2e  = unlist( sapply( fit2e$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
-   
-    # predictions from posterior distributions  -- identity link
-    posterior_means = function( x, n=100 ) {
-      pp = inla.posterior.sample.eval( function() Predictor, inla.posterior.sample( n, x ) )
-      return(rowMeans( ( pp ) ))
-    }
+    
   
     p1 = predict( fit1, type="response" )
-    p2 = posterior_means(fit2) 
-    p2e = posterior_means(fit2e) 
-  
+    p2 = posterior_means(fit2)  # identity link
+    p2e = posterior_means(fit2e) # identity link
+   
        # all predictions
     u = cbind(
       p1,
@@ -342,7 +498,7 @@ carstm_test_inla = function( family = "poisson" ) {
     plot( as.data.frame(u) )
     o = cor(u)  # should all be 1
     o [ abs(o-1) <= 0.001 ] = 1
-    o [ abs(o-1) > 0.001 ] = 99999
+    o [ abs(o-1) > 0.001 ] = 0
     print(o)
     print( round( (u - rowMeans(u))/ rowMeans(u) , 4 ) )  
     if (any(o != 1)) {
@@ -424,20 +580,13 @@ carstm_test_inla = function( family = "poisson" ) {
 
     pfit2  = unlist( sapply( fit2$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
     pfit2e = unlist( sapply( fit2e$marginals.fitted.values, function(u) inla.zmarginal(u) )["mean",] )
-
-    # predictions from posterior distributions -- logit link 
-    posterior_means = function( x, n=100 ) {
-      pp = inla.posterior.sample.eval( function() Predictor, inla.posterior.sample( n, x ) )
-      return(rowMeans( inverse.logit ( pp ) ))
-    }
-
+ 
     p1 = predict( fit1, type="response" )
-    p2 = posterior_means(fit2) 
-    p2e = posterior_means(fit2e) 
+    p2 = posterior_means(fit2, func=inverse.logit) 
+    p2e = posterior_means(fit2e, func=inverse.logit) 
 
     # all predictions .. on probability scale ... no need for scaling
     u = cbind(
-   
       p1,
       
       fit2$summary.fitted.values$mean,
@@ -452,7 +601,7 @@ carstm_test_inla = function( family = "poisson" ) {
     plot( as.data.frame(u) )
     o = cor(u)  # should all be 1
     o [ abs(o-1) <= 0.001 ] = 1
-    o [ abs(o-1) > 0.001 ] = 99999
+    o [ abs(o-1) > 0.001 ] = 0
     print(o)
     print( round( (u - rowMeans(u))/ rowMeans(u) , 4 ) )  
     if (any(o != 1)) {
@@ -464,3 +613,8 @@ carstm_test_inla = function( family = "poisson" ) {
 
 
 }
+
+### NOTE:: Bottom line 
+###     when using offsets in formulae, marginals and summaries are on user scale.
+###     using posterior samples requires inverse link    
+### 
