@@ -98,7 +98,7 @@ carstm_plot_map = function( p=NULL,
         annotation=paste( p$carstm_model_label, vn )
       }
 
-      carstm_map( res=res, vn=vn,  tmatch=tmatch, umatch=as.character(u),
+      carstm_map( res=res, vn=vn,  
         breaks = brks, colors=colors, additional_features=additional_features,
         legend.position.inside=legend.position, transformation=tf,
         annotation=annotation, 

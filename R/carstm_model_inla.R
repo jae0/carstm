@@ -1253,15 +1253,14 @@ carstm_model_inla = function(
       if (length(fit[["marginals.fitted.values"]]) > 0 ) {
 
         if ( O[["dimensionality"]] == "space" ) {
-          m = NULL
-          if (exists("data_transformation", O)) {
-            m = fit$marginals.fitted.values[O[["ipred"]]]  # on **response scale** & already incorporates offsets
-            m = apply_generic( m, backtransform )
-            m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-            m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-            if (test_for_error(m) =="error") m = NULL
-          }  
-          if (is.null(m)) {
+          m = fit$marginals.fitted.values[O[["ipred"]]]  # on **response scale** & already incorporates offsets
+          if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
+          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+          if (test_for_error(m) =="error")  {
+            if (O[["family"]] == "lognormal") {
+              warning( "The results are on log-scale and will need to be back-transformed")
+            }
             m = fit$summary.fitted.values[O[["ipred"]], inla_tokeep ] # on **response scale** & already incorporates offsets
             names(m) = tokeep
           } 
@@ -1278,15 +1277,14 @@ carstm_model_inla = function(
         }
 
         if (O[["dimensionality"]] == "space-time"  ) {
-          m = NULL
-          if (exists("data_transformation", O)) {
-            m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
-            m = apply_generic( m, backtransform )
-            m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-            m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-            if (test_for_error(m) =="error") m = NULL
-          }
-          if (is.null(m)) {  
+          m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
+          if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
+          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+          if (test_for_error(m) =="error")  {  
+            if (O[["family"]] == "lognormal") {
+              warning( "The results are on log-scale and will need to be back-transformed")
+            }
             m = fit$summary.fitted.values[O[["ipred"]], inla_tokeep ] # on **response scale** & already incorporates offsets
             names(m) = tokeep
           } 
@@ -1307,15 +1305,14 @@ carstm_model_inla = function(
 
 
         if ( O[["dimensionality"]] == "space-time-cyclic" ) {
-          m = NULL
-          if (exists("data_transformation", O)) {
-            m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
-            m = apply_generic( m, backtransform )
-            m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-            m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-            if (test_for_error(m) =="error") m = NULL  
-          }
-          if (is.null(m)) {
+          m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
+          if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
+          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+          if (test_for_error(m) =="error") {
+            if (O[["family"]] == "lognormal") {
+              warning( "The results are on log-scale and will need to be back-transformed")
+            }
             m = fit$summary.fitted.values[O[["ipred"]], inla_tokeep ] # on **response scale** & already incorporates offsets
             names(m) = tokeep
           } 
