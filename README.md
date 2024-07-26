@@ -1,9 +1,8 @@
 # CARSTM
 
-Conditional AutoRegressive ("CAR") models are just about th simplest possible way of accounting for spatial autorcorrelation. It is essentially the analogue of the temporal ARIMA type models but in space. It is arguably even simpler as the units of space are discrete areal units (arbitrary polygons). Originally it was formulated in lattice form and related to the Ising models in physics. Its use is most prevalent in epidemiology made accessible by the original Besag-York-Mollie paper, Leroux and Riebler, and many others.
-
+Conditional AutoRegressive ("CAR") models are just about the simplest possible way of accounting for spatial autorcorrelation. It is essentially the analogue of the temporal ARIMA type models but in space. It is arguably even simpler as the units of space are discrete areal units (arbitrary polygons). Originally it was formulated in lattice form and related to the Ising models in physics. Its use is most prevalent in epidemiology made accessible by the original Besag-York-Mollie paper, Leroux and Riebler, and many others.
      
-For the R implementation, they are structured to be installed as a package (see below) and documentation in:
+This R implementation is actually a simple front-end to INLA (see below) with simple data structure expectations to permit multiply chained projects (dependencies such as bathymetry -> temperature -> abundance of snow crab). The documentation  of methods and examples can be found in:
     
 [./docs/carstm_methods.md](./docs/carstm_methods.md)
 
