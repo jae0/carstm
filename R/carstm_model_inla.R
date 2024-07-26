@@ -1865,6 +1865,6 @@ carstm_model_inla = function(
     message("---------------------------------------")
   } 
 
-  return( O )  # O is Omodelinfo
+  return( fn_fit )   
   
 }
