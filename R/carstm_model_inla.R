@@ -1251,19 +1251,27 @@ carstm_model_inla = function(
     if (exists("marginals.fitted.values", fit)) {
       
       if (length(fit[["marginals.fitted.values"]]) > 0 ) {
+      
+        m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
+        if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
+        if (O[["family"]] == "lognormal") {
+          # only lognormal needs inverse link due to how inla treats it 
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE )
+          if (test_for_error(m) =="error") { 
+            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear"), silent=TRUE )
+          }
+        }
+        m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
+        m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
+        if (test_for_error(m) =="error")  {  
+          if (O[["family"]] == "lognormal") {
+            warning( "The results are on log-scale and will need to be back-transformed")
+          }
+          m = fit$summary.fitted.values[O[["ipred"]], inla_tokeep ] # on **response scale** & already incorporates offsets
+          names(m) = tokeep
+        } 
 
         if ( O[["dimensionality"]] == "space" ) {
-          m = fit$marginals.fitted.values[O[["ipred"]]]  # on **response scale** & already incorporates offsets
-          if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
-          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-          if (test_for_error(m) =="error")  {
-            if (O[["family"]] == "lognormal") {
-              warning( "The results are on log-scale and will need to be back-transformed")
-            }
-            m = fit$summary.fitted.values[O[["ipred"]], inla_tokeep ] # on **response scale** & already incorporates offsets
-            names(m) = tokeep
-          } 
           W = array( NA, 
             dim=c( O[["space_n"]],  length(names(m)) ),  
             dimnames=list( space=O[["space_name"]], stat=names(m) ) )
@@ -1277,17 +1285,6 @@ carstm_model_inla = function(
         }
 
         if (O[["dimensionality"]] == "space-time"  ) {
-          m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
-          if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
-          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-          if (test_for_error(m) =="error")  {  
-            if (O[["family"]] == "lognormal") {
-              warning( "The results are on log-scale and will need to be back-transformed")
-            }
-            m = fit$summary.fitted.values[O[["ipred"]], inla_tokeep ] # on **response scale** & already incorporates offsets
-            names(m) = tokeep
-          } 
           W = array( NA, 
             dim=c( O[["space_n"]], O[["time_n"]], length(names(m)) ),  
             dimnames=list( space=O[["space_name"]], time=O[["time_name"]], stat=names(m) ) 
@@ -1305,17 +1302,6 @@ carstm_model_inla = function(
 
 
         if ( O[["dimensionality"]] == "space-time-cyclic" ) {
-          m = fit$marginals.fitted.values[O[["ipred"]]]   # on **response scale** & already incorporates offsets
-          if (exists("data_transformation", O)) m = apply_generic( m, backtransform )
-          m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE)
-          m = try( list_simplify( simplify2array( m ) ), silent=TRUE)
-          if (test_for_error(m) =="error") {
-            if (O[["family"]] == "lognormal") {
-              warning( "The results are on log-scale and will need to be back-transformed")
-            }
-            m = fit$summary.fitted.values[O[["ipred"]], inla_tokeep ] # on **response scale** & already incorporates offsets
-            names(m) = tokeep
-          } 
           W = array( NA, 
             dim=c( O[["space_n"]], O[["time_n"]], O[["cyclic_n"]], length(names(m)) ),  
             dimnames=list( space=O[["space_name"]], time=O[["time_name"]], cyclic=O[["cyclic_name"]], stat=names(m) ) )
