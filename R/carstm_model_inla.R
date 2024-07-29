@@ -943,13 +943,11 @@ carstm_model_inla = function(
             m = fit$summary.random[[rnef]][, inla_tokeep, drop =FALSE ]
             names(m) =  tokeep
             Osummary[[rnef]] = m
-            Osummary[[rnef]]$ID = fit$summary.random[[rnef]]$ID
-            Osummary[[rnef]] = list_to_dataframe( Osummary[[rnef]] )
           } else {
             Osummary[[rnef]] = m[, tokeep, drop =FALSE]
-            Osummary[[rnef]]$ID = fit$summary.random[[rnef]]$ID
-            Osummary[[rnef]] = list_to_dataframe( Osummary[[rnef]] )
           }
+          Osummary[[rnef]]$ID = fit$summary.random[[rnef]]$ID
+          Osummary[[rnef]] = list_to_dataframe( Osummary[[rnef]] )
         }
         m = raneff = NULL
         gc()

@@ -37,7 +37,7 @@ carstm_plot_map = function( p=NULL,
       tf = identity
     } else if (  grepl("meansize", fn_root_prefix)  ) {
       prefix = "weight"
-      tf = identity
+      tf = czzzzzz
     } 
   }
 
