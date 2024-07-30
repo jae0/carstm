@@ -861,8 +861,8 @@ carstm_model_inla = function(
         m = try( simplify2array( m ), silent=TRUE)
         if (test_for_error(m) =="error") {  
           if (be_verbose)  {
-            message( "NAN or Inf values encountered in marginals.") 
-            message( "Try an alternate parameterization as model may be over parameterized or degenerate. ")
+            message( "NAN or Inf values encountered in marginals. ") 
+            message( "Try an alternate parameterization as model may be stuck in local optima or boundary conditions. ")
             message( "Copying fit summaries directly rather than from marginals ... ")
           }
           m = fit$summary.hyperpar[prcs,1:5]

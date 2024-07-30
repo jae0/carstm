@@ -164,10 +164,10 @@
 
       title = ifelse( exists("title", ellps), ellps[["title"]],  "" )
       
-      if ( exists("legend.position", ellps)) {
-        legend.position = ellps[["legend.position"]] 
+      if ( exists("legend.position.inside", ellps)) {
+        legend.position.inside = ellps[["legend.position.inside"]] 
       } else {
-        legend.position = c( 0.925, 0.15 ) 
+        legend.position.inside = c( 0.925, 0.15 ) 
       }
 
       pltadd = NULL 
@@ -207,7 +207,7 @@
           axis.ticks=element_blank(),
           axis.title.x=element_blank(),
           axis.title.y=element_blank(), 
-          legend.position=legend.position,
+          legend.position.inside=legend.position.inside,
           legend.title = element_blank(),
           # panel.background=element_blank(),
           panel.background = element_rect(fill =NA),
@@ -266,10 +266,10 @@
         scale_bar.position = c("RIGHT", "BOTTOM" )
       }
 
-      if ( exists("legend.position", ellps) ) {
-        legend.position =  ellps[["legend.position"]] 
+      if ( exists("legend.position.inside", ellps) ) {
+        legend.position.inside =  ellps[["legend.position.inside"]] 
       } else {
-        legend.position = c("LEFT", "top" )
+        legend.position.inside = c("LEFT", "top" )
       }
   
 
@@ -339,7 +339,7 @@
       }
 
       plt = plt +
-        tm_layout( frame=FALSE, legend.position=legend.position, scale=scale, legend.title.size=legend.title.size,
+        tm_layout( frame=FALSE, legend.position.inside=legend.position.inside, scale=scale, legend.title.size=legend.title.size,
           legend.text.size =legend.text.size, legend.width=legend.width ) 
 
       tmap_mode(tmapmode)

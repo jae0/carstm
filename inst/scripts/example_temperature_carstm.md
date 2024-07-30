@@ -189,10 +189,10 @@ if (0) {
     # tmap has a lot of dependencies, so you might not want to install it unless you already use it
     # install.packages("tmap") 
     require(tmap)
-    carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="tmap", tmapmode="view", legend.position=c("LEFT", "top" ) )  # interactive map 
+    carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="tmap", tmapmode="view", legend.position.inside=c("LEFT", "top" ) )  # interactive map 
 }
 
-carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="ggplot", legend.position=c(0.1, 0.9)  )  # default fast plot 
+carstm_map( sppoly=sppoly, vn="au_sa_km2", plotmethod="ggplot", legend.position.inside=c(0.1, 0.9)  )  # default fast plot 
  
 ```
 

@@ -3,7 +3,7 @@ carstm_plot_map = function( p=NULL,
   outputdir=tempdir(), fn=NULL, fn_root_prefix=NULL, 
   additional_features=NULL, 
   annotation = NULL,
-  probs=c(0.025,0.975), legend.position=c( 0.08, 0.865 ), brks =NULL, 
+  probs=c(0.025,0.975), legend.position.inside=c( 0.08, 0.865 ), brks =NULL, 
   colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")), 
   # colors=RColorBrewer::brewer.pal(5, "YlOrRd"),
   transf=NULL ) {
@@ -37,7 +37,7 @@ carstm_plot_map = function( p=NULL,
       tf = identity
     } else if (  grepl("meansize", fn_root_prefix)  ) {
       prefix = "weight"
-      tf = czzzzzz
+      tf = identity
     } 
   }
 
@@ -69,7 +69,7 @@ carstm_plot_map = function( p=NULL,
 
     carstm_map( res=res, vn=vn, 
       breaks = brks, colors=colors, additional_features=additional_features,
-      legend.position.inside=legend.position, transformation=tf,
+      legend.position.inside.inside=legend.position.inside, transformation=tf,
       annotation=annotation, 
       outfilename=fn
     )
@@ -100,7 +100,7 @@ carstm_plot_map = function( p=NULL,
 
       carstm_map( res=res, vn=vn,  
         breaks = brks, colors=colors, additional_features=additional_features,
-        legend.position.inside=legend.position, transformation=tf,
+        legend.position.inside.inside=legend.position.inside, transformation=tf,
         annotation=annotation, 
         outfilename=fn
       )
@@ -123,7 +123,7 @@ carstm_plot_map = function( p=NULL,
 
         carstm_map( res=res, vn=vn,  tmatch=tmatch, umatch=as.character(u),
           breaks = brks, colors=colors, additional_features=additional_features,
-          legend.position.inside=legend.position, transformation=tf,
+          legend.position.inside.inside=legend.position.inside, transformation=tf,
           annotation=annotation, 
           outfilename=fn
         )
@@ -146,7 +146,7 @@ carstm_plot_map = function( p=NULL,
         annotation = paste( p$carstm_model_label, "  ", paste0(tmatch, collapse="-"),  umatch)
         carstm_map( res=res, vn=vn,  tmatch=tmatch, umatch=umatch,
           breaks = brks, colors=colors, additional_features=additional_features,
-          legend.position.inside=legend.position, transformation=tf,
+          legend.position.inside.inside=legend.position.inside, transformation=tf,
           annotation=annotation, 
           outfilename=fn
         )

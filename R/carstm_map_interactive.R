@@ -251,7 +251,7 @@
     }
 
     plt = plt + 
-      tm_view(set.view = tmap_zoom, view.legend.position=legend_position  ) +
+      tm_view(set.view = tmap_zoom, view.legend.position.inside=legend_position  ) +
       tm_layout( legend.text.size=legend.text.size, legend.title.size=legend.title.size, scale=scale, frame=FALSE ) 
 
     print( plt ) 
