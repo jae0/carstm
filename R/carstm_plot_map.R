@@ -69,7 +69,7 @@ carstm_plot_map = function( p=NULL,
 
     carstm_map( res=res, vn=vn, 
       breaks = brks, colors=colors, additional_features=additional_features,
-      legend.position.inside.inside=legend.position.inside, transformation=tf,
+      legend.position.inside=legend.position.inside, transformation=tf,
       annotation=annotation, 
       outfilename=fn
     )
@@ -100,7 +100,7 @@ carstm_plot_map = function( p=NULL,
 
       carstm_map( res=res, vn=vn,  
         breaks = brks, colors=colors, additional_features=additional_features,
-        legend.position.inside.inside=legend.position.inside, transformation=tf,
+        legend.position.inside=legend.position.inside, transformation=tf,
         annotation=annotation, 
         outfilename=fn
       )
@@ -123,7 +123,7 @@ carstm_plot_map = function( p=NULL,
 
         carstm_map( res=res, vn=vn,  tmatch=tmatch, umatch=as.character(u),
           breaks = brks, colors=colors, additional_features=additional_features,
-          legend.position.inside.inside=legend.position.inside, transformation=tf,
+          legend.position.inside=legend.position.inside, transformation=tf,
           annotation=annotation, 
           outfilename=fn
         )
@@ -146,7 +146,7 @@ carstm_plot_map = function( p=NULL,
         annotation = paste( p$carstm_model_label, "  ", paste0(tmatch, collapse="-"),  umatch)
         carstm_map( res=res, vn=vn,  tmatch=tmatch, umatch=umatch,
           breaks = brks, colors=colors, additional_features=additional_features,
-          legend.position.inside.inside=legend.position.inside, transformation=tf,
+          legend.position.inside=legend.position.inside, transformation=tf,
           annotation=annotation, 
           outfilename=fn
         )

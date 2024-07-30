@@ -207,6 +207,7 @@
           axis.ticks=element_blank(),
           axis.title.x=element_blank(),
           axis.title.y=element_blank(), 
+          legend.position = "inside",
           legend.position.inside=legend.position.inside,
           legend.title = element_blank(),
           # panel.background=element_blank(),
@@ -266,10 +267,10 @@
         scale_bar.position = c("RIGHT", "BOTTOM" )
       }
 
-      if ( exists("legend.position.inside", ellps) ) {
-        legend.position.inside =  ellps[["legend.position.inside"]] 
+      if ( exists("legend.position", ellps) ) {
+        legend.position =  ellps[["legend.position"]] 
       } else {
-        legend.position.inside = c("LEFT", "top" )
+        legend.position = c("LEFT", "top" )
       }
   
 
@@ -339,7 +340,7 @@
       }
 
       plt = plt +
-        tm_layout( frame=FALSE, legend.position.inside=legend.position.inside, scale=scale, legend.title.size=legend.title.size,
+        tm_layout( frame=FALSE, legend.position=legend.position, scale=scale, legend.title.size=legend.title.size,
           legend.text.size =legend.text.size, legend.width=legend.width ) 
 
       tmap_mode(tmapmode)

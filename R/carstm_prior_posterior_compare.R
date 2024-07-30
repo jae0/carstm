@@ -45,7 +45,7 @@ carstm_prior_posterior_compare = function( hypers, all.hypers, i=1, vn=NULL, xra
         geom_line( alpha=0.9, linewidth=1.2  ) + 
         ylab('Density') + xlab(label) +
         theme_light( base_size = 22 ) +
-        theme( legend.position.inside="inside", legend.position.inside.inside=c(0.8, 0.9), 
+        theme( legend.position="inside", legend.position.inside=c(0.8, 0.9), 
             legend.title=element_blank()) 
     return(plt)
 }
