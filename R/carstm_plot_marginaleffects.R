@@ -17,7 +17,7 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
       } else if ( grepl("weight", fn_root_prefix,  ignore.case =TRUE) |  grepl("meansize", fn_root_prefix,  ignore.case =TRUE)  ) {
         prefix = "weight"
       } else {
-        prefix = ""
+        prefix = fn_root_prefix
       }
     }
   }
