@@ -45,9 +45,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
     # override default load/save locations:
     fn_fit = file.path( carstm_directory, basename( fn_fit) )
   }
-
-   
-
+ 
   outputdir = dirname(fn_fit)
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
    
