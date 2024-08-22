@@ -175,24 +175,29 @@ carstm_model_inla = function(
 
   if ( inla_args[["family"]] == "gaussian" ) {
     lnk_function = inla.link.identity
+    lnk_betas = inla.link.identity
   } else if ( inla_args[["family"]] == "lognormal" ) {
     # inla uses identity link and simply transforms Y ::  log(X)~normaLl()
     # however to back-transform properly to user scale, we override with a log-exp link
     # need to manually intervene in a few calcs below (with identity link)
 
     lnk_function = inla.link.log  
+    lnk_betas = inla.link.log
 
   } else if ( grepl( ".*poisson", inla_args[["family"]])) {
     lnk_function = inla.link.log
+    lnk_betas = inla.link.log
   } else if ( grepl( ".*nbinomial", inla_args[["family"]])) {
     lnk_function = inla.link.log
+    lnk_betas = inla.link.log
     invlink_id  =  "exp"
   } else if ( grepl( ".*binomial", inla_args[["family"]])) {
     lnk_function = inla.link.logit
+    lnk_betas = inla.link.log
   } 
 
   O[["invlink"]] = invlink = function(x) lnk_function( x,  inverse=TRUE )
-
+  O[["invlink_betas"]] = invlink_betas = function(x) lnk_betas( x,  inverse=TRUE )
 
   # changes in INLA data structures noted in 2023:
   # posterior samples is on link scale ((for both experimental and classical))
@@ -816,9 +821,9 @@ carstm_model_inla = function(
     if (exists( "marginals.fixed", fit)) {
       m = fit$marginals.fixed  # make a copy to do transformations upon
       fi = grep("Intercept", names(m) )
-      m = try( apply_generic( m, function(x) marginal_clean( inla.tmarginal( invlink, x)) ), silent=TRUE  )
+      m = try( apply_generic( m, function(x) marginal_clean( inla.tmarginal( invlink_betas, x)) ), silent=TRUE  )
       if (test_for_error(m) =="error") { 
-        m = try( apply_generic( m, function(x) marginal_clean( inla.tmarginal( invlink, x, n=ndiscretization, method="linear" )) ), silent=TRUE  )
+        m = try( apply_generic( m, function(x) marginal_clean( inla.tmarginal( invlink_betas, x, n=ndiscretization, method="linear" )) ), silent=TRUE  )
       }
       if ( exists("data_transformation", O))  {
         m[[fi]] = inla.tmarginal( O$data_transformation$backward, m[[fi]] , n=ndiscretization ) # on user scale
@@ -892,7 +897,7 @@ carstm_model_inla = function(
       hyps = prcs = other = known = NULL
 
       if (length(rhos) > 0) {
-        m = marginal_summary( fit$marginals.hyperpar[ rhos ] )
+        m = marginal_summary( fit$marginals.hyperpar[ rhos ], invlink=NULL  )
         if (test_for_error(m) =="error") {  
           m = fit$summary.hyperpar[rhos, 1:5]
           colnames(m) = tokeep
@@ -903,7 +908,7 @@ carstm_model_inla = function(
       rhos = NULL
 
       if (length(phis) > 0) {
-        m = marginal_summary( fit$marginals.hyperpar[ phis ] )
+        m = marginal_summary( fit$marginals.hyperpar[ phis ], invlink=NULL  )
         if (test_for_error(m) =="error") {  
           m = fit$summary.hyperpar[phis, 1:5]
           colnames(m) = tokeep
@@ -914,7 +919,7 @@ carstm_model_inla = function(
       phis = NULL
 
       if (length(unknown) > 0) {
-        m = marginal_summary( fit$marginals.hyperpar[ unknown ] )
+        m = marginal_summary( fit$marginals.hyperpar[ unknown ], invlink=NULL ) # default to no transform
         if (is.character(m) && m=="error")  {
           #  alternatively: m[,"mode"] = apply_simplify( fit$marginals.hyperpar[ unknown ], FUN=function(x) inla.mmarginal( x ))
           m = fit$summary.hyperpar[unknown, 1:5]
@@ -937,7 +942,7 @@ carstm_model_inla = function(
  
         raneff = setdiff( names( fit$marginals.random ), c(vS, vS2, vS3  ) )
         for (rnef in raneff) {
-          m = marginal_summary( fit$marginals.random[[rnef]]  )
+          m = marginal_summary( fit$marginals.random[[rnef]], invlink=invlink_betas  )
           if (test_for_error(m) =="error") {  
              message( "failed to transform marginals .. copying directly from INLA summary instead: ", rnef)
             m = fit$summary.random[[rnef]][, inla_tokeep, drop =FALSE ]
@@ -1412,7 +1417,7 @@ carstm_model_inla = function(
         fkk = inla_get_indices(O[["names.fixed"]], tag=tag, start=start, len=length, model="direct_match")
         fkk = unlist(fkk)
         for (i in 1:O[["nposteriors"]]) Osamples[["fixed_effects"]][,i] = S[[i]]$latent[fkk,]  
-        Osamples[["fixed_effects"]] = invlink(Osamples[["fixed_effects"]])
+        Osamples[["fixed_effects"]] = invlink_betas(Osamples[["fixed_effects"]])
         row.names(Osamples[["fixed_effects"]]) = flabels
 
         if (summarize_simulations) {
