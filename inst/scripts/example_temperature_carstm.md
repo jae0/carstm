@@ -475,38 +475,14 @@ if (0) {
 
 
     # EXAMINE POSTERIORS AND PRIORS
-    all.hypers = INLA:::inla.all.hyper.postprocess(fit$all.hyper)
-    hypers = fit$marginals.hyperpar
-    names(hypers)
 
-    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, i=2, xrange=c(0.02, 10) )  # note xrange is for precision .. this gets converted to SD   
-    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, vn="Rho for time" )  
-    carstm_prior_posterior_compare( hypers=hypers, all.hypers=all.hypers, vn="Phi for space" )  
-       
-    
-    [1] "Precision for the Gaussian observations"                   
-    [2] "Precision for time"                                        
-    [3] "Rho for time"                                              
-    [4] "Precision for cyclic"                                      
-    [5] "Precision for space"                                       
-    [6] "Phi for space"                                             
-    [7] "Precision for inla.group(z, method = \"quantile\", n = 11)"
-    [8] "Precision for space_cyclic"                                
-    [9] "Phi for space_cyclic"                                      
-    [10] "GroupRho for space_cyclic"                                 
-    [11] "Precision for space_time"                                  
-    [12] "Phi for space_time"                                        
-    [13] "GroupRho for space_time"                                   
-
-    # or more succinctly:
-     
     res = carstm_model(  p=p, DS="carstm_summary" )  # parameters in p and summary
-
-    names(res$hypers)
-    for (i in 1:length(names(res$hypers)) ){
-        o = carstm_prior_posterior_compare( hypers=res$hypers, all.hypers=res$all.hypers, vn=names(res$hypers)[i] )  
-        dev.new(); print(o)
-    } 
+    res_vars = c( names( res$hypers), names(res$fixed) )
+    for (i in 1:length(res_vars) ) {
+      o = carstm_prior_posterior_compare( res, vn=res_vars[i] )  
+      dev.new(); print(o)
+    }     
+ 
 
 }  
 

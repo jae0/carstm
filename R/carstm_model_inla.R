@@ -175,35 +175,35 @@ carstm_model_inla = function(
 
   if ( inla_args[["family"]] == "gaussian" ) {
     lnk_function = inla.link.identity
-    lnk_betas = inla.link.identity
+    lnk_function_betas = inla.link.identity
   } else if ( inla_args[["family"]] == "lognormal" ) {
     # inla uses identity link and simply transforms Y ::  log(X)~normaLl()
     # however to back-transform properly to user scale, we override with a log-exp link
     # need to manually intervene in a few calcs below (with identity link)
 
     lnk_function = inla.link.log  
-    lnk_betas = inla.link.log
+    lnk_function_betas = inla.link.log
 
   } else if ( grepl( ".*poisson", inla_args[["family"]])) {
     lnk_function = inla.link.log
-    lnk_betas = inla.link.log
+    lnk_function_betas = inla.link.log
   } else if ( grepl( ".*nbinomial", inla_args[["family"]])) {
     lnk_function = inla.link.log
-    lnk_betas = inla.link.log
+    lnk_function_betas = inla.link.log
     invlink_id  =  "exp"
   } else if ( grepl( ".*binomial", inla_args[["family"]])) {
     lnk_function = inla.link.logit
-    lnk_betas = inla.link.log
+    lnk_function_betas = inla.link.log
   } 
 
   O[["invlink"]] = invlink = function(x) lnk_function( x,  inverse=TRUE )
-  O[["invlink_betas"]] = invlink_betas = function(x) lnk_betas( x,  inverse=TRUE )
+  O[["invlink_betas"]] = invlink_betas = function(x) lnk_function_betas( x,  inverse=TRUE )
 
   # changes in INLA data structures noted in 2023:
   # posterior samples is on link scale ((for both experimental and classical))
   # marginals.fitted.values are on response scale (for both experimental and classical)
   # summary.fitted.values on response scale ((for both experimental and classical))
-
+  # 2024: no more experimental mode .. just use default
 
   # --------------------------------------------
   # --------------------------------------------
@@ -797,6 +797,7 @@ carstm_model_inla = function(
  
     Osummary[["all.hypers"]] = INLA:::inla.all.hyper.postprocess(fit$all.hyper)
     Osummary[["hypers"]] = fit$marginals.hyperpar
+    Osummary[["fixed"]] = fit$marginals.fixed
 
     Osummary[["dic"]] = fit$dic[c("dic", "p.eff", "dic.sat", "mean.deviance")]
     Osummary[["waic"]] = fit$waic[c("waic", "p.eff")]
@@ -833,7 +834,7 @@ carstm_model_inla = function(
           message("Problem with marginals for intercept (probably too variable), doing a simple inverse transform, SD is blanked out")
           W = fit$summary.fixed[ "(Intercept)", 1:5]
           colnames(W) = tokeep
-          W[,c(1,3:5)] = exp( W[,c(1,3:5)] )
+          W[,c(1,3:5)] = invlink_betas( W[,c(1,3:5)] )
           W[,2] = NA
 
       } else {
@@ -1018,9 +1019,9 @@ carstm_model_inla = function(
         # NOTE ::: marginals and summary of fitted.values are on the response scale 
         # ... BUT .. random effects are not and require inverse transform (check with inst/scripts/test_inla.R)
 
-        m = try( apply_generic( m, inla.tmarginal, fun=invlink  ) , silent=TRUE )
+        m = try( apply_generic( m, inla.tmarginal, fun=invlink_betas  ) , silent=TRUE )
         if (test_for_error(m) =="error") { 
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear" ) , silent=TRUE )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink_betas, n=ndiscretization, method="linear" ) , silent=TRUE )
         }
         m = try( apply_generic( m, inla.zmarginal, silent=TRUE ), silent=TRUE )
         m = try( simplify2array( m ), silent=TRUE)
@@ -1073,9 +1074,9 @@ carstm_model_inla = function(
           # NOTE ::: marginals and summary of fitted.values are on the response scale 
           # ... BUT .. random effects are not and require inverse transform (check with inst/scripts/test_inla.R)
 
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE  )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink_betas ), silent=TRUE  )
           if (test_for_error(m) =="error") { 
-            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear"), silent=TRUE  )
+            m = try( apply_generic( m, inla.tmarginal, fun=invlink_betas, n=ndiscretization, method="linear"), silent=TRUE  )
           }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE) , silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE) 
@@ -1137,9 +1138,9 @@ carstm_model_inla = function(
           # NOTE ::: marginals and summary of fitted.values are on the response scale 
           # ... BUT .. random effects are not and require inverse transform (check with inst/scripts/test_inla.R)
 
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink ) , silent=TRUE )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink_betas ) , silent=TRUE )
           if (test_for_error(m) =="error") { 
-            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear" ) , silent=TRUE )
+            m = try( apply_generic( m, inla.tmarginal, fun=invlink_betas, n=ndiscretization, method="linear" ) , silent=TRUE )
           }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE), silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE)
@@ -1190,9 +1191,9 @@ carstm_model_inla = function(
           # NOTE ::: marginals and summary of fitted.values are on the response scale 
           # ... BUT .. random effects are not and require inverse transform (check with inst/scripts/test_inla.R)
 
-          m = try( apply_generic( m, inla.tmarginal, fun=invlink ), silent=TRUE )
+          m = try( apply_generic( m, inla.tmarginal, fun=invlink_betas ), silent=TRUE )
           if (test_for_error(m) =="error") { 
-            m = try( apply_generic( m, inla.tmarginal, fun=invlink, n=ndiscretization, method="linear"), silent=TRUE )
+            m = try( apply_generic( m, inla.tmarginal, fun=invlink_betas, n=ndiscretization, method="linear"), silent=TRUE )
           }
           m = try( apply_generic( m, inla.zmarginal, silent=TRUE  ), silent=TRUE )
           m = try( simplify2array( m ), silent=TRUE)
@@ -1524,7 +1525,7 @@ carstm_model_inla = function(
           message("Two spatial effects .. assuming they are are additive")
         }
 
-        space = invlink(space)   # the overall spatial random effect 
+        space = invlink_betas(space)   # the overall spatial random effect 
         row.names(space) = O[["space_name"]]
         matchfrom = list( space=O[["space_id"]] )
         
@@ -1569,8 +1570,8 @@ carstm_model_inla = function(
         Osamples[[vS]][["re_total"]] = space  # already inverse link scale (line 1517)
         
         if ( "random_spatial12" %in% posterior_simulations_to_retain ) {
-          if (!is.null(space1)) Osamples [[vS]] [[model_name1]] =  invlink(space1) 
-          if (!is.null(space2)) Osamples [[vS]] [[model_name2]] =  invlink(space2) 
+          if (!is.null(space1)) Osamples [[vS]] [[model_name1]] =  invlink_betas(space1) 
+          if (!is.null(space2)) Osamples [[vS]] [[model_name2]] =  invlink_betas(space2) 
         }
       } # END random spatial post samples
 
@@ -1633,7 +1634,7 @@ carstm_model_inla = function(
           row.names(space_time2) = stlabels 
         }
       
-        space_time = invlink(space_time)
+        space_time = invlink_betas(space_time)
         row.names(space_time) = stlabels
 
         Z = expand.grid( space=O[["space_id"]], type ="re_total", time=O[["time_id"]], stringsAsFactors =FALSE )
@@ -1695,8 +1696,8 @@ carstm_model_inla = function(
           Osamples [[vnST]] [["re_total"]] = space_time  # already invlinked .. line 1626
         }
         if ( "random_spatiotemporal12" %in% posterior_simulations_to_retain ) {
-          if (!is.null(space_time1)) Osamples [[vnST]] [[model_name1]] = invlink(space_time1)
-          if (!is.null(space_time2)) Osamples [[vnST]] [[model_name2]] = invlink(space_time2)
+          if (!is.null(space_time1)) Osamples [[vnST]] [[model_name1]] = invlink_betas(space_time1)
+          if (!is.null(space_time2)) Osamples [[vnST]] [[model_name2]] = invlink_betas(space_time2)
         }
       }  # END sp-temp post samples
       Z = W = m = space_time = space_time1 = space_time2 = skk1 = skk2 = NULL
