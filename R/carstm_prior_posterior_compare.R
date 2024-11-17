@@ -1,39 +1,40 @@
 
-carstm_prior_posterior_compare = function( fit=NULL, vn=NULL, xrange=NULL, transf=TRUE ) {
+carstm_prior_posterior_compare = function( fit=NULL, vn=NULL, xrange=NULL, transf=TRUE, 
+    outputdir = tempdir() ) {
 
     # extracted from INLA:::plot.inla()
     if (0) {
         # usage: 
-				fit= carstm_model(  p=p, DS="modelled_fit" )      
-				( vns = names(fit$marginals.hyperpar) )
+        fit = carstm_model(  p=p, DS="modelled_fit" )      
+		( vns = names(fit$marginals.hyperpar) )
         for (i in 1:length( fit$marginals.hyperpar )) {
+            o = plot_prior_posterior( fit, vn=vns[i])
             dev.new() 
-            o = plot_prior_posterior( fit, vn=names(fit$marginals.hyperpar)[i])
             print(o)
         }
 
-				# or: 
+        # or: 
 
-		    res = carstm_model(  p=p, DS="carstm_summary" )  # parameters in p and summary
+        res = carstm_model(  p=p, DS="carstm_summary" )  # parameters in p and summary
 
-		    ( res_vars = c( names( res$hypers), names(res$fixed) ) )
-		    for (i in 1:length(res_vars) ) {
-		      o = carstm_prior_posterior_compare( res, vn=res_vars[i] )  
-		      dev.new(); print(o)
-		    }     
-	 
+        ( vns = c( names( res$hypers), names(res$fixed) ) )
+  
+        for (i in 1:length(vns) ) {
+            o = carstm_prior_posterior_compare( res, vn=vns[i] )  
+            dev.new(); print(o)
+        }     
 
     }
 
-		if ( exists("marginals.hyperpar", fit) ) {  
-			# fit object from INLA    
-			hypers = fit$marginals.hyperpar
-	    fixed = fit$marginals.fixed
-		} else if ( exists("hypers", fit) ) {  
-			# carstm results summary
-	    hypers = fit$hypers
-	    fixed = fit$fixed
-		}
+    if ( exists("marginals.hyperpar", fit) ) {  
+        # fit object from INLA    
+        hypers = fit$marginals.hyperpar
+        fixed = fit$marginals.fixed
+    } else if ( exists("hypers", fit) ) {  
+        # carstm results summary
+        hypers = fit$hypers
+        fixed = fit$fixed
+    }
 
     all.hypers = INLA:::inla.all.hyper.postprocess(fit$all.hyper)
  
@@ -109,8 +110,7 @@ carstm_prior_posterior_compare = function( fit=NULL, vn=NULL, xrange=NULL, trans
     theme_light( base_size = 22 ) +
     theme( legend.position="inside", legend.position.inside=c(0.8, 0.9), 
         legend.title=element_blank()) 
-
-    outputdir = file.path( p$modeldir, p$carstm_model_label )
+    
     fn = file.path(outputdir, paste("prior_posterior_compare_", vn, ".png", sep="" ) )
     ggsave(filename=fn, plot=plt, width=12, height = 8)
     print(fn)
