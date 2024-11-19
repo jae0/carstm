@@ -6,7 +6,7 @@ carstm_prior_posterior_compare = function( fit=NULL, vn=NULL, xrange=NULL, trans
     if (0) {
         # usage: 
         fit = carstm_model(  p=p, DS="modelled_fit" )      
-		( vns = names(fit$marginals.hyperpar) )
+		    ( vns = names(fit$marginals.hyperpar) )
         for (i in 1:length( fit$marginals.hyperpar )) {
             o = plot_prior_posterior( fit, vn=vns[i])
             dev.new() 
