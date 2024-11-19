@@ -478,8 +478,10 @@ if (0) {
 
     res = carstm_model(  p=p, DS="carstm_summary" )  # parameters in p and summary
     res_vars = c( names( res$hypers), names(res$fixed) )
+    outputdir = file.path(p$modeldir, p$carstm_model_label)
+ 
     for (i in 1:length(res_vars) ) {
-      o = carstm_prior_posterior_compare( res, vn=res_vars[i] )  
+      o = carstm_prior_posterior_compare( res, vn=res_vars[i], outputdir=outputdir )  
       dev.new(); print(o)
     }     
  
