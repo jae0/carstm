@@ -1,7 +1,7 @@
 carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=NULL, prefix = "" ) {
 
   require(ggplot2)
-
+ 
   if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
  
   
@@ -27,13 +27,15 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
 
   # add more as required: 
 
+  lwd = 1.5
+
   # annual component 
   i = grep("\\<time\\>", names_res )
   if (length(i)==1) {
     vn = names_res[i]
     res$time$yr = as.numeric(p$time_name[res$time$ID])
-    plt = ggplot( res$time, aes(x=yr, y=mean)) +  geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
-      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, width=0.5) +
+    plt = ggplot( res$time, aes(x=yr, y=mean)) +  geom_line(color="gray", linewidth=lwd) + geom_point( size=3, color="slategray") +
+      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray", linewidth=lwd, width=0  ) +
       labs(title="Annual effect", x="Year", y =prefix) +
       theme_light( base_size=22) 
     print(plt)    
@@ -50,8 +52,8 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
   if (length(i)==1) {
     vn = names_res[i]
     res$cyclic$seas = as.numeric( p$cyclic_name[res$cyclic$ID] )
-    plt = ggplot( res$cyclic, aes(x=seas, y=mean) ) + geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
-      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, width=0.05) +
+    plt = ggplot( res$cyclic, aes(x=seas, y=mean) ) + geom_line(color="gray", linewidth=lwd) + geom_point( size=3, color="slategray") +
+      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=lwd, width=0  ) +
       labs(title="Seasonal effect", x="Year (fraction)", y =prefix) +
       theme_light( base_size=22) 
     fn = "cyclic.png"
@@ -67,8 +69,8 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
   if (length(i)==1) {
     vn = names_res[i]
     # vn = paste( "inla.group(z, method = \"quantile\", n = ", n_discret, ")", sep="")
-    plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
-      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0 ) +
+    plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=lwd) + geom_point( size=3, color="slategray") +
+      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=lwd, width=0  ) +
       labs(title="Depth effect", x="Depth (log; m)", y =prefix) +
       theme_light( base_size=22) 
     fn = "depth.png"
@@ -84,8 +86,8 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
   if (length(i)==1) {
     vn = names_res[i]
     # vn = paste( "inla.group(t, method = \"quantile\", n = ", n_discret, ")", sep="")
-    plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
-      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, width=5) +
+    plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=lwd) + geom_point( size=3, color="slategray") +
+      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=lwd, width=0 ) +
       labs(title="Temperature effect", x="Bottom temperature (deg C)", y =prefix) +
       theme_light( base_size=22) 
     fn = "temperature.png"
@@ -101,8 +103,8 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
   if (length(i)==1) {
     vn = names_res[i]
     # vn= paste( "inla.group(pca1, method = \"quantile\", n = ", n_discret, ")", sep="")
-    plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
-      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, width=5) +
+    plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=lwd) + geom_point( size=3, color="slategray") +
+      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=lwd, width=0 ) +
       labs(title="PCA1 effect", x="PCA1", y =prefix) +
       theme_light( base_size=22) 
     fn = "pca1.png"
@@ -117,8 +119,8 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
   if (length(i)==1) {
     vn = names_res[i]
     # vn = paste( "inla.group(pca2, method = \"quantile\", n = ", n_discret, ")", sep="")
-    plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
-      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, width=5) +
+    plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=lwd) + geom_point( size=3, color="slategray") +
+      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=lwd, width=0 ) +
       labs(title="PCA2 effect", x="PCA2", y =prefix) +
       theme_light( base_size=22) 
     fn = "pca2.png"
@@ -134,8 +136,8 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
   if (length(i)==1) {
     vn = names_res[i]
     # vn = paste( "inla.group(substrate.grainsize, method = \"quantile\", n = ", n_discret, ")", sep="") 
-    plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=1.75) + geom_point( size=3, color="slategray") +
-      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, width=5) +
+    plt = ggplot( res[[vn]], aes(x=ID, y=mean ))+ geom_line(color="gray", linewidth=lwd) + geom_point( size=3, color="slategray") +
+      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=lwd, width=0 ) +
       labs(title="Depth effect", x="Depth (m)", y =prefix) +
       theme_light( base_size=22) 
     fn = "substrate.png"
@@ -153,7 +155,7 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
     gears = c("Western IIA", "Yankee #36", "US 4seam 3beam",  "Engle", "Campelen 1800", "Nephrops" )
     res$gear$grs = gears[res$gear$ID]
     plt = ggplot( res$gear, aes(x=grs, y=mean)) + geom_point( size=3, color="slategray") +
-      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=1.0, width=0.5) +
+      geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=lwd, width=0 ) +
       labs(title="Gear effect", x="Year", y =prefix) +
       theme_light( base_size=22) 
     fn = "gear.png"
