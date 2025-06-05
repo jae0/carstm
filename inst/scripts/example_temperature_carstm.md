@@ -115,11 +115,13 @@ p$gridparams = list( dims=c(p$nplons, p$nplats), origin=p$origin, res=c(p$pres, 
 
 # time resolution
 p$ny = length(p$yrs)
-p$nw = 10 # default value of 10 time steps number of intervals in time within a year for all temp and indicators
+p$nw = 12 # number of intervals in time within a year for all temp and indicators
 p$tres = 1/ p$nw # time resolution .. predictions are made with models that use seasonal components
-p$dyears = (c(1:p$nw)-1) / p$nw # intervals of decimal years... fractional year breaks
+
+# intervals of decimal years... fractional year breaks
+p$dyears = discretize_data( span=c(0,1, p$nw), toreturn="lower" )  # left breaks
+p$cyclic_levels = discretize_data( span=c(0,1, p$nw), toreturn="midpoints" )
 p$dyear_centre = p$dyears[ trunc(p$nw/2) ] + p$tres/2
-p$cyclic_levels = p$dyears + diff(p$dyears)[1]/2 
 
 p$timezone="America/Halifax" 
 p$prediction_dyear = lubridate::decimal_date( lubridate::ymd("0000/Sep/01")) # used for creating timeslices and predictions  .. needs to match the values in aegis_parameters()
@@ -257,16 +259,14 @@ M$time_space = M$time
 
 M$dyear = M$tiyr - M$year 
 
-dyri_levels = seq( 0, 1, by=0.1 )
-dylev = discretize_data( p$cyclic_levels, dyri_levels )
-M$dyri = discretize_data( M[["dyear"]], dyri_levels )
+M$dyri = discretize_data( x=M[["dyear"]], span=c(0,1, p$nw) )
 
 # do not separate out as season can be used even if not predicted upon
 ii = which( M$dyear > 1) 
 if (length(ii) > 0) M$dyear[ii] = 0.99 # cap it .. some surveys go into the next year
  
 
-M$cyclic = match( M$dyri, dylev )  # easier to deal with numeric indices 
+M$cyclic = match( M$dyri, p$cyclic_levels )  # easier to deal with numeric indices 
 M$cyclic_space = M$cyclic # copy cyclic for space - cyclic component .. for groups, must be numeric index
 
 if (0) {

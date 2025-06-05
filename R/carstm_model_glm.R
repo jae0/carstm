@@ -89,10 +89,10 @@
 
     if ( O$dimensionality == "space-time-cyclic") {
       T = as.character( O$yrs )
-      U = as.character( discretize_data( (O$dyears + diff(O$dyears)[1]/2), O$discretization[["dyear"]] ) )
+      U = as.character( discretize_data( brks=O$dyears ) )
 
       data$year = as.character(data$year)
-      data$dyear = as.character( discretize_data( data$dyear, O$discretization[["dyear"]] ) )
+      data$dyear = as.character( discretize_data( x=data$dyear, brks=O$dyears ) )
 
       withsolutions = names( which(is.finite(fit$coefficients)) )
       withsolutions = withsolutions[ grep( "AUID.*:year", withsolutions ) ]
