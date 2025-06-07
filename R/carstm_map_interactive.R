@@ -53,15 +53,15 @@
 
     # tmap plotting options:
     bbox = NULL
-    breaks = NULL
-    style = "cont"; 
-    palette =  "YlOrRd"
+    ticks = NULL
+    fill.scale = tm_scale_continuous()
+    values =  "brewer.yl_or_rd"
     title =  "" 
-    showNA =  FALSE 
+    na.show =  FALSE 
     lwd =  0.25 
-    border.alpha =  0.75
-    alpha =   0.95
-    legend.is.portrait = TRUE   
+    col_alpha =  0.75
+    fill_alpha =   0.95
+    orientation = "landscape"   
     compass_position = c( 0.925, 0.1 )  # (left-right, top-bottom)  
     compass_north = 0
     scale_bar_position = c( 0.75, "BOTTOM" )
@@ -75,15 +75,15 @@
 
     if (exists("bbox", ellps) )   bbox = ellps[["bbox"]]
  
-    if (exists("breaks", ellps) )   breaks = ellps[["breaks"]]
-    if (exists("style", ellps) )   style = ellps[["style"]]
-    if (exists("palette", ellps) )   palette = ellps[["palette"]]
+    if (exists("ticks", ellps) )   ticks = ellps[["ticks"]]
+    if (exists("fill.scale", ellps) )   fill.scale = ellps[["fill.scale"]]
+    if (exists("values", ellps) )   values = ellps[["values"]]
     if (exists("title", ellps) )   title = ellps[["title"]]
-    if (exists("showNA", ellps) )   showNA = ellps[["showNA"]]
+    if (exists("na.show", ellps) )   na.show = ellps[["na.show"]]
     if (exists("lwd", ellps) )   lwd = ellps[["lwd"]]
-    if (exists("border.alpha", ellps) )  border.alpha = ellps[["border.alpha"]]
-    if (exists("alpha", ellps) )   alpha = ellps[["alpha"]]
-    if (exists("legend.is.portrait", ellps) )   legend.is.portrait = ellps[["legend.is.portrait"]]
+    if (exists("col_alpha", ellps) )  col_alpha = ellps[["col_alpha"]]
+    if (exists("fill_alpha", ellps) )   fill_alpha =  fill_alpha[[ "fill_alpha"]]
+    if (exists("orientation", ellps) )   orientation = ellps[["orientation"]]
     if (exists("compass_position", ellps) )   compass_position = ellps[["compass_position"]]
     if (exists("compass_north", ellps) ) compass_north = ellps[["compass_north"]]
     if (exists("scale_bar_position", ellps) )   scale_bar_position = ellps[["scale_bar_position"]]
@@ -157,13 +157,13 @@
         toplot = tapply( toplot[[vn]], toplot_id, aggregate_function, na.rm=TRUE )
       }
  
-      if  ( exists("breaks", ellps)) {
-        breaks = ellps[["breaks"]] 
-        er = range(breaks)
+      if  ( exists("ticks", ellps)) {
+        ticks = ellps[["ticks"]] 
+        er = range(ticks)
       } else{ 
         er = quantile( toplot, probs=probs, na.rm=TRUE )
-        # breaks = signif( seq( er[1], er[2], length.out=7), 2) 
-        breaks = pretty( er )
+        # ticks = signif( seq( er[1], er[2], length.out=7), 2) 
+        ticks = pretty( er )
       }
       
       toplot[ which(toplot < er[1]) ] = er[1] # set levels higher than max datarange to max datarange
@@ -183,12 +183,12 @@
       # no data sent, assume it is an element of sppoly
       if (!exists(vn, sppoly)) message( paste("variable: ", vn, "not found in sppoly ..."))
 
-      if  ( exists("breaks", ellps)) {
-        breaks = ellps[["breaks"]] 
-        er = range(breaks)
+      if  ( exists("ticks", ellps)) {
+        ticks = ellps[["ticks"]] 
+        er = range(ticks)
       } else{ 
         er = range( sppoly[[vn]],   na.rm=TRUE )
-        breaks = pretty( er )
+        ticks = pretty( er )
       }
 
       if (is.null(vn_label)) vn_label = vn  # this permits direct plotting of sppoly variables (if toplot and res are not sent)
@@ -218,22 +218,39 @@
     }
 
     plt = plt + 
-      tm_shape( sppoly, projection=plot_crs ) +
+      tm_shape( sppoly, crs=plot_crs ) +
       tm_polygons( 
-        col=vn_label, 
+        fill=vn_label, 
         title= title,
-        style = style,
-        palette = palette,
-        breaks = breaks,
+        fill.scale = ifelse ( 
+          exists("fill.scale", ellps), 
+          ellps[["fill.scale"]], 
+          tm_scale_continuous(
+            ticks = datarange,  
+            value.na = NA
+            values = ifelse ( 
+              exists("values", ellps), 
+              ellps[["values"]], 
+              "brewer.yl_or_rd"
+            )
+          ) 
+        ) ,
+        fill.legend = tm_legend(
+          na.show =na.show,
+          orientation = orientation,
+          title = ifelse ( 
+            exists("vn_title", ellps), 
+            ellps[["vn_title"]], 
+            vn
+          )
+        ),
         midpoint = NA ,
-        border.col = "lightgray",
-        colorNA = NULL,
+        col = "lightgray",
         id = id,
-        showNA =showNA,
         lwd = lwd,  
-        border.alpha =border.alpha,
-        alpha =alpha, 
-        legend.is.portrait = legend.is.portrait ) +
+        col_alpha = col_alpha,
+        fill_alpha = fill_alpha 
+      ) +
 
     plt = plt + 
       tm_facets(ncol = 2, sync = TRUE) 
@@ -247,7 +264,7 @@
   
     if ("scale_bar" %in% plot_elements ) {
       plt = plt + 
-        tm_scale_bar( position=scale_bar_position, width=scale_bar_width, text.size=0.7)  
+        tm_scalebar( position=scale_bar_position, width=scale_bar_width, text.size=0.7)  
     }
 
     plt = plt + 

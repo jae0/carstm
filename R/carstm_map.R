@@ -8,7 +8,7 @@
     time= "time_name",
     cyclic="cyclic_name",
     stat_var="mean",
-    alpha=0.95,
+    fill_alpha=0.95,
     sppoly=NULL,
     smatch=NULL, 
     tmatch=NULL, 
@@ -23,7 +23,7 @@
     plotmethod="ggplot",
     tmapmode="view",
     colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")), 
-    # colors=RColorBrewer::brewer.pal(5, "YlOrRd"), # display.brewer.all()
+    # colors=RColorBrewer::brewer.pal(5, "brewer.yl_or_rd"), # display.brewer.all()
     ...) {
  
 
@@ -109,13 +109,13 @@
         if (exists("filter", sppoly)) toplot  = toplot  * sppoly[["filter"]]
       }
 
-      if  ( exists("breaks", ellps)) {
-        breaks = ellps[["breaks"]]
-        er = range(breaks)
+      if  ( exists("ticks", ellps)) {
+        ticks = ellps[["ticks"]]
+        er = range(ticks)
       } else{
         er = quantile( toplot, probs=probs, na.rm=TRUE )
-        # breaks = signif( seq( er[1], er[2], length.out=7), 2)
-        breaks = pretty( er )
+        # ticks = signif( seq( er[1], er[2], length.out=7), 2)
+        ticks = pretty( er )
       }
 
       toplot[ which(toplot < er[1]) ] = er[1] # set levels higher than max datarange to max datarange
@@ -139,12 +139,12 @@
         if (!is.null(transformation)) sppoly[[vn]] = transformation(sppoly[[vn]])
         if (exists("filter", sppoly)) sppoly[[vn]] = sppoly[[vn]] * sppoly[["filter"]]
 
-        if  ( exists("breaks", ellps)) {
-          breaks = ellps[["breaks"]]
-          er = range(breaks)
+        if  ( exists("ticks", ellps)) {
+          ticks = ellps[["ticks"]]
+          er = range(ticks)
         } else{
           er = range( sppoly[[vn]],   na.rm=TRUE )
-          breaks = pretty( er )
+          ticks = pretty( er )
         }
       
         if (is.null(vn_label)) vn_label = vn  # this permits direct plotting of sppoly variables (if toplot and res are not sent)
@@ -190,7 +190,7 @@
       plt = ggplot() +
         geom_sf( data=sppoly, aes(fill=.data[[vn_label]], alpha=0.95), lwd=0 )  +
         scale_fill_gradientn(name = vn_label, 
-          limits=range(breaks),
+          limits=range(ticks),
           colors=alpha(colors, alpha=0.99), na.value=NA ) +
         guides(fill = guide_colorbar(
           # title.theme = element_blank(), 
@@ -276,15 +276,13 @@
 
       scale = ifelse( exists("scale", ellps),  ellps[["scale"]],  2 )
 
-
-      style = ifelse( exists("style", ellps),   ellps[["style"]],  "cont" )
-      palette = ifelse( exists("palette", ellps),   ellps[["palette"]],  "YlOrRd" )
+      fill.scale = ifelse( exists("fill.scale", ellps),   ellps[["fill.scale"]],  tm_scale_continuous() )
+      values = ifelse( exists("values", ellps),   ellps[["values"]],  "brewer.yl_or_rd" )
       title = ifelse( exists("title", ellps),   ellps[["title"]],  "" )
-      showNA = ifelse( exists("showNA", ellps),   ellps[["showNA"]],  FALSE )
+      na.show = ifelse( exists("na.show", ellps),   ellps[["na.show"]],  FALSE )
       lwd = ifelse( exists("lwd", ellps),  ellps[["lwd"]],  0.02  )
-      border.alpha = ifelse( exists("border.alpha", ellps),  ellps[["border.alpha"]],  0.75 )
-      alpha = ifelse( exists("alpha", ellps),   ellps[["alpha"]],  0.975 )
-
+      col_alpha = ifelse( exists("col_alpha", ellps),  ellps[["col_alpha"]],  0.75 )
+      fill_alpha = ifelse( exists("fill_alpha", ellps),   ellps[["fill_alpha"]],  0.975 )
 
       compass.north = ifelse( exists("compass.north", ellps),  ellps[["compass.north"]],  0 )
 
@@ -294,7 +292,7 @@
       legend.text.size = ifelse( exists("legend.text.size", ellps),   ellps[["legend.text.size"]],  0.75 )
       legend.width = ifelse( exists("legend.width", ellps),  ellps[["legend.width"]], 0.75 )
 
-      legend.is.portrait = ifelse( exists("legend.is.portrait", ellps),   ellps[["legend.is.portrait"]],  TRUE )
+      orientation = ifelse( exists("orientation", ellps),   ellps[["orientation"]],  "landscape" )
   
 
 
@@ -303,22 +301,39 @@
       plt = NULL
 
       plt =  plt + 
-        tm_shape( sppoly, projection = plot_crs ) +
+        tm_shape( sppoly, crs = plot_crs ) +
         tm_polygons( 
-          col = vn_label, 
+          fill = vn_label, 
           title= title,
-          style = style,
-          palette = palette,
-          breaks = breaks,
+          fill.scale = ifelse ( 
+            exists("fill.scale", ellps), 
+            ellps[["fill.scale"]], 
+            tm_scale_continuous(
+              ticks = datarange,  
+              value.na = NA,
+              values = ifelse ( 
+                exists("values", ellps), 
+                ellps[["values"]], 
+                "brewer.yl_or_rd"
+              )
+            ) 
+          ),
+          fill.legend = tm_legend(
+            na.show =na.show,
+            orientation = orientation,
+            title = ifelse ( 
+              exists("vn_title", ellps), 
+              ellps[["vn_title"]], 
+              vn
+            )
+          ),
           midpoint = NA ,
-          border.col = "lightgray",
-          colorNA = NULL,
+          col = "lightgray",
           id = id,
-          showNA =showNA,
           lwd = lwd,
-          border.alpha =border.alpha,
-          alpha =alpha,
-          legend.is.portrait = legend.is.portrait )
+          col_alpha =col_alpha,
+          fill_alpha = fill_alpha
+        )
   
       if ( exists("additional_features", ellps) ) {
         # e.g. management lines, etc
@@ -336,7 +351,7 @@
 
       if ("scale_bar" %in% plot_elements ) {
         plt = plt +
-          tm_scale_bar( position=scale_bar.position, width=scale_bar.width, text.size=0.5)
+          tm_scalebar( position=scale_bar.position, width=scale_bar.width, text.size=0.5)
       }
 
       plt = plt +

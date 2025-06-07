@@ -5,7 +5,7 @@ carstm_plot_map = function( p=NULL,
   annotation = NULL,
   probs=c(0.025,0.975), legend.position.inside=c( 0.08, 0.865 ), brks =NULL, 
   colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")), 
-  # colors=RColorBrewer::brewer.pal(5, "YlOrRd"),
+  # colors=RColorBrewer::brewer.pal(5, "brewer.yl_or_rd"),
   transf=NULL ) {
 
   require(ggplot2)
