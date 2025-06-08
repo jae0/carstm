@@ -173,8 +173,7 @@
       pltadd = NULL 
       if ( exists("additional_features", ellps) ) {
         # e.g. management lines, etc
-        pltadd = ellps[["additional_features"]]
-        if (exists("ggplot", pltadd ) ) pltadd = pltadd[["ggplot"]][["layers"]]
+        pltadd = ellps[["additional_features"]] 
       } 
       
       annot = NULL
@@ -337,9 +336,7 @@
   
       if ( exists("additional_features", ellps) ) {
         # e.g. management lines, etc
-        pltadd = ellps[["additional_features"]] 
-        if (exists("tmap", pltadd ) ) pltadd = pltadd[["tmap"]]
-        plt = plt + pltadd 
+        plt = plt + ellps[["additional_features"]] 
       }
 
 
