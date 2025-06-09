@@ -227,7 +227,7 @@
           ellps[["fill.scale"]], 
           tm_scale_continuous(
             ticks = datarange,  
-            value.na = NA
+            value.na = NA,
             values = ifelse ( 
               exists("values", ellps), 
               ellps[["values"]], 
