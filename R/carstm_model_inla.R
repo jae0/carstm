@@ -444,7 +444,6 @@ carstm_model_inla = function(
       yl [ yl==0 ] = tweak
     }
     
-
     yl = lnk_function( yl )   # necessary in case of log(0)
     
     # offsets need to be close to 1 in user scale ( that is log(1)==0 in internal scale ) in experimental mode .. rescale  
@@ -484,7 +483,13 @@ carstm_model_inla = function(
     mqi = NULL
 
     O[["predictions_range"]] = range( which( inla_args[["data"]][["tag"]] == "predictions" ) )
-    O[["priors"]] = H = inla_hyperparameters(  reference_sd = O[["data_range_internal"]][["sd"]], alpha=0.5, median(yl[ll], na.rm=TRUE) )  # sd slightly biased due to 0's being dropped .. but use of pc.priors that shrink to 0
+    
+    O[["priors"]] = H = inla_hyperparameters(
+      reference_sd = O[["data_range_internal"]][["sd"]], 
+      alpha=0.5, 
+      O[["data_range_internal"]][["median"]] 
+    )  
+    # sd biased (high) due to 0's being dropped .. but we use pc.priors which shrink it to 0, so is ok as more robust ... :)
     
     m = yl = ii = ll = fy = ol = NULL
     gc()
