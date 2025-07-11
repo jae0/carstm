@@ -146,7 +146,7 @@ scottish_lip_cancer_data = function( fn=NULL ){
         log_offset = log_offset
     )
 
-    if (!is.null(fn)) save(out, file=fn, compress=TRUE) 
+    if (!is.null(fn)) read_write_fast(out, file=fn) 
 
     return (out)
 }

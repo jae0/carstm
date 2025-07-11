@@ -12,8 +12,8 @@ The example data is bounded by longitudes (-65, -62) and latitudes (45, 43). It 
 set.seed(12345)
 
 require(lubridate)
-fn = system.file("extdata", "aegis_spacetime_test.RDS", package="carstm" )
-bottemp = readRDS( fn )   
+fn = system.file("extdata", "aegis_spacetime_test.rdz", package="carstm" )
+bottemp = read_write_fast( fn )   
 bottemp$yr = year(bottemp$date )
 
 # bottemp = bottemp[lon>-65 & lon< -62 & lat <45 &lat>43,]
@@ -121,16 +121,14 @@ p$tres = 1/ p$nw # time resolution .. predictions are made with models that use 
 # intervals of decimal years... fractional year breaks
 p$dyears = discretize_data( span=c(0,1, p$nw), toreturn="lower" )  # left breaks
 p$cyclic_levels = discretize_data( span=c(0,1, p$nw), toreturn="midpoints" )
-p$dyear_centre = p$dyears[ trunc(p$nw/2) ] + p$tres/2
 
 p$timezone="America/Halifax" 
 p$prediction_dyear = lubridate::decimal_date( lubridate::ymd("0000/Sep/01")) # used for creating timeslices and predictions  .. needs to match the values in aegis_parameters()
 p$nt = p$nw*p$ny # i.e., seasonal with p$nw (default is annual: nt=ny)
 
 # predictions at these time values (decimal-year), # output timeslices for predictions in decimla years, yes all of them here
-tout = expand.grid( yr=p$yrs, dyear=1:p$nw, KEEP.OUT.ATTRS=FALSE )
-p$prediction_ts = sort( tout$yr + tout$dyear/p$nw - p$tres/2 )# mid-points
-
+tout = expand.grid( yr=p$yrs, dyear=discretize_data( span=c(0, 1, p$nw), toreturn="midpoints" ), KEEP.OUT.ATTRS=FALSE )
+p$prediction_ts = sort( tout$yr + tout$dyear  ) # mid-points
 
 p$inputdata_spatial_discretization_planar_km = p$pres / 10 # controls resolution of data prior to modelling (km )
 p$inputdata_temporal_discretization_yr = 1/52  # ie., weekly .. controls resolution of data prior to modelling to reduce data set and speed up modelling;; use 1/12 -- monthly or even 1/4.. if data density is low
@@ -274,7 +272,7 @@ if (0) {
     nb = attributes(sppoly)$nb$nbs
     obs = M[tag=="observations"]
     preds = M[tag=="predictions"]
-    save( obs, nb, preds, file=file.path(p$modeldir, "example_bottom_temp.RData"), compress=TRUE)
+    read_write_fast( list(obs=obs, nb=nb, preds=preds), file=file.path(p$modeldir, "example_bottom_temp.rdz") )
 
 }
 
@@ -334,7 +332,7 @@ res = carstm_model(
 
 
 # NOTE: the above creates a number of files in the specified directory (here: ~/test/test_ocean_bottom_temperatures_halifax/modelled/test_basic_form/ )
-# NOTE: these files have an extentsion of *.RDS. This is due to historical reasons. Currently they are saved as **qs** files, but still retain the RDS extension. The RDS format can still be created by choosing compress="gzip" (or bzip2, or xz -- standard RDS compression formats
+# NOTE: these files have an extension of *.rdz (**qs::qsave()** compressed files). Use, aegies::read_write_fast() to read/write.
 
 # your timings will vary with OS, number of cores/threads and RAM/CPU ...
  

@@ -24,6 +24,6 @@ toy_spatial_data = function(seed = 123, nx=10, fn=NULL) {
   dat$ID = 1:K
   row.names(W) = dat$ID
   out = list(dat=dat, W=W)
-  if (!is.null(fn)) save(out, file=fn, compress=TRUE) 
+  if (!is.null(fn)) read_write_fast(out, file=fn) 
   return( out)
 }

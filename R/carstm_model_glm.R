@@ -1,19 +1,19 @@
 
   carstm_model_glm = function( O, DS=NULL, data=NULL, 
-    fn_fit=tempfile(pattern="fit_", fileext=".RDS"), 
-    compress="qs-preset", 
+    fn_fit=tempfile(pattern="fit_", fileext=".rdz"), 
+    compress="", 
     compression_level=3,
-    qs_preset="high", redo_fit=TRUE , ...  ) {
+    redo_fit=TRUE , ...  ) {
     
     # TODO:: assumes a fixed name convention .. look at carstm_model_inla to disconnect and use O$vn$*
     fit = NULL
     if (DS=="modelled_fit") {
         if (!is.null(fn_fit)) {
           if (file.exists(fn_fit)) {
-            if (grepl("\\.RDS$", fn_fit)) {
+            if (grepl("\\.rdz$", fn_fit)) {
               fit = aegis::read_write_fast(fn_fit)
             } else {
-              load( fn_fit )
+              fit = read_write_fast( fn_fit )
             }
           }
           if (is.null(fit)) message("Modelled fit was not found.")
@@ -45,7 +45,7 @@
 
       message( "Saving carstm fit: ", fn_fit )
 
-      read_write_fast( data=fit, file=fn_fit, compress=compress, compression_level=compression_level )
+      read_write_fast( data=fit, fn=fn_fit, compress=compress, compression_level=compression_level )
 
     }
 
@@ -136,7 +136,7 @@
     if ( grepl( ".*lognormal", O$family)) O[[vn]] = exp(O[[vn]])
     if (exists("data_transformation", O) ) O[[vn]] = data_transformation$backward( O[[vn]] ) # make all positive
 
-    read_write_fast( data=O, file=fn_res, compress=compress, compression_level=compression_level )
+    read_write_fast( data=O, fn=fn_res, compress=compress, compression_level=compression_level )
 
     message( "carstm summary saved as: ", fn_res )
 

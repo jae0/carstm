@@ -2,7 +2,7 @@
 carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL, DS=NULL, 
     space_id=NULL, time_id=NULL, cyclic_id=NULL, theta=NULL, carstm_directory=NULL, 
     toget=NULL, nposteriors=NULL, posterior_simulations_to_retain=NULL,
-    compress="qs-preset", qs_preset="high", compression_level=3, fn_fit=NULL, debug=FALSE, 
+    compress="", compression_level=9, fn_fit=NULL, debug=FALSE, 
     ... ) {
 
      if (0) {
@@ -11,7 +11,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
       areal_units_fn=NULL
       DS=NULL
       carstm_modelengine = "inla"
-      compress=TRUE
+      compress=""
       fn_fit=NULL
       
      }
@@ -52,13 +52,13 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
   if ( grepl("glm", carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
     out = carstm_model_glm( O=p, DS=DS, data=data, fn_fit=fn_fit,  
-      compress=compress, compression_level=compression_level, qs_preset=qs_preset, ... ) 
+      compress=compress, compression_level=compression_level, ... ) 
   }
 
   if ( grepl("gam", carstm_modelengine) ) {
     # not a CAR but for comparison with no spatial random effect model
     out = carstm_model_gam( O=p, DS=DS, data=data, fn_fit=fn_fit,  
-      compress=compress, compression_level=compression_level, qs_preset=qs_preset, ... ) 
+      compress=compress, compression_level=compression_level, ... ) 
   }
 
 
@@ -78,8 +78,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
   if ( grepl("inla", carstm_modelengine) ) {
 
     out = carstm_model_inla( DS=DS, O=p, data=data, sppoly=sppoly, fn_fit=fn_fit, 
-      compress=compress, compression_level=compression_level, qs_preset=qs_preset,
-      toget=toget,
+      compress=compress, compression_level=compression_level,       toget=toget,
       nposteriors=nposteriors, posterior_simulations_to_retain=posterior_simulations_to_retain,
       space_id=space_id, time_id=time_id, cyclic_id=cyclic_id, theta=theta, debug=debug, ... )
   }

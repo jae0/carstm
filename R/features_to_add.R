@@ -8,7 +8,7 @@ features_to_add = function( p,
   redo=FALSE, target="ggplot"
 ) {
  
-    fn = file.path( p$data_root, paste0("additional_mapping_features_", target, ".RDS") )
+    fn = file.path( p$data_root, paste0("additional_mapping_features_", target, ".rdz") )
     if (!redo){
       O = NULL
       if (file.exists(fn)) O = aegis::read_write_fast(fn)
@@ -54,7 +54,7 @@ features_to_add = function( p,
 
 
     dir.create( p$data_root, showWarnings = FALSE, recursive = TRUE )
-    read_write_fast( data=O, file=fn )
+    read_write_fast( data=O, fn=fn )
     return(O)
   
 
