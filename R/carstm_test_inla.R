@@ -20,7 +20,7 @@ carstm_test_inla = function( family = "poisson" ) {
     }
 
     
-  if (family=="besag") {
+  if (family=="besag_poisson_nbinomial") {
  
     source(system.file("demodata/Bym-map.R", package="INLA"))  # load polygons "germany.graph", etc
     g = system.file("demodata/germany.graph", package = "INLA")
@@ -612,7 +612,88 @@ carstm_test_inla = function( family = "poisson" ) {
   }
 
 
+  if (family=="bym2_poisson_nbinomial_random_effect") {
+ 
+    source(system.file("demodata/Bym-map.R", package="INLA"))  # load polygons "germany.graph", etc
+    g = system.file("demodata/germany.graph", package = "INLA")
+    
+    Germany = INLA::Germany  # data
+    Germany$region.copy = Germany$region
+    Germany$logE = log(Germany$E)
+
+    obsrate = Germany$Y / Germany$E
+
+     
+    # bym2 model .. offset not in formula but as a parameter for inla
+    formula1 = Y ~ f(region, model="bym2", graph=g)  
+    
+
+    # no offsets in formula, but use "offset log transformed" ( note: results are counts and not rates)
+    m1a = inla(formula1, family="poisson", data=Germany, 
+        offset=Germany$logE,
+        control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+        control.fixed=list(prec.intercept=1),
+        control.predictor = list(compute=TRUE, link=1)
+    ) 
+    
+    m1a$summary.fitted.values$mean
+    
+
+    # NOTE: using offset in formula is the approach used in carstm:
+    formula2 = Y ~ offset(logE) + f(region, model="bym2",graph=g)  
+
+    m2 = inla(formula2, family="poisson", data=Germany, 
+        control.compute = list(config = TRUE, return.marginals.predictor=TRUE), 
+        control.fixed=list(prec.intercept=1),
+        control.predictor = list(compute=TRUE, link=1)
+    )
+
+    m2$summary.fitted.values$mean
+
+    cor(m1a$summary.fitted.values$mean, m2$summary.fitted.values$mean)
+    plot(m1a$summary.fitted.values$mean, m2$summary.fitted.values$mean)
+
+    # parameter estimates are good
+
+    # random effects:
+    re_m1a_summ = m1a$summary.random[["region"]]
+    re_m1a_marg = m1a$marginals.random[["region"]]
+
+    re_m2_summ = m2$summary.random[["region"]]
+    re_m2_marg = m2$marginals.random[["region"]]
+
+    abs(re_m2_summ[1,"mean"] - re_m1a_summ[1,"mean"]) < 1e6
+    
+    abs(inla.zmarginal(re_m2_marg[[1]])[[1]] - inla.zmarginal(re_m1a_marg[[1]])[[1]] ) < 1e6
+ 
+    abs( inla.tmarginal(function(x) (x), re_m2_marg[[1]]) [[1]] - re_m2_summ[1,"mean"] ) < 1e6
+
+    o1a = lapply( re_m1a_marg, inla.tmarginal, fun=exp )
+
+    o2  = lapply( re_m2_marg,  inla.tmarginal, fun=exp )
+
+    plot(o2[1,], o1a[1,])
+    cor(c(o2), c(o1a))
+    
+    o2t = sapply( lapply( o2, inla.zmarginal), function(x) x$mean )
+    o2z  = sapply( lapply( re_m2_marg,  inla.zmarginal ), function(x) x$mean )
+    
+    plot(o2z~o2t )
+ 
+    plot(o2z~log(o2t) )
+ 
+    plot(o2z~re_m2_summ$mean)
+    cor(o2z,re_m2_summ$mean)
+
+  }
+
+
+
 }
+
+
+
+
 
 ### NOTE:: Bottom line 
 ###     when using offsets in formulae, marginals and summaries are on user scale.
