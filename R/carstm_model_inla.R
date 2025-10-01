@@ -24,7 +24,9 @@ carstm_model_inla = function(
   ndiscretization = 1024L,
   eps = 1e-12,
   ... ) {
-  
+ 
+	require(INLA)
+
   if (!is.null(DS)) {
 
     if (DS=="modelled_fit") {
