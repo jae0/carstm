@@ -4,8 +4,10 @@ features_to_add = function( p,
   isobaths=c( 100, 200, 300, 400, 500 ), 
   coastline=c("Canada", "United States of America"), 
   plot_crs=projection_proj4string("lonlat_wgs84"),
-  xlim=c(-85,-35), ylim=c(35, 65),
-  redo=FALSE, target="ggplot"
+  xlim=c(-85,-35), 
+  ylim=c(35, 65),
+  redo=FALSE, 
+  target="ggplot"
 ) {
  
     fn = file.path( p$data_root, paste0("additional_mapping_features_", target, ".rdz") )
