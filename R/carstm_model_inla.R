@@ -119,6 +119,15 @@ carstm_model_inla = function(
 
   inla.setOption(num.threads=num.threads)
   
+
+  if (!exists("inla.mode", inla_args)) {
+    inla_args[["inla.mode"]]="compact"
+  }
+
+  if (!exists("working.directory", inla_args)) {
+    inla_args[["working.directory"]] = tempfile(pattern = "to_delete_", tmpdir = dirname(fn_fit), fileext = "") 
+  }
+
   # n cores to use for posterior marginals in mcapply .. can be memory intensive so make it a bit less than "num.threads" ..
   if (exists("mc.cores", inla_args)) {
     mc.cores = inla_args[["mc.cores"]]
@@ -541,48 +550,61 @@ carstm_model_inla = function(
      
 
     # check INLA options
+    
+    
 
-    if (!exists("control.inla", inla_args)) inla_args[["control.inla"]] = list(strategy = "auto", optimiser="default") 
+    if (!exists("control.inla", inla_args)) {
+      inla_args[["control.inla"]] = list( strategy="gaussian", int.strategy="eb",  fast=TRUE, h=0.01, force.diagonal=TRUE,  cmin=0.0001 )
+    }
 
-    if (!exists("control.predictor", inla_args)) inla_args[["control.predictor"]] = list()
+ 
+
+    if (!exists("control.predictor", inla_args)){
+       inla_args[["control.predictor"]] = list()
+    }
 
     # these are required to know the scale of predictions
     inla_args[["control.predictor"]]$compute = TRUE   # force
     inla_args[["control.predictor"]]$link = 1  # force
 
-    if (!exists("control.mode", inla_args ) ) inla_args[["control.mode"]] = list( restart=TRUE ) 
+    if (!exists("control.mode", inla_args ) ) {
+       inla_args[["control.mode"]] = list(restart=TRUE )
+    }
+
     if (!is.null(theta) ) inla_args[["control.mode"]]$theta= theta
-    
-    if (!exists("control.compute", inla_args)) inla_args[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE )
+
+    if (!exists("control.compute", inla_args)) {
+      inla_args[["control.compute"]] = list(dic=TRUE, waic=TRUE, cpo=FALSE, config=TRUE, return.marginals.predictor=TRUE, save.memory=TRUE )
+    }
 
     # if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = list(mean.intercept=0.0, prec.intercept=0.001, mean=0, prec=0.001)
-    if (!exists("control.fixed", inla_args)) inla_args[["control.fixed"]] = H$fixed
+    if (!exists("control.fixed", inla_args)){
+       inla_args[["control.fixed"]] = H$fixed
+    }
 
     setDF(inla_args[["data"]]) # in case .. INLA requires this ?
  
+    if ("recompute_at_theta" %in% toget) {
+      if (!is.null(theta) ) {
+        # last resort force use of theta
+        message( "model fits failed, trying to predict upon theta directly" )
+        inla_args[["control.mode"]]$theta= theta
+        inla_args[["control.mode"]]$restart=FALSE
+        inla_args[["control.mode"]]$fixed=TRUE 
+      }
+    }
+
     fit = try( do.call( inla, inla_args ) )      
-
+ 
     if (inherits(fit, "try-error" )) {
-      inla_args[["control.inla"]]$strategy="laplace"
-      inla_args[["control.inla"]]$optimiser="gsl"
-      inla_args[["control.inla"]]$restart=1
-      inla_args[["control.inla"]]$cmin=0
-      inla_args[["control.inla"]]$diagonal=1e-8 
+      inla_args[["control.inla"]]$strategy="gaussian"
+      inla_args[["control.inla"]]$fast=TRUE
+      inla_args[["control.inla"]]$cmin=0.0001
+      inla_args[["control.inla"]]$h=0.01
+      inla_args[["control.inla"]]$force.diagonal=TRUE 
       fit = try( do.call( inla, inla_args ) )      
     }
-
-    if (inherits(fit, "try-error" )) {
-      inla_args[["control.inla"]]$strategy="laplace"
-      inla_args[["control.inla"]]$optimiser="gsl"
-      inla_args[["control.inla"]]$restart=1
-      inla_args[["control.inla"]]$h = 0.00075
-      inla_args[["control.inla"]]$step.factor = 0.0075
-      inla_args[["control.inla"]]$cmin=0
-      inla_args[["control.inla"]]$diagonal=1e-8 
-      fit = try( do.call( inla, inla_args ) )      
-    }
-
-
+ 
     if (inherits(fit, "try-error" )) {
       
       inla_args[["control.inla"]]$strategy="laplace"
@@ -595,22 +617,38 @@ carstm_model_inla = function(
     }
 
     if (inherits(fit, "try-error" )) {
+      inla_args[["inla.mode"]]="classic"
       inla_args[["safe"]] = TRUE
+      inla_args[["control.inla"]]$strategy="gaussian"
+      inla_args[["control.inla"]]$int.strategy="eb"
+      inla_args[["control.inla"]]$fast=TRUE
       inla_args[["control.inla"]]$h = NULL
       inla_args[["control.inla"]]$step.factor = NULL
       inla_args[["control.inla"]]$cmin = 0
-      inla_args[["control.inla"]]$diagonal = 1e-6 
+      inla_args[["control.inla"]]$diagonal = 1e-6  
 
+      inla_args[["control.mode"]] = list( restart=TRUE )
+         
       fit = try( do.call( inla, inla_args ) )      
     }
 
     if (inherits(fit, "try-error" )) {
-      inla_args[["safe"]] = TRUE
+
+      inla_args[["safe"]] = FALSE
       inla_args[["control.inla"]]$h = NULL
       inla_args[["control.inla"]]$step.factor = NULL
       inla_args[["control.inla"]]$cmin = 0
       inla_args[["control.inla"]]$diagonal = 1e-6 
       inla_args[["control.inla"]]$int.strategy='eb'
+
+      if (!is.null(theta) ) {
+        # last resort force use of theta
+        message( "model fits failed, trying to predict upon theta directly" )
+        inla_args[["control.mode"]]$theta= theta
+        inla_args[["control.mode"]]$restart=FALSE
+        inla_args[["control.mode"]]$fixed=TRUE 
+      }
+
       fit = try( do.call( inla, inla_args ) )      
     }
 
