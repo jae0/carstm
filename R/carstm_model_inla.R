@@ -494,10 +494,12 @@ carstm_model_inla = function(
 
     O[["predictions_range"]] = range( which( inla_args[["data"]][["tag"]] == "predictions" ) )
     
+    browser()
+
     O[["priors"]] = H = inla_hyperparameters(
       reference_sd = O[["data_range_internal"]][["sd"]], 
       alpha=0.5, 
-      O[["data_range_internal"]][["median"]] 
+      O[["data_range_internal"]][["median.50%"]] 
     )  
     # sd biased (high) due to 0's being dropped .. but we use pc.priors which shrink it to 0, so is ok as more robust ... :)
     
