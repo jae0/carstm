@@ -126,6 +126,7 @@ carstm_model_inla = function(
 
   if (!exists("working.directory", inla_args)) {
     inla_args[["working.directory"]] = tempfile(pattern = "to_delete_", tmpdir = dirname(fn_fit), fileext = "") 
+    message("Ensure that the working directory is clear once finished: \n\n", inla_args[["working.directory"]] )
   }
 
   # n cores to use for posterior marginals in mcapply .. can be memory intensive so make it a bit less than "num.threads" ..
@@ -1910,8 +1911,11 @@ carstm_model_inla = function(
     message("Summarize results from marginals: ", format(difftime(run_post_samples, run_fit_end)))
     message("Posterior simulations: ", format(difftime(end_post_samples, run_post_samples)))
     message("Total: ", format(difftime(run_end, run_start)))
+    message("Clearing working directory: ", inla_args[["working.directory"]])
     message("---------------------------------------")
   } 
+
+  file.remove( inla_args[["working.directory"]] )
 
   return( fn_fit )   
   
