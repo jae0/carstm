@@ -187,15 +187,15 @@
 #, colour="gray90"
  
       plt = ggplot() +
-        geom_sf( data=sppoly, aes(fill=.data[[vn_label]], alpha=0.95), lwd=0 )  +
+        geom_sf( data=sppoly, aes(fill=.data[[vn_label]]), lwd=0, alpha=1.0 )  +
         scale_fill_gradientn(name = vn_label, 
           limits=range(ticks),
-          colors=alpha(colors, alpha=0.99), na.value=NA ) +
+          colors= colors, 
+          na.value=NA ) +
         guides(fill = guide_colorbar(
           # title.theme = element_blank(), 
           # title.theme = element_text(size = 20),
           label.theme = element_text(size = 16) ) ) +
-        scale_alpha(range = c(0.8, 0.95), guide = "none") +
         annot +
         pltadd  +
         coord_sf(xlim =xr, ylim =yr, expand = FALSE) +
