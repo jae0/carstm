@@ -178,7 +178,6 @@ sppoly = areal_units( p=p, xydata=xydata,
     spbuffer=p$areal_units_resolution_km*2,  # length scale of hull and surrounding buffer
     n_iter_drop=3,   # no. times to try to drop nodes to meet filter requirements
     sa_threshold_km2= 4,   # min size of an areal unit
-    lenprob = 0.95, # quantile of length scales to use for boundary determination (non convex hull)
     verbose=TRUE, redo=TRUE 
 ) 
    
