@@ -5,7 +5,6 @@ carstm_model_inla = function(
   sppoly =NULL,
   data=NULL,
   fit = NULL,
-  space_id=NULL, time_id=NULL, cyclic_id=NULL, 
   fn_fit=tempfile(pattern="fit_", fileext=".rdz"), 
   redo_fit = TRUE,
   redo_posterior_simulations = TRUE,
@@ -289,56 +288,31 @@ carstm_model_inla = function(
         if (!exists(sppoly)) sppoly = NULL
       }
       if (is.null(sppoly)) stop( "sppoly is required") 
-      
-      # test to see if sppoly has been altered:
-      sp_nb_auid = NULL
-      sp_nb_auid = try( attributes(attributes(sppoly)$NB_graph)$region.id, silent=TRUE)  # order of neighbourhood graph 
-      if (!inherits("try-error", sp_nb_auid)) {
-        o = match( sppoly$AUID, sp_nb_auid)  
-        if (length(unique(diff(o))) !=1) {
-          stop( "Neighbourhood indices and polygons AUID order are mismatched .. this will not end well" )
-        }
-        o = NULL
-        O[["space_id"]] = sp_nb_auid
-        sp_nb_auid = NULL
-      }
-
+ 
       O[["sppoly"]] = sppoly  # copy in case mapping directly from O
       
       # the master / correct sequence of the AU's and neighbourhood matrix index values
-      if (!is.null(space_id)) {
-        O[["space_id"]] = space_id
-        space_id = NULL
-      } else {
-        if (exists("space_id", attributes(sppoly)) ) {
-          O[["space_id"]] = as.character( attributes(sppoly)$space_id )
-        } else if (exists("region.id", attributes(sppoly)) ) {
-          O[["space_id"]] = as.character( attributes(sppoly)$region.id )
-        } else if (exists("AUID", sppoly) ) {
-          O[["space_id"]] = as.character( sppoly[["AUID"]] )
-        }
-      }
+      if (!exists("AUID", sppoly)) stop("AUID is required in sppoly")
 
-      if (!exists("space_id", O)) stop( "space_id could not be determined from data")
-      if (!exists("space_id", attributes(sppoly)) ) attributes(sppoly)$space_id = O[["space_id"]]  # copy as attribute in case
+      if (!exists("space_id", O)) {
+        O[["space_id"]] = as.character( sppoly[["AUID"]] )
+      }
       
       O[["space_n"]] = length( O[[ "space_id" ]] )
 
       # better formatted areal unit names (for reporting or plotting) (outside of carstm))
       if (!exists("space_name", O)) {
-        if (exists("space_name", attributes(sppoly))) {
-          O[["space_name"]] = attributes(sppoly)$space_name  
-        } else {
-          O[["space_name"]] = O[["space_id"]]
-        }
+        O[["space_name"]] = as.character( sppoly$AUID )
       }
-      if (!exists("space_name", attributes(sppoly)) ) attributes(sppoly)$space_name = O[["space_name"]]  # copy as attribute in case
 
-      if (exists("AUID_label", sppoly)) {
+      if (!exists("space_label", O)) {
         # long name useful in some cases (for plotting)
-          O[["space_label"]] = sppoly[["AUID_label"]]
-          if (!exists("space_label", attributes(sppoly)) ) attributes(sppoly)$space_label = O[["space_label"]]  # copy as attribute in case
-      }
+        if (exists("AUID_label", sppoly)) {
+          O[["space_label"]] = as.character( sppoly[["AUID_label"]] )
+        } else {
+          O[["space_label"]] = as.character( sppoly[["AUID"]] )
+        }
+      } 
 
       if ( is.null(O[["fm"]][["vn"]][["T"]]) ) {
         # force to carry a "time" to make dimensions of predictions simpler to manipulate 
@@ -362,49 +336,42 @@ carstm_model_inla = function(
 
     }
 
+
     if ( !is.null(O[["fm"]][["vn"]][["T"]])  | !is.null(O[["fm"]][["vn"]][["U"]])  ) {
       # carstm internal ID
-      if (!is.null(time_id)) {
-        O[["time_id"]] = time_id
-        time_id = NULL
-      } else {
-        if (exists("yrs", O)) {
-          if (is.factor(O[["yrs"]])) {
-            O[["time_id"]] = as.numeric(O[["yrs"]])
-          } else {
-            O[["time_id"]] = as.numeric(O[["yrs"]])  # redundant but make explicit
-          }
+
+      if (!exists("yrs", O)) stop("Require yrs in parameter list" )
+ 
+      if (!exists("time_id", O)) {
+        if (exists("time_levels", O)) {
+          O[["time_id"]] = as.numeric( O[["time_levels"]] )
+        } else {
+          O[["time_id"]] = 1:O[["ny"]]   
         }
       }
-      if (!exists("time_id", O)) stop( "time_id or yrs need to be provided")
       
       O[["time_n"]] = length( O[[ "time_id" ]] )
 
       # for plot labels, etc .. time (year) gets swapped out for time index (outside of carstm)
       if (!exists("time_name", O)) {
-        if (exists("yrs", O)) {
-          O[["time_name"]] = as.character(O[[ "yrs" ]] )
+
+        if (exists("time_levels", O)) {
+          O[["time_name"]] = as.character( O[["time_levels"]] )
         } else {
-          O[["time_name"]] = as.character(O[[ "time_id" ]] ) 
-        }  
+          O[["time_name"]] = as.character( O[[ "time_id" ]] )
+        }
+      
       }
   
       # sub-annual time 
       if (!is.null(O[["fm"]][["vn"]][["U"]]) )  {
         # carstm internal ID
-        if (!is.null(cyclic_id)) {
-          O[["cyclic_id"]] = cyclic_id
-          cyclic_id = NULL
+
+        if (exists("cyclic_levels", O)) {
+          O[["cyclic_id"]] = as.numeric( O[["cyclic_levels"]] )
         } else {
-          if (exists("cyclic_levels", O)) {
-            if (is.factor(O[["cyclic_levels"]])) {
-              O[["cyclic_id"]] = as.numeric(O[["cyclic_levels"]])
-            } else {
-              O[["cyclic_id"]] = O[["cyclic_levels"]]
-            }
-          }
+          O[["cyclic_id"]] = i:O[["nw"]]
         }
-        if (!exists("cyclic_id", O)) stop( "cyclic_id or cyclic_levels need to be provided")
         
         O[["cyclic_n"]] = length( O[[ "cyclic_id" ]] )
 
@@ -416,6 +383,7 @@ carstm_model_inla = function(
             O[["cyclic_name"]] = as.character(O[[ "cyclic_id" ]] ) 
           }  
         }
+
       }
     } 
 

@@ -1,6 +1,6 @@
 
 carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL, DS=NULL, 
-    space_id=NULL, time_id=NULL, cyclic_id=NULL, theta=NULL, carstm_directory=NULL, 
+    theta=NULL, carstm_directory=NULL, 
     toget=NULL, nposteriors=NULL, posterior_simulations_to_retain=NULL,
     compress="", compression_level=9, fn_fit=NULL, debug=FALSE, 
     ... ) {
@@ -80,7 +80,7 @@ carstm_model = function( p=list(), data=NULL, sppoly =NULL, areal_units_fn=NULL,
     out = carstm_model_inla( DS=DS, O=p, data=data, sppoly=sppoly, fn_fit=fn_fit, 
       compress=compress, compression_level=compression_level,       toget=toget,
       nposteriors=nposteriors, posterior_simulations_to_retain=posterior_simulations_to_retain,
-      space_id=space_id, time_id=time_id, cyclic_id=cyclic_id, theta=theta, debug=debug, ... )
+      theta=theta, debug=debug, ... )
   }
 
   return( out )

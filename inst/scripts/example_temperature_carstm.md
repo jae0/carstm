@@ -286,19 +286,7 @@ formula = as.formula( paste(
     ' + f( space_cyclic, model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE, group=cyclic_space, hyper=H$bym2, control.group=list(model="ar1", hyper=H$ar1_group, cyclic=TRUE) ) ',
     ' + f( space_time,   model="bym2", graph=slot(sppoly, "nb"), scale.model=TRUE, group=time_space,   hyper=H$bym2, control.group=list(model="ar1", hyper=H$ar1_group) ) '
 ) )
-
-
-
-p$space_name = sppoly$AUID 
-p$space_id = 1:nrow(sppoly)
-
-p$time_name = as.character(p$yrs)
-p$time_id =  1:p$ny
-
-p$cyclic_name = as.character(p$cyclic_levels)
-p$cyclic_id = 1:p$nw
-
-
+ 
   
 # hyper parameters ("theta") from close to the final solution on INLA's internal scale:
 theta = c( -0.4837, 0.7395, 0.0023, 2.0392, 2.4817, 3.7261, 0.1356, 0.5362, 10.5067, 1.6043, 0.7973, 4.6358, 0.0863  )
