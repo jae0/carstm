@@ -32,17 +32,19 @@ features_to_add = function( p,
     cl = NULL
     if (!is.null(coastline)) {
       # coastline =  c("unsited states of america", "canada")
-      cl = st_transform( polygons_rnaturalearth(countries=coastline, xlim=xlim, ylim=ylim), st_crs(plot_crs) )
+      cl = st_transform( polygons_rnaturalearth(xlim=xlim, ylim=ylim), st_crs(plot_crs) )
     }
+   
+ 
 
     O = list()
 
     if ("ggplot" %in% target) {
       require(ggplot2)
       O =  ggplot() +
-        geom_sf( data=z,  fill=NA, col = "slategray",  lwd=0.25) +
-        geom_sf( data=rg, fill=NA, col = "slategray",  lwd=2.0) + 
-        geom_sf( data=cl, fill=NA, col = "slategray", lwd=0.5)
+        geom_sf( data=z,  fill=NA, col = "slategray",  lwd=0.25, alpha=0.25 ) +
+        geom_sf( data=rg, fill=NA, col = "slategray",  lwd=1.0, alpha=0.5) + 
+        geom_sf( data=cl, fill="gray90", col = "slategray", lwd=0.25)
       O = O[["layers"]]
     }
 
