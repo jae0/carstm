@@ -1884,7 +1884,7 @@ carstm_model_inla = function(
     message("---------------------------------------")
   } 
 
-  fnls = list.files(path = wkdir".", all.files = TRUE,
+  fnls = list.files(path = wkdir, all.files = TRUE,
                 full.names = TRUE, recursive = TRU,
                 ignore.case = FALSE, include.dirs = TRUE)
   
