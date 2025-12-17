@@ -1880,11 +1880,10 @@ carstm_model_inla = function(
     message("Summarize results from marginals: ", format(difftime(run_post_samples, run_fit_end)))
     message("Posterior simulations: ", format(difftime(end_post_samples, run_post_samples)))
     message("Total: ", format(difftime(run_end, run_start)))
-    message("Clearing working directory: ", wkdir )
+    message("Remove working directory once ready: ", wkdir )
     message("---------------------------------------")
   } 
 
-  file.remove( wkdir )
 
   return( fn_fit )   
   
