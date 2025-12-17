@@ -1880,10 +1880,18 @@ carstm_model_inla = function(
     message("Summarize results from marginals: ", format(difftime(run_post_samples, run_fit_end)))
     message("Posterior simulations: ", format(difftime(end_post_samples, run_post_samples)))
     message("Total: ", format(difftime(run_end, run_start)))
-    message("Remove working directory once ready: ", wkdir )
+    message("Removing working directory: ", wkdir )
     message("---------------------------------------")
   } 
 
+  fnls = list.files(path = wkdir".", all.files = TRUE,
+                full.names = TRUE, recursive = TRU,
+                ignore.case = FALSE, include.dirs = TRUE)
+  
+  # repeat in case order is incorrect
+  for (f in 1:5) {
+    for (i in fnls) try( file.remove(i), silent=TRUE )
+  }
 
   return( fn_fit )   
   
