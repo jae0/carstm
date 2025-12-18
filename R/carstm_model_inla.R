@@ -355,10 +355,8 @@ carstm_model_inla = function(
       # for plot labels, etc .. time (year) gets swapped out for time index (outside of carstm)
       if (!exists("time_name", O)) {
 
-        if (exists("time_levels", O)) {
-          O[["time_name"]] = as.character( O[["time_levels"]] )
-        } else {
-          O[["time_name"]] = as.character( O[[ "time_id" ]] )
+        if (exists("yrs", O)) {
+          O[["time_name"]] = as.character( O[["yrs"]] )
         }
       
       }
@@ -379,8 +377,6 @@ carstm_model_inla = function(
         if (!exists("cyclic_name", O)) {
           if (exists("cyclic_levels", O)) {
             O[["cyclic_name"]] = as.character(O[[ "cyclic_levels" ]] )
-          } else {
-            O[["cyclic_name"]] = as.character(O[[ "cyclic_id" ]] ) 
           }  
         }
 
