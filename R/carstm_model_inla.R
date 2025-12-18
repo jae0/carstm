@@ -1881,7 +1881,7 @@ carstm_model_inla = function(
   } 
 
   fnls = list.files(path = wkdir, all.files = TRUE,
-                full.names = TRUE, recursive = TRU,
+                full.names = TRUE, recursive = TRUE,
                 ignore.case = FALSE, include.dirs = TRUE)
   
   # repeat in case order is incorrect
