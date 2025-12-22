@@ -31,7 +31,7 @@ carstm_posterior_predictive_check = function( p, M )  {
     out = ggplot(pld, aes(x =  observed, y = fitted )) +
       geom_abline(slope=1, intercept=0, color="darkgray", lwd=1.4 ) +
       geom_point(color="slategray", alpha=0.2) +
-      labs(caption=anno1, color="slateblue") +
+      labs(caption=anno1, color="slategray") +
       theme( plot.caption = element_text(hjust = 0, size=12 ) )# move caption to the left 
    
     outputdir = file.path( p$modeldir, p$carstm_model_label )

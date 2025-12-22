@@ -33,6 +33,7 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
   i = grep("\\<time\\>", names_res )
   if (length(i)==1) {
     vn = names_res[i]
+    p$time_name = p$yrs
     res$time$yr = as.numeric(p$time_name[res$time$ID])
     plt = ggplot( res$time, aes(x=yr, y=mean)) +  geom_line(color="gray", linewidth=lwd) + geom_point( size=3, color="slategray") +
       geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray", linewidth=lwd, width=0  ) +
@@ -51,6 +52,8 @@ carstm_plot_marginaleffects = function( p, outputdir=tempdir(), fn_root_prefix=N
   i = grep("\\<cyclic\\>", names_res )
   if (length(i)==1) {
     vn = names_res[i]
+    p$cyclic_name  = as.character(p[[ "cyclic_levels" ]] )
+
     res$cyclic$seas = as.numeric( p$cyclic_name[res$cyclic$ID] )
     plt = ggplot( res$cyclic, aes(x=seas, y=mean) ) + geom_line(color="gray", linewidth=lwd) + geom_point( size=3, color="slategray") +
       geom_errorbar(aes(ymin=quant0.025, ymax=quant0.975), color="slategray",  linewidth=lwd, width=0  ) +
