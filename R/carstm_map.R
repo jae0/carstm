@@ -16,13 +16,15 @@
     plot_elements=c( "isobaths", "compass", "scale_bar" ),
     aggregate_function=mean,
     probs=c(0,0.975),
+    eps = min(brks)/2 ,
     outfilename=NULL,
     outscale= 1,
     digits = 3,
     transformation=NULL,
     plotmethod="ggplot",
     tmapmode="view",
-    colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")), 
+    vartype="identity",
+    # colors=rev(RColorBrewer::brewer.pal(5, "RdYlBu")), 
     # colors=RColorBrewer::brewer.pal(5, "brewer.yl_or_rd"), # display.brewer.all()
     ...) {
  
@@ -109,17 +111,11 @@
         if (exists("filter", sppoly)) toplot  = toplot  * sppoly[["filter"]]
       }
 
-      if  ( exists("ticks", ellps)) {
-        ticks = ellps[["ticks"]]
-        er = range(ticks)
-      } else{
-        er = quantile( toplot, probs=probs, na.rm=TRUE )
-        # ticks = signif( seq( er[1], er[2], length.out=7), 2)
-        ticks = pretty( er )
-      }
+      data_range = quantile( toplot, probs=probs, na.rm=TRUE )
+      er = range( toplot, na.rm=TRUE )
 
-      toplot[ which(toplot < er[1]) ] = er[1] # set levels higher than max datarange to max datarange
-      toplot[ which(toplot > er[2]) ] = er[2] # set levels higher than max datarange to max datarange
+      toplot[ which(toplot < data_range[1]) ] = data_range[1] # set levels higher than max datarange to max datarange
+      toplot[ which(toplot > data_range[2]) ] = data_range[2] # set levels higher than max datarange to max datarange
       toplot = round( toplot, digits=digits)
 
       if (is.vector(toplot) | ( is.array(toplot) && length(dim(toplot) <2 )) ) {
@@ -131,6 +127,7 @@
       }
       vn_label = gsub(" ", ".", vn_label)
 
+
     } else {
       # no data sent, assume it is an element of sppoly
       if (length(vn) ==1 ) {
@@ -139,25 +136,16 @@
         if (!is.null(transformation)) sppoly[[vn]] = transformation(sppoly[[vn]])
         if (exists("filter", sppoly)) sppoly[[vn]] = sppoly[[vn]] * sppoly[["filter"]]
 
-        if  ( exists("ticks", ellps)) {
-          ticks = ellps[["ticks"]]
-          er = range(ticks)
-        } else{
-          er = range( sppoly[[vn]],   na.rm=TRUE )
-          ticks = pretty( er )
-        }
-      
         if (is.null(vn_label)) vn_label = vn  # this permits direct plotting of sppoly variables (if toplot and res are not sent)
         sppoly[, vn_label] = round( sppoly[[vn]], digits=digits)
-
+        data_range = quantile( sppoly[[vn]], probs=probs, na.rm=TRUE )
+        er = range( sppoly[[vn]], na.rm=TRUE )
       }
     }
 
     sppoly = st_make_valid(sppoly)
     attributes(sppoly[[vn_label]]) = NULL
 
- 
- 
     if (plotmethod=="ggplot") {
  # copy of simple .. elaborate as required ..
       require(ggplot2)
@@ -184,18 +172,58 @@
       bb = st_bbox(sppoly)
       xr = c(bb["xmin"], bb["xmax"])
       yr = c(bb["ymin"], bb["ymax"])
-#, colour="gray90"
+
+      
+      if  ( exists("breaks", ellps)) {
+
+        breaks = ellps[["breaks"]]
+        labs = round(breaks, digits=digits)
+
+      } else {
+
+        labs = pretty(data_range, n=2)
+        breaks = labs
+
+      }
  
+      
+      nd = 100
+      color_range = seq( er[1], er[2], length.out=nd )
+      
+      if  ( exists("colors", ellps)) {
+        colors = ellps[["colors"]]
+      } else{
+        colors = c("darkblue","cyan","green", "yellow", "orange","darkred", "black")
+      }
+
+      color_func = colorRampPalette(colors, space = "Lab")
+      colors_codes = color_func(length(color_range))
+  
+      # interval for each color value -- ggplot wants the actual intervals
+      ggvalues = rep(NA, 2*nd)
+      uu = 1:nd *2
+      ggvalues[uu-1] = color_range 
+      ggvalues[uu] = color_range + min(diff(color_range)) / (nd*100) 
+      ggvalues = scales::rescale(ggvalues)
+ 
+      # if (vartype == "log10") {
+      #   labs = 10^labs
+      #   er = 10^er
+      # }
+
       plt = ggplot() +
         geom_sf( data=sppoly, aes(fill=.data[[vn_label]]), lwd=0, alpha=1.0 )  +
         scale_fill_gradientn(name = vn_label, 
-          limits=range(ticks),
-          colors= colors, 
+          limits = er,
+          colors = colors_codes,
+          values = ggvalues,  # interval for each color
+          labels = labs ,
+          breaks = breaks,
           na.value=NA ) +
         guides(fill = guide_colorbar(
           # title.theme = element_blank(), 
           # title.theme = element_text(size = 20),
-          label.theme = element_text(size = 16) ) ) +
+          label.theme = element_text(size = 10) ) ) +
         annot +
         pltadd  +
         coord_sf(xlim =xr, ylim =yr, expand = FALSE) +

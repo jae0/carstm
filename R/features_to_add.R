@@ -2,10 +2,10 @@
 features_to_add = function( p, 
   area_lines=NULL, 
   isobaths=c( 100, 200, 300, 400, 500 ), 
-  coastline=c("Canada", "United States of America"), 
-  plot_crs=projection_proj4string("lonlat_wgs84"),
-  xlim=c(-85,-35), 
-  ylim=c(35, 65),
+  coastline=NULL, 
+  plot_crs=st_crs( projection_proj4string("utm20N") ),
+#  xlim=c(-85,-35), 
+#  ylim=c(35, 65),
   redo=FALSE, 
   target="ggplot"
 ) {
@@ -17,25 +17,33 @@ features_to_add = function( p,
       if (!is.null(O)) return(O)
     }
 
+    crs_lonlat = st_crs( projection_proj4string("lonlat_wgs84") )
+
     plot_crs = p$aegis_proj4string_planar_km
     
     rg = NULL
     if (!is.null(area_lines )) {
-      rg = aegis.polygons::area_lines.db( DS=area_lines, returntype="sf", project_to=plot_crs )
+      rg = area_lines.db( DS=area_lines, returntype="sf", project_to=crs_lonlat )
+      rg = st_transform( rg, plot_crs )
+      # rg = aegis.polygons::area_lines.db( DS=area_lines, returntype="sf", project_to=plot_crs )
     }
 
     z = NULL
     if (!is.null(isobaths)) {
-      z = aegis.bathymetry::isobath_db( depths=isobaths, project_to=plot_crs )
+      z = isobath_db( depths=isobaths, project_to=crs_lonlat, spatial_domain="canada.east" )  # aegis.bathymetry
+      z = st_transform(z,  plot_crs )
+      # z = aegis.bathymetry::isobath_db( depths=isobaths, project_to=plot_crs )
     }
 
     cl = NULL
-    if (!is.null(coastline)) {
-      # coastline =  c("unsited states of america", "canada")
-      cl = st_transform( polygons_rnaturalearth(xlim=xlim, ylim=ylim), st_crs(plot_crs) )
+    if ( is.null(coastline)) {
+      cl = polygons_rnaturalearth() 
+      cl = st_transform( cl, plot_crs )
+      # cl = st_transform( polygons_rnaturalearth(xlim=xlim, ylim=ylim), st_crs(plot_crs) )
+    } else {
+      cl = coastline 
     }
-   
- 
+
 
     O = list()
 
@@ -44,7 +52,8 @@ features_to_add = function( p,
       O =  ggplot() +
         geom_sf( data=z,  fill=NA, col = "slategray",  lwd=0.25, alpha=0.3 ) +
         geom_sf( data=rg, fill=NA, col = "slategray",  lwd=1.0, alpha=0.9 ) + 
-        geom_sf( data=cl, fill="gray90", col = "lightslategray", lwd=0.50 ) 
+        geom_sf( data=cl, fill="gray94", col = "gray70", lwd=0.5, alpha=0.99 ) 
+
       O = O[["layers"]]
     }
 
