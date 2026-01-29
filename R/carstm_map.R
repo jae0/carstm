@@ -97,6 +97,12 @@
     }
 
 
+    breaks = labs = NULL
+    if  ( exists("breaks", ellps)) {
+      breaks = ellps[["breaks"]]
+      labs = round(breaks, digits=digits)
+    } 
+
     # add toplot to sppoly for final plots, but first check in case toplot is xyz data
     if (!is.null(toplot)) {
 
@@ -173,20 +179,11 @@
       xr = c(bb["xmin"], bb["xmax"])
       yr = c(bb["ymin"], bb["ymax"])
 
-      
-      if  ( exists("breaks", ellps)) {
-
-        breaks = ellps[["breaks"]]
-        labs = round(breaks, digits=digits)
-
-      } else {
-
+      if (is.null(breaks)) {
         labs = pretty(data_range, n=2)
         breaks = labs
-
       }
  
-      
       nd = 100
       color_range = seq( er[1], er[2], length.out=nd )
       
