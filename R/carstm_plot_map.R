@@ -64,7 +64,7 @@ carstm_plot_map = function( p=NULL,
     
     if (is.null(brks)) {
       qn = quantile( tf(datatoplot[,"mean"]), probs=probs, na.rm=TRUE ) 
-      brks = pretty( qn )
+      brks = pretty( qn, n=2 )
     }
 
     carstm_map( res=res, vn=vn, 
@@ -85,7 +85,7 @@ carstm_plot_map = function( p=NULL,
 
       if (is.null(brks)) {
         qn = quantile( datatoplot[,"mean"], probs=probs, na.rm=TRUE ) 
-        brks = pretty( tf(qn) )
+        brks = pretty( tf(qn), n=2 )
       }
       
       if (is.null(fn)) {
@@ -109,7 +109,7 @@ carstm_plot_map = function( p=NULL,
 
       if (is.null(brks)) {
         qn = quantile( datatoplot[,,"mean"], probs=probs, na.rm=TRUE )
-        brks = pretty(  tf(qn)  )
+        brks = pretty(  tf(qn), n=2  )
       }
 
       for (y in res$time_name) {
@@ -132,7 +132,7 @@ carstm_plot_map = function( p=NULL,
     } else if (p$dimensionality == "space-time-cyclic") {
       if (is.null(brks)) {
         qn = quantile( datatoplot[,,,"mean"], probs=probs, na.rm=TRUE )
-        brks = pretty(  tf(qn)  )
+        brks = pretty(  tf(qn), n=2  )
       }
  
       for ( y in res$time_name ) {
