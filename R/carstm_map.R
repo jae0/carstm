@@ -30,8 +30,7 @@
  
 
     ellps = list(...)
-
-
+ 
     require(sf)
     require(RColorBrewer) 
 
@@ -97,10 +96,9 @@
     }
 
 
-    breaks = labs = NULL
+    breaks = NULL
     if  ( exists("breaks", ellps)) {
       breaks = ellps[["breaks"]]
-      labs = round(breaks, digits=digits)
     } 
 
     # add toplot to sppoly for final plots, but first check in case toplot is xyz data
@@ -118,8 +116,7 @@
       }
 
       data_range = quantile( toplot, probs=probs, na.rm=TRUE )
-      er = range( toplot, na.rm=TRUE )
-
+ 
       toplot[ which(toplot < data_range[1]) ] = data_range[1] # set levels higher than max datarange to max datarange
       toplot[ which(toplot > data_range[2]) ] = data_range[2] # set levels higher than max datarange to max datarange
       toplot = round( toplot, digits=digits)
@@ -145,7 +142,6 @@
         if (is.null(vn_label)) vn_label = vn  # this permits direct plotting of sppoly variables (if toplot and res are not sent)
         sppoly[, vn_label] = round( sppoly[[vn]], digits=digits)
         data_range = quantile( sppoly[[vn]], probs=probs, na.rm=TRUE )
-        er = range( sppoly[[vn]], na.rm=TRUE )
       }
     }
 
@@ -153,7 +149,7 @@
     attributes(sppoly[[vn_label]]) = NULL
 
     if (plotmethod=="ggplot") {
- # copy of simple .. elaborate as required ..
+ 
       require(ggplot2)
 
       title = ifelse( exists("title", ellps), ellps[["title"]],  "" )
@@ -180,12 +176,11 @@
       yr = c(bb["ymin"], bb["ymax"])
 
       if (is.null(breaks)) {
-        labs = pretty(data_range, n=2)
-        breaks = labs
+        breaks = pretty(data_range, n=2) 
       }
  
       nd = 100
-      color_range = seq( er[1], er[2], length.out=nd )
+      color_range = seq( data_range[1], data_range[2], length.out=nd )
       
       if  ( exists("colors", ellps)) {
         colors = ellps[["colors"]]
@@ -195,27 +190,13 @@
 
       color_func = colorRampPalette(colors, space = "Lab")
       colors_codes = color_func(length(color_range))
-  
-      # interval for each color value -- ggplot wants the actual intervals
-      ggvalues = rep(NA, 2*nd)
-      uu = 1:nd *2
-      ggvalues[uu-1] = color_range 
-      ggvalues[uu] = color_range + min(diff(color_range)) / (nd*100) 
-      ggvalues = scales::rescale(ggvalues)
- 
-      # if (vartype == "log10") {
-      #   labs = 10^labs
-      #   er = 10^er
-      # }
-
+     
       plt = ggplot() +
         geom_sf( data=sppoly, aes(fill=.data[[vn_label]]), lwd=0, alpha=1.0 )  +
         scale_fill_gradientn(name = vn_label, 
-          limits = er,
-          colors = colors_codes,
-          values = ggvalues,  # interval for each color
-          labels = labs ,
-          breaks = breaks,
+          limits = range(breaks), 
+          colors = colors_codes, 
+          n.breaks = 4, 
           na.value=NA ) +
         guides(fill = guide_colorbar(
           # title.theme = element_blank(), 
@@ -247,10 +228,9 @@
 
       if ( !is.null(outfilename) ) {
           if (!file.exists( dirname(outfilename) ))  dir.create( dirname(outfilename), recursive=TRUE, showWarnings=FALSE )
-          print(plt)
-          ggsave( outfilename )
-          # ggsave( outfilename, width=width_pts, height=height_pts, asp=asp, dpi=pres, scale=scale*outscale)
-          # print(outfilename)
+          #print(plt)
+          ggsave( plot=plt, filename=outfilename )
+          print(outfilename)
       }
       return(plt)
     }

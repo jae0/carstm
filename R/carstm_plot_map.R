@@ -75,7 +75,7 @@ carstm_plot_map = function( p=NULL,
     )
     return("done")
   }
- 
+  
   if (toplot=="predictions") {
     res = carstm_model( p=p,  DS="carstm_predictions" ) 
     vn="predictions"
