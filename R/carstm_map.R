@@ -197,6 +197,7 @@
           limits = range(breaks), 
           colors = colors_codes, 
           n.breaks = 4, 
+          oob = scales::squish,
           na.value=NA ) +
         guides(fill = guide_colorbar(
           # title.theme = element_blank(), 
