@@ -87,7 +87,7 @@ p$quantile_bounds =c(0.005, 0.995) # trim upper bounds (in posterior predictions
 # space resolution
 p$aegis_proj4string_planar_km = projection_proj4string("utm20")
 
-p$dres =res 1/60/4 # resolution in angular units (degrees)
+p$dres = 1/60/4 # resolution in angular units (degrees)
 p$pres = 1  # spatial resolution in planar units (km)
 p$lon0 = min( bottemp$lon )
 p$lon1 = max( bottemp$lon )
