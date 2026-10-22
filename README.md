@@ -319,7 +319,7 @@ res = carstm_model(
 
 
 # NOTE: the above creates a number of files in the specified directory (here: ~/test/test_ocean_bottom_temperatures_halifax/modelled/test_basic_form/ )
-# NOTE: these files have an extension of *.rds (**qs::qsave()** compressed files). Use, aegies::read_write_fast() to read/write.
+ 
 
 # your timings will vary with OS, number of cores/threads and RAM/CPU ...
  

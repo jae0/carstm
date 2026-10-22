@@ -41,7 +41,7 @@ To begin analysis using [CARSTM](https://github.com/jae0/carstm), we bring in th
 # required R library list
 standard_libs = c( 
     "colorspace", "lubridate",  "lattice",  "data.table", "parallel",
-    "sf",  "terra", "INLA", "ggplot2", "RColorBrewer", "qs"
+    "sf",  "terra", "INLA", "ggplot2", "RColorBrewer"
 )
 #  warning INLA has a lot of dependencies 
 
