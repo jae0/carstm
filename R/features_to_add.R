@@ -10,7 +10,7 @@ features_to_add = function( p,
   target="ggplot"
 ) {
  
-    fn = file.path( p$data_root, paste0("additional_mapping_features_", target, ".rdz") )
+    fn = file.path( p$data_root, paste0("additional_mapping_features_", target, ".rds") )
     if (!redo){
       O = NULL
       if (file.exists(fn)) O = aegis::read_write_fast(fn)

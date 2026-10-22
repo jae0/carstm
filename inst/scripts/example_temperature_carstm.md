@@ -12,7 +12,7 @@ The example data is bounded by longitudes (-65, -62) and latitudes (45, 43). It 
 set.seed(12345)
 
 require(lubridate)
-fn = system.file("extdata", "aegis_spacetime_test.rdz", package="carstm" )
+fn = system.file("extdata", "aegis_spacetime_test.rds", package="carstm" )
 bottemp = read_write_fast( fn )   
 bottemp$yr = year(bottemp$date )
 
@@ -271,7 +271,7 @@ if (0) {
     nb = attributes(sppoly)$nb$nbs
     obs = M[tag=="observations"]
     preds = M[tag=="predictions"]
-    read_write_fast( list(obs=obs, nb=nb, preds=preds), file=file.path(p$modeldir, "example_bottom_temp.rdz") )
+    read_write_fast( list(obs=obs, nb=nb, preds=preds), file=file.path(p$modeldir, "example_bottom_temp.rds") )
 
 }
 
@@ -319,7 +319,7 @@ res = carstm_model(
 
 
 # NOTE: the above creates a number of files in the specified directory (here: ~/test/test_ocean_bottom_temperatures_halifax/modelled/test_basic_form/ )
-# NOTE: these files have an extension of *.rdz (**qs::qsave()** compressed files). Use, aegies::read_write_fast() to read/write.
+# NOTE: these files have an extension of *.rds (**qs::qsave()** compressed files). Use, aegies::read_write_fast() to read/write.
 
 # your timings will vary with OS, number of cores/threads and RAM/CPU ...
  

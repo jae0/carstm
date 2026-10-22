@@ -17,7 +17,7 @@ carstm_filenames = function( p=list(), returnvalue="full_filename", fn=NULL, ...
 
   if (!exists("fnroot", p)) {
     
-    fnrt = gsub( "\\.rdata$|\\.rdz$", "", p$areal_units_fn)
+    fnrt = gsub( "\\.rdata$|\\.rds$", "", p$areal_units_fn)
 
     p$fnroot = paste(
       fnrt,
@@ -26,7 +26,7 @@ carstm_filenames = function( p=list(), returnvalue="full_filename", fn=NULL, ...
       p$carstm_modelengine, 
       sep="~"
     )
-    p$fnroot = paste( p$fnroot, "rdz", sep="." )
+    p$fnroot = paste( p$fnroot, "rds", sep="." )
   }
 
   if (!exists("outputdir", p)) {
@@ -44,7 +44,7 @@ carstm_filenames = function( p=list(), returnvalue="full_filename", fn=NULL, ...
       # same file naming as in carstm ..
       outputdir = dirname( aufns )
       if ( !file.exists(outputdir)) dir.create( outputdir, recursive=TRUE, showWarnings=FALSE )
-      outfn = paste( gsub("\\.rdata$|\\.rdz$", "", aufns), fn, "rdz", sep="." )
+      outfn = paste( gsub("\\.rdata$|\\.rds$", "", aufns), fn, "rds", sep="." )
     return( outfn )   
   }  
   # so if returntype is not amongst the above, it just gets added to the fnroot and returned

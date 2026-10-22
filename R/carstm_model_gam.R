@@ -1,7 +1,7 @@
 
   carstm_model_gam = function( O, 
     DS = NULL, 
-    data=NULL, fn_fit=tempfile(pattern="fit_", fileext=".rdz"), 
+    data=NULL, fn_fit=tempfile(pattern="fit_", fileext=".rds"), 
     compress="", 
     compression_level=3,
     redo_fit=TRUE , ... ) {
@@ -11,7 +11,7 @@
     if (DS=="modelled_fit") {
         if (!is.null(fn_fit)) {
           if (file.exists(fn_fit)) {
-            if (grepl("\\.rdz$", fn_fit)) {
+            if (grepl("\\.rds$", fn_fit)) {
               fit = aegis::read_write_fast(fn_fit)
             } else {
               fit = read_write_fast( fn_fit )

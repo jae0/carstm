@@ -5,7 +5,7 @@ carstm_model_inla = function(
   sppoly =NULL,
   data=NULL,
   fit = NULL,
-  fn_fit=tempfile(pattern="fit_", fileext=".rdz"), 
+  fn_fit=tempfile(pattern="fit_", fileext=".rds"), 
   redo_fit = TRUE,
   redo_posterior_simulations = TRUE,
   summarize_simulations=FALSE,
@@ -31,7 +31,7 @@ carstm_model_inla = function(
     if (DS=="modelled_fit") {
       if (!is.null(fn_fit)) {
         if (file.exists(fn_fit)) {
-          if (grepl("\\.rdz$", fn_fit)) {
+          if (grepl("\\.rds$", fn_fit)) {
             fit = aegis::read_write_fast(fn_fit)
           } else {
             fit = read_write_fast( fn_fit )
